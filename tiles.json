@@ -1,0 +1,342 @@
+{
+  "weather": {
+    "label": "Wexford",
+    "latitude": 52.336,
+    "longitude": -6.463
+  },
+  "tiles": [
+    {
+      "id": "moxy",
+      "name": "Movy",
+      "sub": "Films & TV",
+      "color": "#3B3FB6",
+      "icon": "film",
+      "image": "moxy.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/movy",
+        "--class=movy",
+        "--remote-debugging-port=9222",
+        "--remote-debugging-address=127.0.0.1",
+        "--force-device-scale-factor=1.25",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.movy.sx/"
+      ],
+      "window_class": "movy",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/movy.png"
+      ],
+      "fullscreen": true,
+      "devtools_port": 9222,
+      "search": "movy",
+      "accent": "#E50914"
+    },
+    {
+      "id": "steam",
+      "name": "Steam",
+      "sub": "Big Picture",
+      "color": "#1C2A3D",
+      "icon": "gamepad",
+      "image": "steam.svg",
+      "app_icon": [
+        "/usr/share/icons/hicolor/*/apps/steam.png",
+        "~/.local/share/icons/hicolor/*/apps/steam.png"
+      ],
+      "command": [
+        "xdg-open",
+        "steam://open/bigpicture"
+      ],
+      "window_class": "steam",
+      "window_title": "Steam Big Picture Mode",
+      "accent": "#66C0F4"
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "sub": "Music",
+      "color": "#17352A",
+      "icon": "music",
+      "image": "spotify.svg",
+      "app_icon": [
+        "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.spotify.Client.png",
+        "~/.local/share/flatpak/exports/share/icons/hicolor/*/apps/com.spotify.Client.png",
+        "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.spotify.Client.svg",
+        "~/.local/share/flatpak/exports/share/icons/hicolor/*/apps/com.spotify.Client.svg"
+      ],
+      "command": [
+        "flatpak",
+        "run",
+        "com.spotify.Client"
+      ],
+      "window_class": "spotify",
+      "fullscreen": true,
+      "search": "spotify",
+      "accent": "#1ED760"
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "sub": "TV mode",
+      "color": "#3D1A1D",
+      "icon": "tv",
+      "image": "youtube.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/youtube-tv",
+        "--user-agent=Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) 76.0.3809.146/6.0 TV Safari/537.36",
+        "--class=youtube-tv",
+        "--remote-debugging-port=9223",
+        "--remote-debugging-address=127.0.0.1",
+        "--kiosk",
+        "https://www.youtube.com/tv"
+      ],
+      "window_class": "youtube-tv",
+      "fullscreen": true,
+      "devtools_port": 9223,
+      "search": "youtube",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/youtube.png"
+      ],
+      "accent": "#FF3355"
+    },
+    {
+      "id": "ufc",
+      "name": "UFC",
+      "sub": "Fight night",
+      "color": "#4A2A12",
+      "icon": "octagon",
+      "image": "ufc.svg",
+      "window_class": "ufc",
+      "fullscreen": true,
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/ufc",
+        "--class=ufc",
+        "--remote-debugging-port=9224",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://watchwrestling.ae/ufc43/"
+      ],
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/ufc.png"
+      ],
+      "accent": "#FF5A2A",
+      "devtools_port": 9224,
+      "choices": [
+        {
+          "id": "results",
+          "name": "Results",
+          "icon": "trophy",
+          "url": "https://www.google.com/search?q=UFC"
+        },
+        {
+          "id": "fights",
+          "name": "Fights",
+          "icon": "octagon",
+          "url": "https://watchwrestling.ae/ufc43/"
+        }
+      ]
+    },
+    {
+      "id": "tv",
+      "name": "Live TV",
+      "sub": "Live and catch-up",
+      "color": "#1F2A44",
+      "accent": "#FF4D6D",
+      "icon": "tv",
+      "image": "tv.svg",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/tv.png"
+      ],
+      "choices": [
+        {
+          "id": "rte",
+          "name": "RT\u00c9 Player",
+          "tile": "rte"
+        },
+        {
+          "id": "virginmedia",
+          "name": "Virgin Media",
+          "tile": "virginmedia"
+        },
+        {
+          "id": "plex",
+          "name": "Plex",
+          "tile": "plex"
+        }
+      ]
+    },
+    {
+      "id": "rte",
+      "name": "RT\u00c9 Player",
+      "sub": "Live and catch-up",
+      "color": "#4A0B16",
+      "accent": "#FF2D55",
+      "icon": "tv",
+      "image": "rte.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/rte",
+        "--class=rte",
+        "--remote-debugging-port=9225",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.rte.ie/player/"
+      ],
+      "window_class": "rte",
+      "devtools_port": 9225,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/rte.png"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "virginmedia",
+      "name": "Virgin Media",
+      "sub": "Live and catch-up",
+      "color": "#4A0A0A",
+      "accent": "#FF3B30",
+      "icon": "tv",
+      "image": "virginmedia.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/virginmedia",
+        "--class=virginmedia",
+        "--remote-debugging-port=9226",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://play.virginmediatelevision.ie/"
+      ],
+      "window_class": "virginmedia",
+      "devtools_port": 9226,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/virginmedia.png"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "plex",
+      "name": "Plex",
+      "sub": "Free live TV",
+      "color": "#3A2C08",
+      "accent": "#E5A00D",
+      "icon": "tv",
+      "image": "plex.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/plex",
+        "--class=plex",
+        "--remote-debugging-port=9228",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://watch.plex.tv/live-tv"
+      ],
+      "window_class": "plex",
+      "devtools_port": 9228,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/plex.png"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "sub": "Messages",
+      "color": "#0E4A33",
+      "accent": "#25D366",
+      "icon": "phone",
+      "image": "whatsapp.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/whatsapp",
+        "--class=whatsapp",
+        "--remote-debugging-port=9229",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://web.whatsapp.com/"
+      ],
+      "window_class": "whatsapp",
+      "devtools_port": 9229,
+      "fullscreen": true,
+      "unread": "title",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/whatsapp.png"
+      ]
+    },
+    {
+      "id": "claude",
+      "name": "Claude",
+      "sub": "Assistant",
+      "color": "#7A3A24",
+      "icon": "spark",
+      "image": "claude.svg",
+      "app_icon": [
+        "~/.local/share/icons/**/*claude*.png",
+        "~/.local/share/icons/**/*claude*.svg"
+      ],
+      "command": [
+        "sh",
+        "-c",
+        "f=$(ls ~/.local/share/applications/claude-*.desktop 2>/dev/null | head -n1); if [ -n \"$f\" ]; then kioclient exec \"$f\" 2>/dev/null || kioclient5 exec \"$f\"; else distrobox enter claude -- claude-desktop; fi"
+      ],
+      "window_class": "com.anthropic.claude",
+      "fullscreen": "launch",
+      "accent": "#D97757",
+      "requires": [
+        "~/.local/share/applications/claude-*.desktop"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "sleep",
+      "name": "Sleep",
+      "icon": "moon",
+      "command": [
+        "systemctl",
+        "suspend"
+      ]
+    },
+    {
+      "id": "restart",
+      "name": "Restart",
+      "icon": "restart",
+      "command": [
+        "systemctl",
+        "reboot"
+      ]
+    },
+    {
+      "id": "poweroff",
+      "name": "Power off",
+      "icon": "power",
+      "command": [
+        "systemctl",
+        "poweroff"
+      ]
+    }
+  ]
+}

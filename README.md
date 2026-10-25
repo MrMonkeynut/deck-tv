@@ -1,0 +1,90 @@
+# Deck TV
+
+A TV-style home screen for the Steam Deck's Desktop Mode: big tiles for Movy, Steam Big Picture,
+Spotify, YouTube, UFC, Live TV (RTÉ Player, Virgin Media and Plex) and WhatsApp, a pop-up dock at the bottom of the screen for switching apps, a
+"now playing" card, and a phone remote.
+
+## Install (about 5 minutes)
+
+You need: a Steam Deck in **Desktop Mode** and an internet connection. A mouse and keyboard
+(or the Deck's trackpads) make setup easier.
+
+1. Switch to Desktop Mode: hold the power button → **Switch to Desktop**.
+2. Copy `deck-tv.zip` to the Deck, into **Downloads**.
+3. Open **Dolphin** (the file manager), go to Downloads, right-click `deck-tv.zip` →
+   **Extract → Extract archive here**. You get a `deck-tv` folder.
+4. Open the `deck-tv` folder, right-click an empty space → **Open Terminal Here**.
+5. Type this and press Enter:
+
+   ```
+   bash install.sh
+   ```
+
+6. Answer the two questions:
+   - **Town for the weather**: type your town (or press Enter for Wexford).
+   - **Open Deck TV automatically whenever Desktop Mode starts?**: press Enter for yes.
+
+The installer adds Google Chrome and Spotify if they aren't there yet (no password needed, but it
+can take a few minutes), then opens Deck TV full screen.
+
+## Using it
+
+- **Tiles**: click one to open that app full screen. Click again later to switch back to it.
+  **Live TV** and **UFC** ask which one you want first.
+- **The dock**: move the mouse to the very bottom edge of the screen and a glowing line appears.
+  Click it to open the dock: Home (Deck TV), the apps you have open, and the volume on the left.
+  - Scroll over the speaker to change the volume, or click it for a slider.
+  - Right-click an app in the dock to close it.
+  - Slide the dock left or right if it's in the way. It hides by itself, or click elsewhere.
+- **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
+- **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
+  skip. Starting something in another app pauses the first. Right-click a tile →
+  **Show in now playing** to control that app instead.
+- **Weather**: click it for the 5-day forecast.
+- **Power**: the button in the bottom-left corner: Sleep, Restart or Power off.
+- **Sound**: the speaker button beside it: the volume, and where sound plays: the TV, the Deck's
+  speakers, headphones or a Bluetooth speaker. A paired speaker that isn't connected shows
+  "Connect": switch it on and click it. **Add speaker** pairs a new one: put it in pairing mode,
+  pick it from the list, and sound moves to it.
+- **Phone remote**: scan the QR code in the bottom-right corner with your phone (on the same
+  Wi-Fi). You get a touchpad, a keyboard for search boxes, app switching and media controls.
+  Tip: "Add to Home Screen" in your phone's browser makes it an app.
+
+## Optional extras
+
+- **Pin it to the taskbar**: open the app menu (bottom-left), find **Deck TV**, right-click it →
+  **Pin to Task Manager**. Do the same for any of the other apps if you like.
+- **Ad blocking for Movy and UFC**: each runs in its own Chrome window with its own settings. Open
+  the app, press **Ctrl+T** if needed, go to the Chrome Web Store, search **uBlock Origin Lite**
+  and add it. Do this once in each of them.
+- **Sign in to YouTube**: open YouTube from Deck TV and sign in as you would on a TV.
+- **Link WhatsApp**: open the WhatsApp tile, then on your phone go to WhatsApp → Settings →
+  Linked devices → Link a device, and scan the code on the TV. After that, unread messages show
+  as a badge on the tile. (Messaging only: WhatsApp doesn't do calls in a browser.)
+- **RTÉ Player and Virgin Media** need a free account for live TV: sign in once in each and it's remembered.
+  Plex works without one.
+
+## If something's not right
+
+- **A new speaker doesn't show up under Add speaker**: put it back in pairing mode (its light
+  usually flashes quickly) and press Search again. Some speakers only stay discoverable for a minute.
+
+- **Super + H doesn't work yet**: log out and back in once (or restart the Deck).
+- **The Deck wakes up again straight after Sleep**: a wireless mouse/keyboard receiver is usually
+  waking it. In the `deck-tv` folder, open a terminal and run `sudo bash fix-mouse-wake.sh`
+  (it needs the Deck's sudo password; if you've never set one, run `passwd` first). After that,
+  wake the Deck with its power button.
+- **The phone remote won't connect**: make sure the phone is on the same Wi-Fi as the Deck, and
+  scan the QR code again.
+- **A tile's missing**: tiles only show for apps that are installed.
+
+## Change the weather town later
+
+Open `~/.local/share/deck-tv/tiles.json` in a text editor (Kate) and change the `weather` part
+(name, latitude, longitude). Then close and reopen Deck TV.
+
+## Update or remove
+
+- **Update**: unzip the new version and run `bash install.sh` again. Your settings are kept.
+- **Remove**: open a terminal and run `bash ~/.local/share/deck-tv/uninstall.sh`. Chrome, Spotify
+  and the apps' logins are left in place.

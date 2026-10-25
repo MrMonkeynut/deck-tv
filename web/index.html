@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck TV</title><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1116; --ink: #F2F4F8; --muted: #A3ACBD; --dim: #8E97A8;
+    --pill: #1B2029; --pill-ink: #DDE2EB; --ring: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; cursor: none; }
+  body { font-family: "Space Grotesk", "Cantarell", "Noto Sans", system-ui, sans-serif; color: var(--ink); }
+  body.mouse { cursor: default; }
+
+  #stage {
+    position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+    transform-origin: center; padding: 56px 72px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; }
+  #time { font-size: 72px; font-weight: 700; line-height: 1; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+  #date { font-size: 20px; color: var(--muted); margin-top: 6px; }
+  #weather {
+    all: unset; display: flex; align-items: center; gap: 12px; font-size: 22px; color: #C9D1E0; flex: none;
+    padding: 8px 14px; margin: -8px -14px; border-radius: 18px; cursor: pointer; transition: background .15s;
+  }
+  #weather:hover { background: #1B2029; }
+
+  /* Five-day forecast, from clicking the weather */
+  #forecast {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #forecast.open { display: flex; }
+  .fc-card { width: 1040px; padding: 36px 40px 30px; border-radius: 28px; background: #1B2029; display: flex; flex-direction: column; gap: 28px; }
+  .fc-head { display: flex; align-items: center; gap: 22px; }
+  .fc-head svg { width: 64px; height: 64px; color: #F2F4F8; }
+  .fc-now { font-size: 64px; font-weight: 700; line-height: 1; }
+  .fc-place b { display: block; font-size: 28px; }
+  .fc-place span { font-size: 18px; color: var(--muted); }
+  .fc-close { all: unset; margin-left: auto; align-self: flex-start; font-size: 18px; color: var(--muted); padding: 8px 18px; border-radius: 18px; cursor: pointer; }
+  .fc-close:hover { background: #2A3140; color: var(--ink); }
+  .fc-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .fc-day { padding: 22px 12px 20px; border-radius: 22px; background: #232937; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+  .fc-day:first-child { background: #2A3140; }
+  .fc-day .d { font-size: 20px; font-weight: 700; }
+  .fc-day svg { width: 52px; height: 52px; color: #F2F4F8; margin: 4px 0; }
+  .fc-day .c { font-size: 16px; color: var(--muted); min-height: 2.4em; }
+  .fc-day .t { font-size: 26px; font-weight: 700; }
+  .fc-day .t small { font-size: 20px; font-weight: 500; color: var(--dim); margin-left: 6px; }
+  .fc-day .x { display: flex; gap: 14px; font-size: 15px; color: var(--muted); }
+  .fc-day .x span { display: flex; align-items: center; gap: 5px; }
+  .fc-day .x svg { width: 16px; height: 16px; margin: 0; color: var(--muted); }
+
+  /* Now playing: whichever one app is playing (or was just paused), with its controls */
+  #np {
+    flex: 1; max-width: 560px; margin: 0 32px; display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px 12px 12px; border-radius: 24px; background: #1B2029;
+    transition: opacity .3s; opacity: 0; visibility: hidden;
+  }
+  #np.show { opacity: 1; visibility: visible; }
+  #np-open { all: unset; flex: 1; min-width: 0; display: flex; align-items: center; gap: 18px; cursor: pointer; border-radius: 16px; }
+  #np-art { width: 88px; height: 88px; flex: none; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  #np-art img { width: 100%; height: 100%; object-fit: cover; }
+  #np-art img.icon { width: 64%; height: 64%; object-fit: contain; border-radius: 14px; }
+  .np-text { flex: 1; min-width: 0; }
+  .np-src { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500; color: #C9D1E0; }
+  .np-src .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--np-c, #7BD3A2); }
+  #np-title { font-size: 23px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  #np-sub { font-size: 16px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-bar { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .np-bar .track { flex: 1; height: 5px; border-radius: 3px; background: #2E3542; overflow: hidden; }
+  #np-fill { height: 100%; width: 0; background: var(--ink); border-radius: 3px; transition: width 1s linear; }
+  .np-ctl { all: unset; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); }
+  .np-ctl:hover { background: rgba(255,255,255,.1); }
+  .np-ctl.main { width: 58px; height: 58px; background: var(--ink); color: var(--bg); }
+  .np-ctl.main:hover { background: #fff; }
+  .np-ctl svg { width: 24px; height: 24px; fill: currentColor; }
+  .np-ctl.main svg { width: 28px; height: 28px; }
+  .np-ctl[hidden] { display: none; }
+
+  /* A little equaliser: on the card, and on the tile of the app that's playing */
+  .eq { display: inline-flex; gap: 3px; align-items: flex-end; height: 15px; }
+  .eq i { width: 4px; height: 4px; background: currentColor; border-radius: 2px; animation: eq 1s ease-in-out infinite; }
+  .eq i:nth-child(2) { animation-delay: -.33s; } .eq i:nth-child(3) { animation-delay: -.66s; }
+  @keyframes eq { 50% { height: 15px; } }
+  .np-src .eq { color: var(--np-c, #7BD3A2); }
+  #np:not(.playing) .np-src > .eq { display: none; }
+  .tile > .eq { position: absolute; top: 20px; right: 20px; height: 20px; color: #fff; display: none; }
+  .tile > .eq i { width: 5px; }
+  .tile.playing > .eq { display: inline-flex; }
+  /* Unread messages (WhatsApp) */
+  .tile > .unread {
+    position: absolute; top: 16px; left: 16px; min-width: 36px; height: 36px; padding: 0 10px; box-sizing: border-box;
+    border-radius: 18px; background: var(--a, #25D366); color: #04210F; font-size: 19px; font-weight: 700;
+    display: none; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  }
+  .tile.has-unread > .unread { display: flex; }
+  #tiles.rows2 .tile > .unread { top: 10px; left: 10px; min-width: 30px; height: 30px; font-size: 16px; }
+
+  /* Eight or more apps: two rows of smaller cards instead of one squeezed row */
+  #tiles.rows2 { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 18px; align-content: center; }
+  #tiles.rows2 .tile { max-width: none; height: 172px; padding: 14px 10px 12px; border-radius: 22px; }
+  #tiles.rows2 .tile .appicon { width: 84px; height: 84px; border-radius: 18px; }
+  #tiles.rows2 .tile > svg { width: 64px; height: 64px; }
+  #tiles.rows2 .tile .name { font-size: 21px; }
+  #tiles.rows2 .tile .sub { font-size: 14px; margin-top: 2px; }
+  #tiles.rows2 .tile.focus { transform: scale(1.05); }
+  #tiles.rows2 .tile > .eq { top: 12px; right: 12px; }
+
+  /* Another app playing while the card shows something else: say so, and offer to switch */
+  #np-also {
+    all: unset; display: none; align-items: center; gap: 8px; margin-left: 10px; padding: 3px 12px 3px 10px;
+    border-radius: 14px; background: color-mix(in srgb, var(--also-c, #7BD3A2) 22%, #1B2029);
+    color: #F2F4F8; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  #np-also.show { display: inline-flex; }
+  #np-also:hover { background: color-mix(in srgb, var(--also-c, #7BD3A2) 38%, #1B2029); }
+  #np-also .eq { color: var(--also-c, #7BD3A2); display: inline-flex; height: 12px; }
+  #np-also .eq i { width: 3px; }
+
+  #tiles { display: flex; gap: 22px; align-items: center; justify-content: center; height: 400px; }
+  .tile {
+    all: unset; box-sizing: border-box; position: relative; flex: 1 1 0; max-width: 250px; height: 330px; border-radius: 26px;
+    padding: 22px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center;
+    background-color: var(--c); background-size: cover; background-position: center;
+    transition: transform .18s ease, outline-color .18s ease, opacity .18s ease;
+    outline: 5px solid transparent; outline-offset: 6px; overflow: hidden; cursor: pointer;
+  }
+  .tile.has-img::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(8,10,14,.8) 0%, rgba(8,10,14,.2) 30%, rgba(8,10,14,0) 45%);
+  }
+  .tile > * { position: relative; }
+  .tile .name { font-size: 28px; font-weight: 700; white-space: nowrap; }
+  .tile .sub { font-size: 18px; color: rgba(255,255,255,.78); margin-top: 6px; }
+  /* The app's icon is the tile: big, centred in the space above the name, sitting in the art's glow */
+  .tile > svg, .tile .appicon { margin: auto 0; transition: transform .18s ease; }
+  .tile > svg { width: 96px; height: 96px; }
+  .tile .appicon { width: 124px; height: 124px; object-fit: contain; border-radius: 26px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
+  .tile.focus > svg, .tile.focus .appicon { transform: scale(1.06); }
+  .tile.focus { transform: scale(1.14); outline-color: var(--ring); z-index: 2; }
+  #tiles:has(.focus) .tile:not(.focus) { opacity: .72; }
+  .tile.launching { animation: pulse .6s ease 2; }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
+
+  footer { display: flex; justify-content: space-between; align-items: center; }
+  #actions { display: flex; gap: 14px; }
+  .action {
+    all: unset; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 22px;
+    border-radius: 26px; background: var(--pill); color: var(--pill-ink); font-size: 18px;
+    outline: 4px solid transparent; outline-offset: 3px; transition: outline-color .15s, background .15s; cursor: pointer;
+  }
+  .action svg { width: 22px; height: 22px; }
+  .action.focus { outline-color: var(--ring); background: #2A3140; }
+  .action.power { width: 52px; padding: 0; justify-content: center; }
+  .action.power svg { width: 24px; height: 24px; }
+
+  /* Right-click menu on a tile */
+  #ctx {
+    position: absolute; z-index: 12; display: none; min-width: 280px; padding: 8px; border-radius: 18px;
+    background: #1B2029; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  }
+  #ctx.open { display: block; }
+  #ctx .ctx-head { padding: 8px 14px 6px; font-size: 15px; color: var(--dim); }
+  #ctx button {
+    all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px; font-size: 19px; color: var(--ink); cursor: pointer;
+  }
+  #ctx button svg { width: 22px; height: 22px; flex: none; }
+  #ctx button:hover { background: #2A3140; }
+  #ctx button:disabled { color: var(--dim); cursor: default; background: none; }
+
+  /* Power menu: sleep, restart, power off */
+  #power {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #power.open { display: flex; }
+  .power-card { padding: 36px; border-radius: 28px; background: #1B2029; display: flex; flex-direction: column; gap: 26px; }
+  .power-card b { font-size: 30px; }
+  .power-opts { display: flex; gap: 16px; }
+  .power-opt {
+    all: unset; width: 170px; height: 150px; border-radius: 22px; background: #2A3140; color: var(--pill-ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; font-size: 20px;
+    cursor: pointer; outline: 4px solid transparent; outline-offset: 3px; transition: background .15s, outline-color .15s;
+  }
+  .power-opt svg { width: 40px; height: 40px; }
+  .power-opt img { width: 72px; height: 72px; object-fit: contain; }
+  .power-opt:hover, .power-opt.focus { background: #39414F; }
+  .power-opt.focus { outline-color: var(--ring); }
+  .power-cancel { all: unset; align-self: center; font-size: 18px; color: var(--muted); padding: 8px 18px; border-radius: 18px; cursor: pointer; }
+  .power-cancel:hover { background: #2A3140; color: var(--ink); }
+
+  /* Sound: volume, and where the sound plays (TV, the Deck, headphones, a Bluetooth speaker) */
+  #actions { align-items: center; }
+  #sound {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #sound.open { display: flex; }
+  .sound-card { min-width: 620px; }
+  .vol-row { display: flex; align-items: center; gap: 18px; }
+  .vol-row button { all: unset; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); }
+  .vol-row button:hover { background: #2A3140; }
+  .vol-row button svg { width: 28px; height: 28px; }
+  #snd-num { font-size: 22px; font-weight: 700; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+  #snd-level { flex: 1; -webkit-appearance: none; appearance: none; height: 10px; border-radius: 5px; cursor: pointer;
+    background: linear-gradient(to right, var(--ink) var(--p, 50%), #2E3542 var(--p, 50%)); }
+  #snd-level::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: none; }
+  #sound.muted #snd-level { background: linear-gradient(to right, #5B6475 var(--p, 50%), #2E3542 var(--p, 50%)); }
+  .sound-label { font-size: 17px; color: var(--muted); margin-bottom: -12px; }
+  #snd-opts .power-opt { box-sizing: border-box; padding: 0 14px; text-align: center; }
+  /* Rows of four; past two rows (eight outputs) the list scrolls, with the next row peeking in */
+  #snd-opts { display: grid; grid-template-columns: repeat(4, 170px); gap: 16px; justify-content: center;
+    max-height: 372px; overflow-y: auto; padding: 6px; margin: -6px; scrollbar-width: thin; scrollbar-color: #4A5366 transparent; }
+  #snd-opts::-webkit-scrollbar { width: 8px; }
+  #snd-opts::-webkit-scrollbar-thumb { background: #4A5366; border-radius: 4px; }
+  .power-opt .opt-sub { font-size: 15px; color: var(--muted); margin-top: -8px; }
+  .power-opt.active { background: #34405A; box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+  .power-opt.active .opt-sub { color: #7BD3A2; }
+  #snd-error { font-size: 16px; color: #FF8A8A; min-height: 0; }
+  #sound .add-only { display: none; }
+  #sound.adding .add-only { display: block; }
+  #sound.adding .list-only { display: none; }
+  .add-hint { font-size: 18px; color: var(--muted); max-width: 560px; line-height: 1.4; }
+  .add-status { font-size: 17px; color: var(--ink); display: flex; align-items: center; gap: 12px; }
+  #sound.adding .add-status { display: flex; }
+  .add-status .spin { display: inline-block; flex: none; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #39414F; border-top-color: var(--ink); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .add-status button { all: unset; cursor: pointer; padding: 6px 14px; border-radius: 14px; background: #2A3140; }
+  .add-status button:hover { background: #39414F; }
+  .sound-btns { display: flex; justify-content: center; gap: 8px; }
+  #snd-error:empty { display: none; }
+
+  #toast {
+    position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(20px);
+    background: #F2F4F8; color: #0E1116; font-size: 22px; font-weight: 600;
+    padding: 14px 28px; border-radius: 30px; opacity: 0; transition: .25s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  #sleep {
+    position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; background: rgba(8,10,14,.9); z-index: 11; cursor: pointer;
+  }
+  #sleep.open { display: flex; }
+  #sleep-count { font-size: 120px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  #sleep b { font-size: 34px; }
+  #sleep span { font-size: 20px; color: var(--muted); }
+
+  #pair-card { display: flex; align-items: center; gap: 16px; }
+  #pair-card[hidden] { display: none; }
+  .pair-text { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .pair-text b { font-size: 18px; font-weight: 600; }
+  .pair-text span { font-size: 15px; color: var(--dim); }
+  .qr { width: 96px; height: 96px; padding: 7px; border-radius: 12px; background: #FFFFFF; }
+  .qr img, .qr canvas { width: 100% !important; height: 100% !important; display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div>
+      <div id="time">--:--</div>
+      <div id="date"></div>
+    </div>
+    <div id="np" aria-label="Now playing">
+      <button id="np-open">
+        <div id="np-art"></div>
+        <div class="np-text">
+          <div class="np-src"><span class="dot"></span><span id="np-app"></span><span class="eq"><i></i><i></i><i></i></span><span id="np-also" role="button"></span></div>
+          <div id="np-title"></div>
+          <div id="np-sub"></div>
+          <div class="np-bar"><span id="np-pos">0:00</span><div class="track"><div id="np-fill"></div></div><span id="np-len">0:00</span></div>
+        </div>
+      </button>
+      <button class="np-ctl" id="np-prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path id="np-prev-icon" d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg></button>
+      <button class="np-ctl main" id="np-play" aria-label="Pause"><svg viewBox="0 0 24 24"><path id="np-play-icon" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+      <button class="np-ctl" id="np-next" aria-label="Next"><svg viewBox="0 0 24 24"><path id="np-next-icon" d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg></button>
+    </div>
+    <button id="weather" aria-live="polite" aria-label="Weather forecast"></button>
+  </header>
+
+  <div id="tiles" role="list"></div>
+
+  <footer>
+    <div id="actions"></div>
+    <div id="pair-card" hidden>
+      <div class="pair-text"><b>Phone remote</b><span>Scan to control the TV</span></div>
+      <div id="qr" class="qr"></div>
+    </div>
+  </footer>
+
+  <div id="toast" role="status"></div>
+
+  <div id="sleep" role="dialog" aria-label="Going to sleep">
+    <div id="sleep-count">3</div>
+    <b id="sleep-verb">Going to sleep</b>
+    <span id="sleep-hint"></span>
+  </div>
+
+  <div id="ctx" role="menu"></div>
+
+  <div id="forecast" role="dialog" aria-label="Five-day forecast">
+    <div class="fc-card">
+      <div class="fc-head" id="fc-head"></div>
+      <div class="fc-days" id="fc-days"></div>
+    </div>
+  </div>
+
+  <div id="sound" role="dialog" aria-label="Sound">
+    <div class="power-card sound-card">
+      <b id="snd-title">Sound</b>
+      <div class="vol-row list-only">
+        <button id="snd-mute" aria-label="Mute"></button>
+        <input type="range" id="snd-level" min="0" max="100" step="1" aria-label="Volume">
+        <span id="snd-num">--</span>
+      </div>
+      <div class="sound-label list-only">Play sound on</div>
+      <div class="add-hint add-only">Put your speaker in pairing mode: usually by holding its Bluetooth button until its light flashes.</div>
+      <div class="add-status add-only" id="add-status"></div>
+      <div class="power-opts" id="snd-opts"></div>
+      <div id="snd-error"></div>
+      <div class="sound-btns">
+        <button class="power-cancel add-only" id="snd-back">Back</button>
+        <button class="power-cancel" id="snd-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="power" role="dialog" aria-label="Power">
+    <div class="power-card">
+      <b id="power-title">Power</b>
+      <div class="power-opts" id="power-opts"></div>
+      <button class="power-cancel" id="power-cancel">Cancel</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const ICONS = {
+  film: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>',
+  gamepad: '<path d="M6 11h4M8 9v4"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7V14a4 4 0 0 0 7 2.6L10 15h4l1 1.6A4 4 0 0 0 22 14V9.7A4.7 4.7 0 0 0 17.3 5z"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  tv: '<rect x="2" y="4" width="20" height="14" rx="3"/><path d="M10 8.5v5l4-2.5zM8 21h8"/>',
+  octagon: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M9.5 15v-4.5a1.5 1.5 0 0 1 3 0V9.5a1.5 1.5 0 0 1 3 0V14a3 3 0 0 1-3 3h-1.5a1.5 1.5 0 0 1-1.5-1.5z"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
+  volume: '<path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7"/>',
+  arrow: '<path d="M4 12h16M14 6l6 6-6 6"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  power: '<path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/>',
+  muted: '<path d="M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/>',
+  deck: '<rect x="2" y="7" width="20" height="10" rx="5"/><rect x="8" y="9" width="8" height="6" rx="1"/><circle cx="5" cy="12" r=".8"/><circle cx="19" cy="12" r=".8"/>',
+  headphones: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/>',
+  bluetooth: '<path d="m7 7 10 10-5 5V2l5 5L7 17"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
+  restart: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>',
+  phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
+  cloud: '<path d="M17.5 19H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 11.5a3.75 3.75 0 0 1-2.5 7.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  rain: '<path d="M17.5 15H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 7.5 3.75 3.75 0 0 1 17.5 15zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  partly: '<path d="M8 3v1.5M3.2 5.2l1 1M2 10h1.5M12.8 5.2l-1 1"/><path d="M5.3 11.5A3.5 3.5 0 1 1 11.6 8"/><path d="M17.5 20H9a4 4 0 1 1 .9-7.9A5 5 0 0 1 19.5 14a3 3 0 0 1-2 6z"/>',
+  fog: '<path d="M17.5 13H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 5.5 3.75 3.75 0 0 1 17.5 13zM4 17h16M6 21h12"/>',
+  snow: '<path d="M17.5 15H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 7.5 3.75 3.75 0 0 1 17.5 15zM8 19h.01M12 21h.01M16 19h.01"/>',
+  storm: '<path d="M17.5 15H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 7.5 3.75 3.75 0 0 1 17.5 15zM13 15l-3 4h4l-3 4"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  wind: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>'
+};
+const svg = (name, stroke = "currentColor", w = 1.6) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+
+const api = (path, method = "GET") =>
+  fetch(path, { method, headers: { "X-Deck-TV": "1" } }).then(r => r.json());
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+
+let rows = [[], []];           // [tiles, the power button]
+let pos = { r: 0, c: 0 };
+
+/* ---------- layout scaling ---------- */
+function fit() {
+  const s = Math.min(innerWidth / 1280, innerHeight / 720);
+  document.getElementById("stage").style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+
+/* ---------- clock + weather ---------- */
+function tick() {
+  const d = new Date();
+  document.getElementById("time").textContent =
+    d.toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit", hour12: false });
+  document.getElementById("date").textContent =
+    d.toLocaleDateString("en-IE", { weekday: "long", day: "numeric", month: "long" });
+}
+setInterval(tick, 5000); tick();
+
+// WMO weather codes (what Open-Meteo returns) -> icon and a few words
+function sky(code) {
+  if (code === 0) return ["sun", "Clear"];
+  if (code <= 2) return ["partly", code === 1 ? "Mostly sunny" : "Partly cloudy"];
+  if (code === 3) return ["cloud", "Cloudy"];
+  if (code === 45 || code === 48) return ["fog", "Fog"];
+  if (code >= 51 && code <= 57) return ["rain", "Drizzle"];
+  if (code >= 61 && code <= 67) return ["rain", code >= 65 ? "Heavy rain" : "Rain"];
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ["snow", "Snow"];
+  if (code >= 80 && code <= 82) return ["rain", "Showers"];
+  if (code >= 95) return ["storm", "Thunderstorms"];
+  return ["cloud", ""];
+}
+
+let weatherCfg = null;
+async function weather(cfg) {
+  weatherCfg = cfg;
+  const el = document.getElementById("weather");
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${cfg.latitude}&longitude=${cfg.longitude}&current=temperature_2m,weather_code`;
+    const j = await (await fetch(u)).json();
+    const t = Math.round(j.current.temperature_2m);
+    el.innerHTML = `${svg(sky(j.current.weather_code)[0], "currentColor", 1.6).replace("<svg", '<svg width="34" height="34"')}<span>${cfg.label} · ${t}°</span>`;
+  } catch {
+    el.innerHTML = `<span>${cfg.label}</span>`;
+  }
+}
+
+/* ---------- five-day forecast ---------- */
+let forecastOpen = false;
+async function openForecast() {
+  const cfg = weatherCfg;
+  if (!cfg) return;
+  forecastOpen = true;
+  document.getElementById("forecast").classList.add("open");
+  const head = document.getElementById("fc-head"), days = document.getElementById("fc-days");
+  const close = '<button class="fc-close" id="fc-close">Close</button>';
+  head.innerHTML = `<div class="fc-place"><b>${cfg.label}</b><span>Loading the forecast…</span></div>${close}`;
+  days.innerHTML = "";
+  document.getElementById("fc-close").onclick = closeForecast;
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${cfg.latitude}&longitude=${cfg.longitude}` +
+      "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max" +
+      "&timezone=Europe%2FDublin&forecast_days=5";
+    const j = await (await fetch(u)).json();
+    const c = j.current, [icon, words] = sky(c.weather_code);
+    head.innerHTML = `${svg(icon, "currentColor", 1.5)}<div class="fc-now">${Math.round(c.temperature_2m)}°</div>
+      <div class="fc-place"><b>${cfg.label} town</b><span>${words} · feels like ${Math.round(c.apparent_temperature)}° · wind ${Math.round(c.wind_speed_10m)} km/h</span></div>${close}`;
+    document.getElementById("fc-close").onclick = closeForecast;
+    const d = j.daily;
+    days.innerHTML = d.time.map((date, i) => {
+      const [ic, w] = sky(d.weather_code[i]);
+      const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : new Date(date + "T12:00").toLocaleDateString("en-IE", { weekday: "long" });
+      return `<div class="fc-day"><div class="d">${name}</div>${svg(ic, "currentColor", 1.5)}<div class="c">${w}</div>
+        <div class="t">${Math.round(d.temperature_2m_max[i])}°<small>${Math.round(d.temperature_2m_min[i])}°</small></div>
+        <div class="x"><span>${svg("drop", "currentColor", 1.8)}${d.precipitation_probability_max[i] ?? 0}%</span><span>${svg("wind", "currentColor", 1.8)}${Math.round(d.wind_speed_10m_max[i])} km/h</span></div></div>`;
+    }).join("");
+  } catch {
+    head.querySelector(".fc-place span").textContent = "Couldn't get the forecast. Check the Wi-Fi.";
+  }
+}
+function closeForecast() {
+  forecastOpen = false;
+  document.getElementById("forecast").classList.remove("open");
+}
+document.getElementById("weather").onclick = openForecast;
+document.getElementById("forecast").onclick = e => { if (e.target.id === "forecast") closeForecast(); };
+
+/* ---------- build ---------- */
+let cfgTiles = [];
+async function build() {
+  const cfg = await api("/api/config");
+  cfgTiles = cfg.tiles;
+  const tilesEl = document.getElementById("tiles");
+  // Apps opened from a group tile (Live TV's RTÉ, Virgin, Plex) don't get a tile of their own
+  const visible = cfg.tiles.filter(t => !t.hidden);
+  const shown = visible.length;
+  tilesEl.classList.toggle("rows2", shown > 7);
+  tilesEl.style.setProperty("--cols", Math.ceil(shown / 2));
+  const actEl = document.getElementById("actions");
+
+  visible.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "tile" + (t.image ? " has-img" : "");
+    b.style.setProperty("--c", t.color);
+    if (t.image) b.style.backgroundImage = `url("/images/${encodeURIComponent(t.image)}")`;
+    const icon = t.appIcon
+      ? `<img class="appicon" src="/appicon/${t.id}?v=${t.iconVersion}" alt="">`
+      : svg(t.icon, "#fff");
+    b.dataset.id = t.id;
+    if (t.accent) b.style.setProperty("--a", t.accent);
+    b.innerHTML = `${icon}<span class="eq"><i></i><i></i><i></i></span><span class="unread"></span><div><div class="name">${t.name}</div><div class="sub">${t.sub || ""}</div></div>`;
+    b.onclick = () => {
+      setFocus(0, rows[0].indexOf(b));
+      // A tile with choices (UFC: Results or Fights) asks which page to open first
+      if (t.choices) openPower(t.name, t.choices.map(ch => {
+        const app = ch.tile && cfg.tiles.find(x => x.id === ch.tile);  // a group's choice is an app: show its logo
+        const img = app && app.appIcon ? `/appicon/${app.id}?v=${app.iconVersion}` : null;
+        return { icon: ch.icon || "tv", img, name: ch.name, run: () => launch(t, b, ch) };
+      }));
+      else launch(t, b);
+    };
+    b.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(0, rows[0].indexOf(b));
+    b.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
+    b.oncontextmenu = e => { e.preventDefault(); showCtx(t, e); };
+    tilesEl.appendChild(b); rows[0].push(b);
+  });
+
+  // One power button in the corner; its menu holds the actions (sleep, restart, power off)
+  const pw = document.createElement("button");
+  pw.className = "action power";
+  pw.setAttribute("aria-label", "Power");
+  pw.innerHTML = svg("power", "currentColor", 1.9);
+  pw.onclick = () => { setFocus(1, 0); openPower("Power", cfg.actions.map(a => ({ icon: a.icon, name: a.name, run: () => act(a) }))); };
+  pw.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 0);
+  pw.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
+  actEl.appendChild(pw); rows[1].push(pw);
+  // Sound, beside it: volume, and which speaker the sound comes out of
+  const sb = document.createElement("button");
+  sb.className = "action power";
+  sb.setAttribute("aria-label", "Sound");
+  sb.innerHTML = svg("volume", "currentColor", 1.9);
+  sb.onclick = () => { setFocus(1, 1); openSound(); };
+  sb.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 1);
+  sb.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
+  actEl.appendChild(sb); rows[1].push(sb);
+
+  const last = rows[0].findIndex(b => b.dataset.id === store.get("deckTvLast"));
+  setFocus(0, last >= 0 ? last : 0);
+  weather(cfg.weather);
+  setInterval(() => weather(cfg.weather), 15 * 60 * 1000);
+  refreshOpen();
+  setInterval(refreshOpen, 2000);
+}
+
+/* Mark tiles whose app is already open */
+async function refreshOpen() {
+  const { open = [], media = null, players: found = [], page, unread } = await api("/api/state").catch(() => ({}));
+  players = found;
+  if (unread) showUnread(unread);
+  reloadIfUpdated(page);
+  rows[0].forEach(b => b.classList.toggle("open", open.includes(b.dataset.id)));
+  showPlaying(media);
+}
+
+/* Unread messages: a badge on the tile, and a notice when more arrive */
+let unreadWas = null;
+function showUnread(counts) {
+  rows[0].forEach(b => {
+    const n = counts[b.dataset.id] || 0;
+    b.classList.toggle("has-unread", n > 0);
+    b.querySelector(".unread").textContent = n > 99 ? "99+" : n;
+    const before = unreadWas ? unreadWas[b.dataset.id] || 0 : n;
+    if (n > before) {
+      const t = cfgTiles.find(x => x.id === b.dataset.id);
+      toast(`${t ? t.name : "New"}: ${n} unread message${n === 1 ? "" : "s"}`);
+    }
+  });
+  unreadWas = counts;
+}
+
+/* When Deck TV is updated, pick up the new page by itself (once nothing is open on top of it) */
+let pageVersion = null;
+function reloadIfUpdated(v) {
+  if (!v) return;
+  if (pageVersion === null) pageVersion = v;
+  const busy = forecastOpen || powerOpen || soundOpen || sleepTimer || ctx.classList.contains("open");
+  if (v !== pageVersion && !busy) location.reload();
+}
+
+/* No browser menu anywhere: this is a TV screen, not a web page. Tiles have their own menu. */
+addEventListener("contextmenu", e => e.preventDefault());
+
+/* ---------- tile menu (right-click) ----------
+   Points the now playing card, and its buttons, at this app's player instead of whichever
+   played last. Starting playback anywhere else takes over again as usual. */
+let players = [];
+const ctx = document.getElementById("ctx");
+// Group tiles (Live TV) stand for their apps: playing, menus and the card all look through them
+const members = t => [t.id, ...(t.choices || []).filter(c => c.tile).map(c => c.tile)];
+const groupOf = id => (cfgTiles.find(g => (g.choices || []).some(c => c.tile === id)) || {}).id;
+const FOCUS_ICON = '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>';
+function showCtx(t, e) {
+  const has = players.find(p => members(t).includes(p.tile));
+  const current = np && members(t).includes(np.tile);
+  const label = current ? "In now playing" : has ? "Show in now playing" : `Nothing playing in ${t.name}`;
+  ctx.innerHTML = `<div class="ctx-head">${t.name}</div>
+    <button id="ctx-focus" ${has && !current ? "" : "disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FOCUS_ICON}</svg>${label}</button>`;
+  document.getElementById("ctx-focus").onclick = async () => {
+    hideCtx();
+    await api(`/api/media/focus/${has.tile}`, "POST").catch(() => {});
+    setTimeout(refreshOpen, 1100);  // the server switches on its next look, about a second
+  };
+  // Place it at the pointer, in the stage's own (scaled) coordinates, kept on screen
+  const stage = document.getElementById("stage"), r = stage.getBoundingClientRect(), k = r.width / 1280;
+  ctx.classList.add("open");
+  const x = Math.min((e.clientX - r.left) / k, 1280 - ctx.offsetWidth - 16);
+  const y = Math.min((e.clientY - r.top) / k, 720 - ctx.offsetHeight - 16);
+  ctx.style.left = x + "px"; ctx.style.top = y + "px";
+}
+const hideCtx = () => ctx.classList.remove("open");
+addEventListener("pointerdown", e => { if (!ctx.contains(e.target)) hideCtx(); });
+addEventListener("keydown", e => { if (e.key === "Escape") hideCtx(); });
+addEventListener("blur", hideCtx);
+
+/* ---------- now playing ----------
+   The server picks one player across all the apps (the one playing, or the one just paused), so
+   the card, the tile's equaliser, these buttons and the phone remote all mean the same thing. */
+const PLAY = "M8 5v14l11-7z", PAUSE = "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z";
+const PREV = "M6 5h2v14H6zM20 5v14L9.5 12z", NEXT = "M16 5h2v14h-2zM4 5v14l10.5-7z";
+// Films and videos skip 10 seconds instead of changing track: a circular arrow with a gap
+const BACK10 = "M12 4V1L7 5l5 4V6a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z", FWD10 = "M12 4V1l5 4-5 4V6a6 6 0 1 0 6 6h2a8 8 0 1 1-8-8z";
+let np = null, npAt = 0;
+const clock = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
+function showPlaying(m) {
+  const card = document.getElementById("np");
+  // Every app making sound gets the equaliser on its tile, whether or not it's the card's player
+  const sounding = players.filter(p => p.playing).map(p => p.tile);
+  if (m && m.playing && !sounding.includes(m.tile)) sounding.push(m.tile);
+  const lit = sounding.concat(sounding.map(groupOf).filter(Boolean));  // an app inside Live TV lights Live TV
+  rows[0].forEach(b => b.classList.toggle("playing", lit.includes(b.dataset.id)));
+  card.classList.toggle("show", !!m);
+  if (!m) { np = null; return; }
+  const others = sounding.filter(id => id !== m.tile).map(id => cfgTiles.find(t => t.id === id)).filter(Boolean);
+  const also = document.getElementById("np-also");
+  also.classList.toggle("show", others.length > 0);
+  if (others.length) {
+    const o = others[0];
+    also.style.setProperty("--also-c", o.accent || "#7BD3A2");
+    also.innerHTML = `<span class="eq"><i></i><i></i><i></i></span>${others.map(t => t.name).join(", ")} also playing`;
+    also.title = `Show ${o.name} here instead`;
+    also.onclick = async e => {
+      e.stopPropagation();  // not a click on the card itself (which opens the app)
+      await api(`/api/media/focus/${o.id}`, "POST").catch(() => {});
+      setTimeout(refreshOpen, 1100);
+    };
+  }
+  const changed = !np || np.player !== m.player || np.title !== m.title || np.art !== m.art;
+  np = m; npAt = Date.now();
+  card.classList.toggle("playing", m.playing);
+  card.style.setProperty("--np-c", m.accent || "#7BD3A2");
+  document.getElementById("np-play-icon").setAttribute("d", m.playing ? PAUSE : PLAY);
+  document.getElementById("np-play").setAttribute("aria-label", m.playing ? "Pause" : "Play");
+  document.getElementById("np-prev").hidden = !m.canPrev;
+  document.getElementById("np-next").hidden = !m.canNext;
+  document.getElementById("np-prev-icon").setAttribute("d", m.seek ? BACK10 : PREV);
+  document.getElementById("np-next-icon").setAttribute("d", m.seek ? FWD10 : NEXT);
+  document.getElementById("np-prev").setAttribute("aria-label", m.seek ? "Back 10 seconds" : "Previous");
+  document.getElementById("np-next").setAttribute("aria-label", m.seek ? "Forward 10 seconds" : "Next");
+  if (changed) {
+    document.getElementById("np-app").textContent = m.app;
+    document.getElementById("np-title").textContent = m.title;
+    document.getElementById("np-sub").textContent = m.sub || "";
+    const art = document.getElementById("np-art");
+    art.style.background = m.color || "#2E3542";
+    const tile = cfgTiles.find(t => t.id === m.tile);
+    art.innerHTML = m.art ? `<img src="${m.art}" alt="">`
+      : tile && tile.appIcon ? `<img class="icon" src="/appicon/${m.tile}?v=${tile.iconVersion}" alt="">` : "";
+  }
+  tickPlaying();
+}
+function tickPlaying() {
+  if (!np) return;
+  const has = np.length > 0;
+  document.querySelector(".np-bar").style.visibility = has ? "visible" : "hidden";
+  if (!has) return;
+  const pos = Math.min(np.length, np.position + (np.playing ? (Date.now() - npAt) / 1000 : 0));
+  document.getElementById("np-pos").textContent = clock(pos);
+  document.getElementById("np-len").textContent = clock(np.length);
+  document.getElementById("np-fill").style.width = (pos / np.length * 100).toFixed(2) + "%";
+}
+setInterval(tickPlaying, 1000);
+async function mediaAction(action) {
+  if (np && action === "play") showPlaying({ ...np, playing: !np.playing });  // answer the click at once
+  await api(`/api/media/${action}`, "POST").catch(() => {});
+  setTimeout(refreshOpen, 500);
+}
+document.getElementById("np-play").onclick = () => mediaAction("play");
+document.getElementById("np-next").onclick = () => mediaAction("next");
+document.getElementById("np-prev").onclick = () => mediaAction("prev");
+document.getElementById("np-open").onclick = () => {
+  if (!np) return;
+  const b = rows[0].find(el => el.dataset.id === np.tile);
+  if (b) b.click();  // same as clicking the app's tile: switch to it
+  else api(`/api/launch/${np.tile}`, "POST").then(refreshOpen).catch(() => {});  // an app inside a group
+};
+
+function setFocus(r, c) {
+  r = Math.max(0, Math.min(rows.length - 1, r));
+  c = Math.max(0, Math.min(rows[r].length - 1, c));
+  rows.flat().forEach(el => el.classList.remove("focus"));
+  pos = { r, c };
+  rows[r][c].classList.add("focus");
+}
+
+/* With the mouse, a highlight only lasts while hovering; keys and the gamepad pick up from where it was */
+function clearFocus() {
+  rows.flat().forEach(el => el.classList.remove("focus"));
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+async function launch(t, el, choice) {
+  el.classList.remove("launching"); void el.offsetWidth; el.classList.add("launching");
+  store.set("deckTvLast", t.id);
+  const name = choice ? (choice.tile ? choice.name : `${t.name} ${choice.name}`) : t.name;
+  toast(`${el.classList.contains("open") && !choice ? "Switching to" : "Opening"} ${name}…`);
+  const res = await api(`/api/launch/${t.id}${choice ? "/" + choice.id : ""}`, "POST").catch(() => ({ error: "server" }));
+  if (res.error) toast(`Couldn't open ${name}`);
+  refreshOpen();
+}
+
+function act(a) {
+  if (COUNTDOWN[a.id]) return startCountdown(a);
+  toast(`${a.name}…`);
+  api(`/api/launch/${a.id}`, "POST").catch(() => toast(`Couldn't run ${a.name}`));
+}
+
+/* ---------- sound: volume and output ---------- */
+let soundOpen = false, soundAt = 0, soundPoll = null, soundData = null;
+const OUT_ICONS = { tv: "tv", speaker: "deck", headphones: "headphones", bluetooth: "bluetooth", usb: "volume", other: "volume" };
+const soundOpts = () => [...document.querySelectorAll("#snd-opts .power-opt")];
+function soundFocus(i) {
+  soundAt = Math.max(0, Math.min(soundOpts().length - 1, i));
+  soundOpts().forEach((b, n) => b.classList.toggle("focus", n === soundAt));
+  const b = soundOpts()[soundAt];
+  if (b && !document.body.classList.contains("mouse")) b.scrollIntoView({ block: "nearest" });  // keys/controller: keep it in view
+}
+function showLevel(v) {
+  if (!v) return;
+  const el = document.getElementById("snd-level");
+  if (document.activeElement !== el) el.value = v.level;
+  el.style.setProperty("--p", Math.min(100, v.level) + "%");
+  document.getElementById("snd-num").textContent = v.muted ? "Muted" : v.level;
+  document.getElementById("snd-mute").innerHTML = svg(v.muted ? "muted" : "volume", "currentColor", 1.8);
+  document.getElementById("sound").classList.toggle("muted", v.muted);
+}
+function showOutputs(data) {
+  if (!data) return;
+  soundData = data;
+  const opts = document.getElementById("snd-opts");
+  const keep = soundAt;
+  if (adding) return;
+  const add = document.createElement("button");
+  add.className = "power-opt";
+  add.innerHTML = `${svg("plus", "currentColor", 1.7)}Add speaker<span class="opt-sub">Bluetooth</span>`;
+  add.onclick = startAdding;
+  opts.replaceChildren(...data.outputs.map(o => {
+    const b = document.createElement("button");
+    b.className = "power-opt" + (o.active ? " active" : "");
+    const sub = o.active ? "Playing here" : o.connecting ? "Connecting…" : o.connect ? "Connect" : "";
+    b.innerHTML = `${svg(OUT_ICONS[o.kind] || "volume", "currentColor", 1.7)}${o.name}${sub ? `<span class="opt-sub">${sub}</span>` : ""}`;
+    b.onclick = () => useOutput(o.id);
+    b.onmouseenter = () => soundFocus(soundOpts().indexOf(b));
+    return b;
+  }), add);
+  add.onmouseenter = () => soundFocus(soundOpts().indexOf(add));
+  soundFocus(soundOpen ? keep : Math.max(0, data.outputs.findIndex(o => o.active)));
+  document.getElementById("snd-error").textContent = data.error || "";
+  clearTimeout(soundPoll);
+  if (data.outputs.some(o => o.connecting)) soundPoll = setTimeout(refreshSound, 1000);  // a speaker connecting
+}
+async function refreshSound() {
+  const [outs, vol] = await Promise.all([api("/api/audio").catch(() => null), api("/api/volume").catch(() => null)]);
+  if (!soundOpen) return;
+  showOutputs(outs); showLevel(vol);
+}
+async function openSound() {
+  soundOpen = false;
+  showOutputs(await api("/api/audio").catch(() => ({ outputs: [], error: "Couldn't read the sound outputs." })));
+  showLevel(await api("/api/volume").catch(() => null));
+  soundOpen = true;
+  document.getElementById("sound").classList.add("open");
+}
+/* Adding a new speaker: search, then pair whichever the person picks */
+let adding = false;
+async function startAdding() {
+  adding = true;
+  document.getElementById("sound").classList.add("adding");
+  document.getElementById("snd-title").textContent = "Add a speaker";
+  document.getElementById("snd-opts").replaceChildren();
+  document.getElementById("snd-error").textContent = "";
+  document.getElementById("add-status").dataset.html = "";
+  await api("/api/audio/search", "POST").catch(() => {});
+  pollFound();
+}
+function stopAdding() {
+  adding = false;
+  clearTimeout(soundPoll);
+  document.getElementById("sound").classList.remove("adding");
+  document.getElementById("snd-title").textContent = "Sound";
+  refreshSound();
+}
+async function pollFound() {
+  if (!adding || !soundOpen) return;
+  const f = await api("/api/audio/found").catch(() => null);
+  if (!adding || !f) return;
+  if (pairingNow && !f.pairing) {  // pairing finished: back to the list, with the new speaker playing
+    pairingNow = null;
+    if (!f.error) return stopAdding();
+  }
+  const status = document.getElementById("add-status");
+  const html = f.pairing ? `<span class="spin"></span>Pairing and connecting…`
+    : f.searching ? `<span class="spin"></span>Looking for speakers…`
+    : `${f.devices.length ? "Pick your speaker" : "No speakers found."} <button id="add-again">Search again</button>`;
+  if (status.dataset.html !== html) {  // only when it changes: redrawing restarts the spinner
+    status.innerHTML = html;
+    status.dataset.html = html;
+  }
+  const again = document.getElementById("add-again");
+  if (again) again.onclick = startAdding;
+  const opts = document.getElementById("snd-opts");
+  const keep = soundAt;
+  opts.replaceChildren(...f.devices.map(d => {
+    const b = document.createElement("button");
+    b.className = "power-opt";
+    b.innerHTML = `${svg("bluetooth", "currentColor", 1.7)}${d.name}<span class="opt-sub">${f.pairing === d.mac ? "Pairing…" : "Pair"}</span>`;
+    b.onclick = () => pairSpeaker(d.mac);
+    b.onmouseenter = () => soundFocus(soundOpts().indexOf(b));
+    return b;
+  }));
+  soundFocus(keep);
+  document.getElementById("snd-error").textContent = f.error || "";
+  if (f.searching || f.pairing) soundPoll = setTimeout(pollFound, 1000);
+}
+let pairingNow = null;
+async function pairSpeaker(mac) {
+  if (pairingNow) return;
+  pairingNow = mac;
+  clearTimeout(soundPoll);
+  await api(`/api/audio/pair/${encodeURIComponent(mac)}`, "POST").catch(() => {});
+  pollFound();
+}
+document.getElementById("snd-back").onclick = stopAdding;
+
+function closeSound() {
+  soundOpen = false;
+  adding = false;
+  document.getElementById("sound").classList.remove("adding");
+  document.getElementById("snd-title").textContent = "Sound";
+  clearTimeout(soundPoll);
+  document.getElementById("sound").classList.remove("open");
+}
+async function useOutput(id) {
+  const o = soundData && soundData.outputs.find(x => x.id === id);
+  if (!o || o.active) return;
+  // Show the choice at once: the system takes a moment to report the new output
+  if (o.connect) o.connecting = true;
+  else soundData.outputs.forEach(x => { x.active = x.id === id; });
+  clearTimeout(soundPoll);
+  showOutputs(soundData);
+  await api(`/api/audio/use/${encodeURIComponent(id)}`, "POST").catch(() => {});
+  setTimeout(refreshSound, 700);
+  if (!o.connect) setTimeout(refreshSound, 1800);
+}
+let levelTimer = null;
+document.getElementById("snd-level").addEventListener("input", e => {
+  const v = +e.target.value;
+  e.target.style.setProperty("--p", v + "%");
+  document.getElementById("snd-num").textContent = v;
+  clearTimeout(levelTimer);
+  levelTimer = setTimeout(() => api(`/api/volume/set/${v}`, "POST").then(showLevel).catch(() => {}), 120);
+});
+const soundStep = dir => api(`/api/volume/${dir}`, "POST").then(showLevel).catch(() => {});
+document.getElementById("snd-mute").onclick = () => soundStep("mute");
+document.getElementById("snd-close").onclick = closeSound;
+document.getElementById("sound").onclick = e => { if (e.target.id === "sound") closeSound(); };
+let lastWheel = 0;
+document.getElementById("sound").addEventListener("wheel", e => {
+  e.preventDefault();
+  const now = performance.now();
+  if (now - lastWheel < 80 || !e.deltaY) return;
+  lastWheel = now;
+  soundStep(e.deltaY < 0 ? "up" : "down");
+}, { passive: false });
+
+/* ---------- power menu (also a tile's choices, like UFC's Results or Fights) ---------- */
+let powerOpen = false, powerAt = 0;
+const powerOpts = () => [...document.querySelectorAll(".power-opt")];
+function powerFocus(i) {
+  powerAt = Math.max(0, Math.min(powerOpts().length - 1, i));
+  powerOpts().forEach((b, n) => b.classList.toggle("focus", n === powerAt));
+}
+function openPower(title, items) {
+  document.getElementById("power-title").textContent = title;
+  const opts = document.getElementById("power-opts");
+  opts.replaceChildren(...items.map(it => {
+    const b = document.createElement("button");
+    b.className = "power-opt";
+    b.innerHTML = `${it.img ? `<img src="${it.img}" alt="">` : svg(it.icon, "currentColor", 1.7)}${it.name}`;
+    b.onclick = () => { closePower(); it.run(); };
+    b.onmouseenter = () => powerFocus(powerOpts().indexOf(b));
+    return b;
+  }));
+  document.getElementById("power").setAttribute("aria-label", title);
+  powerOpen = true;
+  document.getElementById("power").classList.add("open");
+  powerFocus(0);
+}
+function closePower() {
+  powerOpen = false;
+  document.getElementById("power").classList.remove("open");
+}
+document.getElementById("power-cancel").onclick = closePower;
+document.getElementById("power").onclick = e => { if (e.target.id === "power") closePower(); };
+
+/* ---------- countdown before sleep, restart or power off ----------
+   The mouse's receiver can wake the Deck, so suspending the instant Sleep is clicked gets undone
+   by the hand still on the mouse. Count down first, with time to let go (or change your mind). */
+const COUNTDOWN = {
+  sleep: { secs: 3, verb: "Going to sleep", hint: "Let go of the mouse so it doesn't wake the Deck · click or press any button to cancel" },
+  restart: { secs: 5, verb: "Restarting", hint: "Click or press any button to cancel" },
+  poweroff: { secs: 5, verb: "Powering off", hint: "Click or press any button to cancel" },
+};
+let sleepTimer = null;
+function startCountdown(a) {
+  const c = COUNTDOWN[a.id];
+  const el = document.getElementById("sleep"), num = document.getElementById("sleep-count");
+  let left = c.secs;
+  num.textContent = left;
+  document.getElementById("sleep-verb").textContent = c.verb;
+  document.getElementById("sleep-hint").textContent = c.hint;
+  el.classList.add("open");
+  sleepTimer = setInterval(() => {
+    if (--left > 0) return void (num.textContent = left);
+    cancelSleep();
+    api(`/api/launch/${a.id}`, "POST").catch(() => toast(`Couldn't run ${a.name}`));
+  }, 1000);
+}
+function cancelSleep() {
+  clearInterval(sleepTimer);
+  sleepTimer = null;
+  document.getElementById("sleep").classList.remove("open");
+}
+document.getElementById("sleep").addEventListener("click", cancelSleep);
+
+/* ---------- phone remote QR (always on the home screen, so no mouse is needed) ---------- */
+async function showPairing() {
+  const { url } = await api("/api/remote").catch(() => ({}));
+  if (!url || !window.QRCode) return;  // the QR library needs the internet; the card stays hidden without it
+  new QRCode(document.getElementById("qr"), { text: url, width: 192, height: 192, colorDark: "#0E1116", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById("pair-card").hidden = false;
+}
+showPairing();
+
+/* ---------- input ---------- */
+function input(cmd) {
+  document.body.classList.remove("mouse");
+  if (sleepTimer) return cancelSleep();
+  if (forecastOpen) return closeForecast();
+  if (soundOpen) {
+    if (cmd === "left") soundFocus(soundAt - 1);
+    if (cmd === "right") soundFocus(soundAt + 1);
+    // Up and down move between rows of outputs; from the top row, up turns the volume up
+    if (cmd === "up") soundAt >= 4 ? soundFocus(soundAt - 4) : soundStep("up");
+    if (cmd === "down") soundAt + 4 < soundOpts().length ? soundFocus(soundAt + 4) : soundStep("down");
+    if (cmd === "ok") soundOpts()[soundAt] && soundOpts()[soundAt].click();
+    if (cmd === "back") adding ? stopAdding() : closeSound();
+    return;
+  }
+  if (powerOpen) {
+    if (cmd === "left") powerFocus(powerAt - 1);
+    if (cmd === "right") powerFocus(powerAt + 1);
+    if (cmd === "ok") powerOpts()[powerAt].click();
+    if (cmd === "back") closePower();
+    return;
+  }
+  const { r, c } = pos;
+  if (!rows[r][c].classList.contains("focus") && cmd !== "back") return setFocus(r, c);  // first press shows where you are
+  if (cmd === "left") setFocus(r, c - 1);
+  if (cmd === "right") setFocus(r, c + 1);
+  if (cmd === "down" && r === 0) setFocus(1, Math.min(c, rows[1].length - 1));
+  if (cmd === "up" && r === 1) setFocus(0, Math.min(c, rows[0].length - 1));
+  if (cmd === "ok") rows[r][c].click();
+}
+
+const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
+               Enter: "ok", " ": "ok", Escape: "back", Backspace: "back" };
+addEventListener("keydown", e => {
+  const cmd = KEYS[e.key];
+  if (!cmd) return;
+  e.preventDefault();
+  input(cmd);
+});
+addEventListener("mousemove", e => {
+  if (document.body.classList.contains("mouse")) return;
+  document.body.classList.add("mouse");
+  if (!e.target.closest?.(".tile, .action")) clearFocus();
+});
+
+/* Gamepad (when the controller isn't already sending arrow keys) */
+const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back" };
+const held = {};
+let lastStick = 0;
+function poll() {
+  if (document.hasFocus()) {
+    for (const gp of navigator.getGamepads ? navigator.getGamepads() : []) {
+      if (!gp) continue;
+      for (const [i, cmd] of Object.entries(BTN)) {
+        const down = gp.buttons[i] && gp.buttons[i].pressed;
+        if (down && !held[gp.index + ":" + i]) input(cmd);
+        held[gp.index + ":" + i] = down;
+      }
+      const [x, y] = gp.axes;
+      const now = performance.now();
+      if (now - lastStick > 220) {
+        const dir = Math.abs(x) > .6 ? (x > 0 ? "right" : "left")
+                  : Math.abs(y) > .6 ? (y > 0 ? "down" : "up") : null;
+        if (dir) { input(dir); lastStick = now; }
+      }
+    }
+  }
+  requestAnimationFrame(poll);
+}
+requestAnimationFrame(poll);
+
+build().catch(() => toast("Launcher server isn't running"));
+</script>
+</body>
+</html>

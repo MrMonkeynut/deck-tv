@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Deck TV Remote</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1116; --panel: #1B2029; --panel-2: #232A35; --ink: #F2F4F8; --muted: #A3ACBD;
+    --dim: #8E97A8; --accent: #3B3FB6; --ok: #7BD3A2;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  body {
+    font-family: "Space Grotesk", system-ui, sans-serif; display: flex; flex-direction: column;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+    gap: 14px; user-select: none; -webkit-user-select: none;
+  }
+  button { all: unset; cursor: pointer; }
+  svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  header { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+  .status { width: 9px; height: 9px; border-radius: 50%; background: #5B6475; }
+  .status.on { background: var(--ok); }
+  .round {
+    width: 48px; height: 48px; border-radius: 50%; background: var(--panel); display: grid; place-items: center;
+    color: var(--ink); transition: background .12s, transform .12s;
+  }
+  .round:active { background: var(--panel-2); transform: scale(.94); }
+
+  #apps { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: none; }
+  #apps::-webkit-scrollbar { display: none; }
+  .app { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 64px; transition: transform .12s; }
+  .app:active { transform: scale(.92); }
+  .app .ic { width: 56px; height: 56px; border-radius: 16px; overflow: hidden; display: grid; place-items: center; background: var(--panel); }
+  .app .ic img { width: 100%; height: 100%; object-fit: cover; }
+  .app .ic svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.6; }
+  .app .lbl { font-size: 12px; color: var(--muted); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app .dot { width: 16px; height: 3px; border-radius: 2px; background: transparent; }
+  .app.open .dot { background: var(--ink); }
+
+  #pad {
+    flex: 1; min-height: 180px; border-radius: 26px; background: var(--panel); position: relative;
+    touch-action: none; display: grid; place-items: center; overflow: hidden;
+  }
+  #pad .hint { font-size: 14px; color: var(--dim); text-align: center; line-height: 1.6; pointer-events: none; transition: opacity .3s; }
+  #pad.used .hint { opacity: 0; }
+  #pad .ripple {
+    position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%;
+    background: rgba(242,244,248,.18); pointer-events: none; animation: ripple .35s ease-out forwards;
+  }
+  @keyframes ripple { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+
+  .controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .group { display: flex; gap: 8px; }
+
+  .typebar { display: flex; gap: 8px; align-items: center; }
+  #type {
+    flex: 1; min-width: 0; height: 52px; border-radius: 26px; border: 1px solid #2E3542; background: var(--panel);
+    color: var(--ink); font: inherit; font-size: 17px; padding: 0 20px; outline: none;
+  }
+  #type:focus { border-color: #5B63E6; }
+  #type::placeholder { color: var(--dim); }
+
+  #results {
+    flex: 1; min-height: 120px; overflow-y: auto; display: none; flex-direction: column; gap: 6px;
+    border-radius: 26px; background: var(--panel); padding: 10px;
+  }
+  body.searching #results { display: flex; }
+  body.searching #pad, body.searching .controls { display: none; }
+  .result-row { display: flex; align-items: center; gap: 6px; }
+  .result-row .play { flex: 0 0 auto; width: 44px; height: 44px; background: var(--panel-2); }
+  .result { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 16px; text-align: left; }
+  .result:active { background: var(--panel-2); }
+  .result b { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result span { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .results-note { margin: auto; color: var(--dim); font-size: 14px; text-align: center; padding: 20px; }
+  .results-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 6px 14px; font-size: 13px; color: var(--dim); }
+  #results-close { padding: 8px 14px; border-radius: 14px; background: var(--panel-2); color: var(--ink); font-size: 14px; }
+
+  #pair {
+    position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 32px; text-align: center;
+  }
+  #pair.show { display: flex; }
+  #pair h1 { margin: 0; font-size: 26px; }
+  #pair p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 320px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="status" id="status"></span>Deck TV</div>
+    <button class="round" id="home" aria-label="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>
+    </button>
+  </header>
+
+  <div id="apps" role="list"></div>
+
+  <div id="pad" aria-label="Touchpad">
+    <div class="hint">Drag to move<br>Tap to click · two-finger tap to right-click<br>Two fingers to scroll</div>
+  </div>
+
+  <div id="results" aria-label="Search results" aria-live="polite"></div>
+
+  <div class="controls">
+    <div class="group">
+      <button class="round" data-media="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M18 6v12L9 12zM6 6v12"/></svg></button>
+      <button class="round" data-media="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg></button>
+      <button class="round" data-media="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M6 6v12l9-6zM18 6v12"/></svg></button>
+    </div>
+    <div class="group">
+      <button class="round" data-vol="down" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5"/></svg></button>
+      <button class="round" data-vol="up" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5M18.5 9.5v5"/></svg></button>
+    </div>
+  </div>
+
+  <div class="typebar">
+    <input id="type" type="text" placeholder="Type on TV…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Type on TV">
+    <button class="round" id="backspace" aria-label="Backspace"><svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m12 9 6 6M18 9l-6 6"/></svg></button>
+    <button class="round" id="enter" aria-label="Enter"><svg viewBox="0 0 24 24"><path d="M20 5v7a3 3 0 0 1-3 3H5"/><path d="m9 11-4 4 4 4"/></svg></button>
+  </div>
+
+  <div id="pair">
+    <h1>Pair with Deck TV</h1>
+    <p>On the TV, open Deck TV and choose <b>Phone remote</b>, then scan the QR code with this phone's camera.</p>
+  </div>
+
+<script>
+/* ---------- pairing ---------- */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+if (location.hash.length > 1) {
+  store.set("deckTvToken", location.hash.slice(1));
+  history.replaceState(null, "", location.pathname);
+}
+const token = store.get("deckTvToken");
+const statusDot = document.getElementById("status");
+
+function needPairing() { document.getElementById("pair").classList.add("show"); }
+if (!token) needPairing();
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "X-Remote-Token": token || "", "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  if (res.status === 401) { needPairing(); throw new Error("unpaired"); }
+  statusDot.classList.add("on");
+  return res.json();
+}
+const fail = () => statusDot.classList.remove("on");
+
+/* Actions that must happen in order (typing) go through one queue */
+let chain = Promise.resolve();
+const queue = (path, body) => (chain = chain.then(() => api(path, body)).catch(fail));
+
+/* ---------- apps ---------- */
+const LINE_ICONS = {
+  film: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>',
+  gamepad: '<path d="M6 11h4M8 9v4"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7V14a4 4 0 0 0 7 2.6L10 15h4l1 1.6A4 4 0 0 0 22 14V9.7A4.7 4.7 0 0 0 17.3 5z"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  tv: '<rect x="2" y="4" width="20" height="14" rx="3"/><path d="M10 8.5v5l4-2.5zM8 21h8"/>',
+  octagon: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M9.5 15v-4.5a1.5 1.5 0 0 1 3 0V9.5a1.5 1.5 0 0 1 3 0V14a3 3 0 0 1-3 3h-1.5a1.5 1.5 0 0 1-1.5-1.5z"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>'
+};
+const appEls = {};
+let tiles = {};          // id -> tile config
+let frontApp = null;     // the app in front on the TV
+
+async function loadApps() {
+  const cfg = await api("/api/config");
+  tiles = Object.fromEntries(cfg.tiles.map(t => [t.id, t]));
+  const row = document.getElementById("apps");
+  // Every app, including those grouped under Live TV on the TV; the group tile itself isn't an app
+  for (const t of cfg.tiles.filter(t => !(t.choices || []).some(c => c.tile))) {
+    const b = document.createElement("button");
+    b.className = "app";
+    b.setAttribute("aria-label", t.name);
+    const ic = document.createElement("div");
+    ic.className = "ic";
+    ic.style.background = t.color;
+    if (t.appIcon) {
+      // Icons need the token header, so fetch them rather than using a plain src
+      fetch(`/appicon/${t.id}?v=${t.iconVersion}`, { headers: { "X-Remote-Token": token } })
+        .then(r => r.blob()).then(blob => { ic.innerHTML = `<img alt="" src="${URL.createObjectURL(blob)}">`; });
+    } else {
+      ic.innerHTML = `<svg viewBox="0 0 24 24">${LINE_ICONS[t.icon] || ""}</svg>`;
+    }
+    b.append(ic);
+    b.insertAdjacentHTML("beforeend", `<span class="lbl">${t.name}</span><span class="dot"></span>`);
+    b.onclick = () => { buzz(); endSearch(); api(`/api/launch/${t.id}`, {}).then(refresh).catch(fail); };
+    row.append(b);
+    appEls[t.id] = b;
+  }
+}
+
+async function refresh() {
+  if (document.hidden || !token || document.getElementById("pair").classList.contains("show")) return;
+  try {
+    const s = await api("/api/state");
+    for (const [id, el] of Object.entries(appEls)) el.classList.toggle("open", s.open.includes(id));
+    if (s.front !== frontApp) { frontApp = s.front; updateSearchBox(); }
+  } catch { fail(); }
+}
+
+const buzz = () => navigator.vibrate && navigator.vibrate(12);
+
+document.getElementById("home").onclick = () => { buzz(); endSearch(); api("/api/home", {}).then(refresh).catch(fail); };
+document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => { buzz(); api(`/api/media/${b.dataset.media}`, {}).catch(fail); });
+document.querySelectorAll("[data-vol]").forEach(b => b.onclick = () => { buzz(); api(`/api/volume/${b.dataset.vol}`, {}).catch(fail); });
+
+/* ---------- touchpad ---------- */
+const pad = document.getElementById("pad");
+const touches = new Map();     // pointerId -> {x, y}
+let gesture = null;            // {start, fingers, moved, maxFingers, scrollAcc}
+let pending = { dx: 0, dy: 0 };
+let sending = false;
+
+function flushMove() {
+  if (sending || (!pending.dx && !pending.dy)) return;
+  const { dx, dy } = pending;
+  pending = { dx: 0, dy: 0 };
+  sending = true;
+  api("/api/move", { dx: Math.round(dx), dy: Math.round(dy) })
+    .catch(fail)
+    .finally(() => { sending = false; flushMove(); });
+}
+
+function ripple(x, y) {
+  const r = pad.getBoundingClientRect();
+  const el = document.createElement("span");
+  el.className = "ripple";
+  el.style.left = (x - r.left) + "px";
+  el.style.top = (y - r.top) + "px";
+  pad.append(el);
+  setTimeout(() => el.remove(), 400);
+}
+
+pad.addEventListener("pointerdown", e => {
+  pad.setPointerCapture(e.pointerId);
+  pad.classList.add("used");
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!gesture) gesture = { start: performance.now(), moved: 0, maxFingers: 0, scrollAcc: 0, x: e.clientX, y: e.clientY };
+  gesture.maxFingers = Math.max(gesture.maxFingers, touches.size);
+});
+
+pad.addEventListener("pointermove", e => {
+  const prev = touches.get(e.pointerId);
+  if (!prev || !gesture) return;
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  gesture.moved += Math.hypot(dx, dy);
+
+  if (touches.size >= 2) {
+    // Two fingers: scroll, using the first finger's movement only
+    if (e.pointerId !== touches.keys().next().value) return;
+    gesture.scrollAcc += dy;
+    const steps = Math.trunc(gesture.scrollAcc / 28);
+    if (steps) {
+      gesture.scrollAcc -= steps * 28;
+      api("/api/scroll", { steps: -steps }).catch(fail);  // natural scrolling: drag up to scroll down
+    }
+    return;
+  }
+  // One finger: move with gentle acceleration
+  const speed = Math.hypot(dx, dy);
+  const gain = 1.5 + Math.min(speed / 7, 2.2);
+  pending.dx += dx * gain;
+  pending.dy += dy * gain;
+  flushMove();
+});
+
+function endTouch(e) {
+  if (!touches.has(e.pointerId)) return;
+  touches.delete(e.pointerId);
+  if (touches.size || !gesture) return;
+  const quick = performance.now() - gesture.start < 280;
+  if (quick && gesture.moved < 12) {
+    buzz();
+    ripple(gesture.x, gesture.y);
+    api("/api/click", { button: gesture.maxFingers >= 2 ? 3 : 1 }).catch(fail);
+  }
+  gesture = null;
+}
+pad.addEventListener("pointerup", endTouch);
+pad.addEventListener("pointercancel", endTouch);
+
+/* ---------- search / typing, depending on the app in front ---------- */
+// results: Movy, YouTube - the TV's search box mirrors this one and results list here
+// send:    Spotify - Enter opens Spotify's search on the TV
+// type:    anything else - letters are typed into whatever is focused on the TV
+const input = document.getElementById("type");
+const resultsEl = document.getElementById("results");
+let sent = "";
+let searchTimer = null;
+let searchSeq = 0;
+
+function mode() {
+  const kind = frontApp && tiles[frontApp] && tiles[frontApp].search;
+  return kind === "spotify" ? "send" : kind ? "results" : "type";
+}
+
+function updateSearchBox() {
+  const t = frontApp && tiles[frontApp];
+  const m = mode();
+  input.placeholder = !t ? "Type on TV…" : m === "type" ? `Type on ${t.name}…` : `Search ${t.name}`;
+  input.enterKeyHint = m === "type" ? "enter" : m === "send" ? "search" : "done";
+  if (document.activeElement !== input) { input.value = ""; sent = ""; }
+}
+
+function showNote(text) {
+  resultsEl.innerHTML = `<p class="results-note">${text}</p>`;
+}
+
+function showResults(list) {
+  if (!list.length) return showNote(input.value ? "No results yet" : "Start typing to search");
+  resultsEl.innerHTML = '<div class="results-head"><span>On the TV now</span><button id="results-close">Close</button></div>';
+  resultsEl.querySelector("#results-close").onclick = endSearch;
+  const canPlay = frontApp === "moxy";  // Movy results can open their page or play straight away
+  list.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "result-row";
+    const b = document.createElement("button");
+    b.className = "result";
+    b.innerHTML = "<b></b><span></span>";
+    b.querySelector("b").textContent = r.title;
+    b.querySelector("span").textContent = r.sub || "";
+    const open = play => () => {
+      buzz();
+      api("/api/search/open", { index: i, play }).catch(fail);
+      endSearch();
+    };
+    b.onclick = open(false);
+    row.append(b);
+    if (canPlay) {
+      const p = document.createElement("button");
+      p.className = "round play";
+      p.setAttribute("aria-label", `Play ${r.title}`);
+      p.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg>';
+      p.onclick = open(true);
+      row.append(p);
+    }
+    resultsEl.append(row);
+  });
+}
+
+input.addEventListener("focus", async () => {
+  if (mode() !== "results") return;
+  document.body.classList.add("searching");
+  showNote("Start typing to search");
+  // Start from whatever is already in the TV's search box
+  try {
+    const ctx = await api("/api/search");
+    if (ctx.mode === "results" && document.activeElement === input && !input.value) {
+      input.value = sent = ctx.text || "";
+      if (ctx.text) runSearch();
+    }
+  } catch { fail(); }
+});
+
+function endSearch() {
+  document.body.classList.remove("searching");
+  input.blur();
+}
+
+input.addEventListener("blur", () => {
+  // With results listed, keep them up (keyboard closed) so they're easy to scroll and pick
+  setTimeout(() => {
+    if (document.activeElement !== input && !resultsEl.querySelector(".result")) endSearch();
+  }, 250);
+});
+
+function runSearch() {
+  clearTimeout(searchTimer);
+  const seq = ++searchSeq;
+  searchTimer = setTimeout(() => {
+    api("/api/search", { text: input.value })
+      .then(r => { if (seq === searchSeq && r.results) showResults(r.results); })
+      .catch(fail);
+  }, frontApp === "youtube" ? 700 : 350);  // YouTube reloads its results page, so wait for a pause
+}
+
+input.addEventListener("input", () => {
+  const m = mode();
+  if (m === "results") { sent = input.value; return runSearch(); }
+  if (m === "send") { sent = input.value; return; }
+  // Letters are sent as you type. Comparing with what was sent last copes with autocorrect too.
+  const now = input.value;
+  let same = 0;
+  while (same < now.length && same < sent.length && now[same] === sent[same]) same++;
+  for (let i = sent.length; i > same; i--) queue("/api/key", { key: "BackSpace" });
+  if (now.length > same) queue("/api/type", { text: now.slice(same) });
+  sent = now;
+});
+
+function pressEnter() {
+  const m = mode();
+  if (m === "results") { input.blur(); return; }  // results are already up on the TV
+  if (m === "send") {
+    if (input.value) api("/api/search", { text: input.value }).catch(fail);
+    input.blur();
+  } else {
+    queue("/api/key", { key: "Return" });
+  }
+  input.value = "";
+  sent = "";
+}
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); pressEnter(); }
+});
+// Keep focus in the type box when tapping these, so the phone keyboard stays open
+for (const id of ["enter", "backspace"]) {
+  document.getElementById(id).addEventListener("pointerdown", e => e.preventDefault());
+  document.getElementById(id).addEventListener("mousedown", e => e.preventDefault());
+}
+document.getElementById("enter").onclick = () => { buzz(); pressEnter(); };
+document.getElementById("backspace").onclick = () => {
+  buzz();
+  if (input.value) {
+    input.value = input.value.slice(0, -1);
+    input.dispatchEvent(new Event("input"));
+  } else {
+    queue("/api/key", { key: "BackSpace" });
+  }
+};
+
+/* ---------- start ---------- */
+if (token) {
+  loadApps().then(refresh).catch(fail);
+  setInterval(refresh, 3000);
+  document.addEventListener("visibilitychange", refresh);
+}
+</script>
+</body>
+</html>

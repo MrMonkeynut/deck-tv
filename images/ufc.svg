@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5A2410"/><stop offset="1" stop-color="#1A0904"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="240" cy="262" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF5A2A" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#FF5A2A" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#FF5A2A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#bg)"/>
+  <rect width="480" height="640" fill="url(#halo)"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="378.6,319.4 297.4,400.6 182.6,400.6 101.4,319.4 101.4,204.6 182.6,123.4 297.4,123.4 378.6,204.6" stroke-opacity="0.18" stroke-width="3"/>
+    <polygon points="420.2,336.6 314.6,442.2 165.4,442.2 59.8,336.6 59.8,187.4 165.4,81.8 314.6,81.8 420.2,187.4" stroke-opacity="0.1" stroke-width="2.5"/>
+    <polygon points="466.4,355.8 333.8,488.4 146.2,488.4 13.6,355.8 13.6,168.2 146.2,35.6 333.8,35.6 466.4,168.2" stroke-opacity="0.06" stroke-width="2"/>
+    <path d="M378.6 319.4 L466.4 355.8" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M297.4 400.6 L333.8 488.4" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M182.6 400.6 L146.2 488.4" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M101.4 319.4 L13.6 355.8" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M101.4 204.6 L13.6 168.2" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M182.6 123.4 L146.2 35.6" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M297.4 123.4 L333.8 35.6" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M378.6 204.6 L466.4 168.2" stroke-opacity=".08" stroke-width="2"/>
+  </g>
+</svg>

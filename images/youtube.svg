@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A1B20"/><stop offset="1" stop-color="#160709"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="240" cy="262" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF3355" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#FF3355" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#FF3355" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#bg)"/>
+  <rect width="480" height="640" fill="url(#halo)"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="70" y="150" width="340" height="224" rx="34" stroke-opacity=".14" stroke-width="3"/>
+    <rect x="40" y="122" width="400" height="280" rx="46" stroke-opacity=".07" stroke-width="2"/>
+    <path d="M190 430 h100" stroke-opacity=".12" stroke-width="4"/>
+    <path d="M240 402 v28" stroke-opacity=".12" stroke-width="4"/>
+  </g>
+</svg>

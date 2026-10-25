@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# Deck TV installer: run it in Desktop Mode, from the unzipped deck-tv folder, in Konsole:
+#   bash install.sh
+# It asks two questions (your town, for the weather; and whether to open Deck TV at start-up).
+# Running it again updates Deck TV and keeps your settings.
+set -euo pipefail
+
+SRC="$(cd "$(dirname "$0")" && pwd)"
+DEST="$HOME/.local/share/deck-tv"
+BIN="$HOME/.local/bin"
+APPS="$HOME/.local/share/applications"
+ASK=1; [ -t 0 ] || ASK=0   # no questions when there's nobody to answer them
+
+say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+# ---------- checks ----------
+if [ -f /run/.containerenv ] || [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
+  echo "Run this in a normal Konsole window, not inside a distrobox container."; exit 1
+fi
+python3 -c 'import gi, dbus, cairo; gi.require_version("Gtk", "3.0")' 2>/dev/null || {
+  echo "Missing Python libraries (gi, dbus, cairo). On a Steam Deck these come with SteamOS;"
+  echo "is this Desktop Mode on SteamOS 3?"; exit 1; }
+for tool in xdotool xprop wpctl kwriteconfig6 flatpak curl; do
+  command -v "$tool" >/dev/null || { echo "Missing $tool (it normally comes with SteamOS)."; exit 1; }
+done
+
+# ---------- apps it needs (from Flathub, into your user account: no password) ----------
+need_app() {
+  flatpak info "$1" >/dev/null 2>&1 && return 0
+  say "Installing $2 (this can take a few minutes)…"
+  flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  flatpak install -y --user flathub "$1" || { echo "Couldn't install $2. Install it from Discover, then run this again."; exit 1; }
+}
+need_app com.google.Chrome "Google Chrome"
+need_app com.spotify.Client "Spotify"
+
+# ---------- files ----------
+say "Copying Deck TV…"
+mkdir -p "$DEST/images" "$DEST/icons" "$BIN" "$APPS"
+cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/dock.py" "$DEST/"
+cp "$SRC/icons/"*.png "$DEST/icons/"
+cp "$SRC/images/"* "$DEST/images/"
+cp "$SRC/uninstall.sh" "$DEST/"
+
+FIRST=1
+if [ -f "$DEST/tiles.json" ]; then
+  FIRST=0
+  # Updating: new tiles and commands, but keep the weather town you chose
+  cp "$DEST/tiles.json" "$DEST/tiles.json.bak"
+  python3 - "$SRC/tiles.json" "$DEST/tiles.json.bak" "$DEST/tiles.json" <<'PY'
+import json, sys
+new, old = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+if old.get("weather"):
+    new["weather"] = old["weather"]
+json.dump(new, open(sys.argv[3], "w"), indent=2)
+PY
+else
+  cp "$SRC/tiles.json" "$DEST/"
+fi
+
+# ---------- weather town ----------
+if [ "$FIRST" = 1 ] && [ "$ASK" = 1 ]; then
+  read -r -p "Town for the weather (press Enter for Wexford): " TOWN || TOWN=""
+  if [ -n "$TOWN" ]; then
+    python3 - "$DEST/tiles.json" "$TOWN" <<'PY' || echo "Couldn't look that town up; keeping Wexford. You can change it later in $HOME/.local/share/deck-tv/tiles.json"
+import json, sys, urllib.parse, urllib.request
+path, town = sys.argv[1], sys.argv[2]
+url = "https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + urllib.parse.quote(town)
+place = json.load(urllib.request.urlopen(url, timeout=10))["results"][0]
+cfg = json.load(open(path))
+cfg["weather"] = {"label": place["name"], "latitude": round(place["latitude"], 3), "longitude": round(place["longitude"], 3)}
+json.dump(cfg, open(path, "w"), indent=2)
+print(f"Weather set to {place['name']}, {place.get('admin1', '')} {place.get('country', '')}".strip())
+PY
+  fi
+fi
+
+# ---------- the Deck TV command and menu entry ----------
+cat > "$BIN/deck-tv" <<'EOF'
+#!/usr/bin/env bash
+DIR="$HOME/.local/share/deck-tv"
+PORT="${DECK_TV_PORT:-8765}"
+# The dock, restarted fresh each time (so Home also recovers a misbehaving dock)
+setsid python3 "$DIR/dock.py" --restart >/dev/null 2>&1 < /dev/null &
+# Already open: bring it to the front (this is what the Home shortcut runs)
+for w in $(xdotool search --class '^deck-tv$' 2>/dev/null); do
+  case "$(xprop -id "$w" WM_NAME 2>/dev/null)" in *'"Deck TV"'*) exec xdotool windowactivate "$w" ;; esac
+done
+if ! (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null; then
+  setsid python3 "$DIR/server.py" >/dev/null 2>&1 < /dev/null &
+  for _ in $(seq 25); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.2; done
+fi
+# Own profile + window class, so the taskbar groups it under the Deck TV icon, not Chrome
+exec flatpak run com.google.Chrome \
+  --user-data-dir="$HOME/.var/app/com.google.Chrome/deck-tv" --class=deck-tv \
+  --app="http://127.0.0.1:$PORT" --start-fullscreen \
+  --no-first-run --no-default-browser-check --disable-features=Translate
+EOF
+chmod +x "$BIN/deck-tv"
+
+cat > "$APPS/deck-tv.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Deck TV
+Comment=Big-screen launcher
+Exec=$BIN/deck-tv
+Icon=$DEST/icons/deck-tv.png
+StartupWMClass=deck-tv
+Categories=AudioVideo;
+EOF
+
+# Menu entries for the browser apps (Movy, YouTube, UFC), so each gets its own taskbar icon.
+# Skipped where you already have one for that app.
+python3 - "$DEST/tiles.json" "$APPS" <<'PY'
+import glob, json, os, re, sys
+cfg, apps = json.load(open(sys.argv[1])), sys.argv[2]
+home = os.path.expanduser("~")
+have = set()
+for f in glob.glob(os.path.join(apps, "*.desktop")):
+    if os.path.basename(f).startswith("deck-tv-"):
+        continue
+    m = re.search(r"^StartupWMClass=(.+)$", open(f, errors="replace").read(), re.M)
+    if m:
+        have.add(m.group(1).strip().lower())
+def quote(arg):
+    arg = arg.replace("=~/", f"={home}/")
+    return '"' + re.sub(r'(["`$\\])', r"\\\1", arg) + '"' if re.search(r'[\s"`$\\]', arg) else arg
+# Entries for tiles that have since been removed go too
+keep = {f"deck-tv-{t['id']}.desktop" for t in cfg["tiles"]}
+for f in glob.glob(os.path.join(apps, "deck-tv-*.desktop")):
+    if os.path.basename(f) not in keep:
+        os.remove(f)
+for t in cfg["tiles"]:
+    cmd, cls = t.get("command", []), t.get("window_class", "")
+    if cmd[:3] != ["flatpak", "run", "com.google.Chrome"] or not cls or cls.lower() in have:
+        continue
+    icon = next((os.path.expanduser(p) for p in t.get("app_icon", []) if os.path.isfile(os.path.expanduser(p))), "video-display")
+    with open(os.path.join(apps, f"deck-tv-{t['id']}.desktop"), "w") as f:
+        f.write(f"[Desktop Entry]\nType=Application\nName={t['name']}\nComment={t.get('sub', '')}\n"
+                f"Exec={' '.join(quote(a) for a in cmd)}\nIcon={icon}\nStartupWMClass={cls}\nCategories=AudioVideo;\n")
+PY
+
+# ---------- desktop settings ----------
+say "Setting up the Home shortcut and full-screen windows…"
+# Meta+H (the Super/Windows key + H on a keyboard) opens Deck TV or brings it back to the front
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv.desktop --key _launch "Meta+H"
+
+# Window rules: Deck TV and the apps it opens start full screen with no title bar
+RULES=$(kreadconfig6 --file kwinrulesrc --group General --key rules 2>/dev/null || true)
+# (every tile marked "fullscreen": true in tiles.json, so a new tile needs no change here)
+FULL=$(python3 -c 'import json, sys; print(" ".join(t["window_class"] for t in json.load(open(sys.argv[1]))["tiles"] if t.get("fullscreen") is True and t.get("window_class")))' "$DEST/tiles.json")
+for app in deck-tv $FULL; do
+  id="deck-tv-$app"
+  W() { kwriteconfig6 --file kwinrulesrc --group "$id" --key "$1" "$2"; }
+  W Description "Deck TV: $app full screen"
+  W wmclass "$app"; W wmclassmatch 1; W wmclasscomplete false
+  W fullscreen true; W fullscreenrule 3
+  W noborder true; W noborderrule 3
+  case ",$RULES," in *",$id,"*) ;; *) RULES="${RULES:+$RULES,}$id" ;; esac
+done
+# Rules for apps no longer in Deck TV are removed
+for id in $(echo "$RULES" | tr ',' '\n' | grep '^deck-tv-'); do
+  case " deck-tv $FULL " in *" ${id#deck-tv-} "*) continue ;; esac
+  for key in Description wmclass wmclassmatch wmclasscomplete fullscreen fullscreenrule noborder noborderrule; do
+    kwriteconfig6 --file kwinrulesrc --group "$id" --key "$key" --delete
+  done
+  RULES=$(echo "$RULES" | tr ',' '\n' | grep -vx "$id" | paste -sd, -)
+done
+kwriteconfig6 --file kwinrulesrc --group General --key rules "$RULES"
+kwriteconfig6 --file kwinrulesrc --group General --key count "$(echo "$RULES" | tr ',' '\n' | grep -c .)"
+qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
+kbuildsycoca6 >/dev/null 2>&1 || true
+
+# ---------- open at start-up? ----------
+AUTO=0
+[ -f "$HOME/.config/autostart/deck-tv.desktop" ] && AUTO=1
+if [ "$FIRST" = 1 ] && [ "$ASK" = 1 ]; then
+  read -r -p "Open Deck TV automatically whenever Desktop Mode starts? [Y/n] " A || A=""
+  case "$A" in [nN]*) AUTO=0 ;; *) AUTO=1 ;; esac
+fi
+if [ "$AUTO" = 1 ]; then
+  mkdir -p "$HOME/.config/autostart"
+  cp "$APPS/deck-tv.desktop" "$HOME/.config/autostart/"
+fi
+
+# ---------- (re)start ----------
+# An update replaces the running server and dock with the new versions
+pkill -f "$DEST/server.py" 2>/dev/null || true
+sleep 0.5
+if [ -n "${DECK_TV_NO_OPEN:-}" ]; then
+  say "Done!"
+else
+  say "Done! Opening Deck TV…"
+  setsid "$BIN/deck-tv" >/dev/null 2>&1 < /dev/null &
+fi
+echo "Next time, open it from the app menu (Deck TV), or press Meta+H."
+echo "To remove it: bash $DEST/uninstall.sh"

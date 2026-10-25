@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B3FB6"/><stop offset="1" stop-color="#15174A"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="240" cy="262" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9DA2FF" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#9DA2FF" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#9DA2FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#bg)"/>
+  <rect width="480" height="640" fill="url(#halo)"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="240" cy="262" r="130" stroke-opacity="0.100" stroke-width="2"/>
+    <circle cx="240" cy="262" r="175" stroke-opacity="0.082" stroke-width="2"/>
+    <circle cx="240" cy="262" r="225" stroke-opacity="0.064" stroke-width="2"/>
+    <rect x="18" y="18" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="18" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="72" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="72" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="126" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="126" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="180" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="180" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="234" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="234" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="288" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="288" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="342" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="342" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="396" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="396" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="450" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="450" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="504" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="504" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="558" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="558" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="18" y="612" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+    <rect x="440" y="612" width="22" height="30" rx="5" stroke-opacity=".10" stroke-width="2"/>
+  </g>
+</svg>
