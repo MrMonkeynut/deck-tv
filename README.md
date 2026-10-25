@@ -30,7 +30,8 @@ can take a few minutes), then opens Deck TV full screen.
 ## Using it
 
 - **Tiles**: click one to open that app full screen. Click again later to switch back to it.
-  **Live TV** and **UFC** ask which one you want first.
+  **Live TV** (RTÉ, Virgin Media, Plex) and **UFC** (Fights, Results) are groups: they ask which
+  app you want first. Make your own groups, or change these, in Settings (the gear button).
 - **The dock**: move the mouse to the very bottom edge of the screen and a glowing line appears.
   Click it to open the dock: Home (Deck TV), the apps you have open, and the volume on the left.
   - Scroll over the speaker to change the volume, or click it for a slider.

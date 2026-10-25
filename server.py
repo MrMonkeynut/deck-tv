@@ -381,7 +381,7 @@ def open_tiles(wins=None):
     """Ids of tiles whose window is currently open; a group tile (Live TV) counts as open when
     any of its apps is."""
     wins = wins or client_windows()
-    tiles = load_config()["tiles"]
+    tiles = all_tiles()
     found = [t["id"] for t in tiles if tile_windows(t, wins)]
     groups = [t["id"] for t in tiles if any(c.get("tile") in found for c in t.get("choices", []))]
     return found + groups
@@ -453,46 +453,157 @@ def public_tile(t):
 # Kept apart from tiles.json, so reinstalling Deck TV doesn't undo it.
 LAYOUT_FILE = Path.home() / ".config/deck-tv/layout.json"
 
+# The person's own groups ("folders" of apps, made in Settings) are cards too. Each has a name, one of
+# these looks (the card's colours; its art is images/group-<style>.svg) and the apps inside it.
+GROUP_STYLES = {
+    "violet": ("#2E1A5C", "#8B5CF6"), "ocean": ("#0B2A4A", "#38BDF8"), "forest": ("#10361F", "#34D399"),
+    "ember": ("#4A1A08", "#FB923C"), "rose": ("#4A0F2A", "#F472B6"), "gold": ("#3D2E08", "#FACC15"),
+    "slate": ("#1E2633", "#94A3B8"), "crimson": ("#4A0B12", "#EF4444"),
+}
+
 
 def load_layout():
     try:
         with open(LAYOUT_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        return {"order": [str(i) for i in data.get("order", [])], "off": [str(i) for i in data.get("off", [])]}
+        groups = [g for g in data.get("groups", []) if isinstance(g, dict) and g.get("id")]
+        layout = {"order": [str(i) for i in data.get("order", [])], "off": [str(i) for i in data.get("off", [])],
+                  "groups": groups, "seeded": [str(i) for i in data.get("seeded", [])]}
     except (OSError, ValueError, AttributeError):
-        return {"order": [], "off": []}
+        layout = {"order": [], "off": [], "groups": [], "seeded": []}
+    return with_starting_groups(layout)
+
+
+def with_starting_groups(layout):
+    """tiles.json's starting groups (Live TV, UFC) join the person's groups the first time they're
+    seen, each in the place (and on or off) of the card it replaces. One the person deletes stays
+    deleted: it's remembered as added."""
+    cfg = load_config()
+    new = [g for g in cfg.get("groups", []) if g["id"] not in layout["seeded"]]
+    if not new:
+        return layout
+    if not layout["order"]:
+        layout["order"] = [t["id"] for t in cfg["tiles"]]
+    taken = {a for g in layout["groups"] for a in g.get("apps", [])}
+    for g in new:
+        layout["seeded"].append(g["id"])
+        if any(x["id"] == g["id"] for x in layout["groups"]):
+            continue
+        layout["groups"].append({"id": g["id"], "name": g["name"], "style": g["style"],
+                                 "apps": [a for a in g["apps"] if a not in taken]})
+        old, order = g.get("replaces"), layout["order"]
+        if old in order:
+            order[order.index(old)] = g["id"]
+        else:  # where its first app is, or at the end
+            at = next((n for n, i in enumerate(order) if i in g["apps"]), len(order))
+            order.insert(at, g["id"])
+        if old in layout["off"]:
+            layout["off"][layout["off"].index(old)] = g["id"]
+    try:
+        write_layout(layout)
+    except OSError:
+        pass
+    return layout
+
+
+def write_layout(layout):
+    LAYOUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(layout, f, indent=2)
+
+
+def groupable(tile):
+    """Can this tile go in a group? Any app: not a group tile from tiles.json, nor an app tiles.json
+    keeps off the home screen."""
+    return "command" in tile and not tile.get("hidden") and not any(c.get("tile") for c in tile.get("choices", []))
+
+
+def clean_groups(groups, tiles):
+    """The groups from Settings, checked: known looks, real apps, each app in one group at most.
+    "icon" is the app whose look the group's card wears, or None for a folder of its apps."""
+    apps = {t["id"] for t in tiles if groupable(t)}
+    taken, out = set(), []
+    for g in groups:
+        if not isinstance(g, dict) or not re.fullmatch(r"g-[a-z0-9]{1,16}", str(g.get("id", ""))):
+            return None
+        name = str(g.get("name", "")).strip()[:24] or "Group"
+        style = g.get("style") if g.get("style") in GROUP_STYLES else "violet"
+        members = [a for a in g.get("apps", []) if a in apps and a not in taken]
+        taken |= set(members)
+        icon = g.get("icon") if g.get("icon") in members else None
+        out.append({"id": g["id"], "name": name, "style": style, "apps": members, "icon": icon})
+    return out
+
+
+def group_tiles(tiles, groups=None):
+    """The person's groups as tiles: each choice is one of the apps inside. An app switched off in
+    Settings stays in its group but is "hidden": left out of the group's picker and card."""
+    names = {t["id"]: t["name"] for t in tiles}
+    by_id = {t["id"]: t for t in tiles}
+    layout = load_layout()
+    off = set(layout["off"])
+    out = []
+    for g in clean_groups(layout["groups"] if groups is None else groups, tiles) or []:
+        color, accent = GROUP_STYLES[g["style"]]
+        apps = [a for a in g["apps"] if a in names]
+        shown = len([a for a in apps if a not in off])
+        look = {"color": color, "accent": accent, "image": f"group-{g['style']}.svg"}
+        if g["icon"]:  # the card wears one of its apps' looks: that app's art, colours and icon
+            app = by_id[g["icon"]]
+            look = {"color": app.get("color"), "accent": app.get("accent"), "image": app.get("image"), "iconApp": app["id"]}
+        out.append({"id": g["id"], "name": g["name"], "sub": f"{shown} app" + ("" if shown == 1 else "s"),
+                    "icon": "grid", **look, "userGroup": True, "style": g["style"],
+                    "choices": [{"id": a, "name": names[a], "tile": a, **({"hidden": True} if a in off else {})} for a in apps]})
+    return out
+
+
+def all_tiles():
+    """tiles.json's tiles and the person's groups."""
+    tiles = load_config()["tiles"]
+    return tiles + group_tiles(tiles)
 
 
 def save_layout(body):
-    """Store {"order": [ids], "off": [ids]} from the settings panel. Returns (body, status)."""
-    known = {t["id"] for t in load_config()["tiles"]}
+    """Store {"order": [ids], "off": [ids], "groups": [...]} from the settings panel ("groups" left
+    out keeps the groups as they are). Returns (body, status)."""
+    tiles = load_config()["tiles"]
+    layout = load_layout()
+    groups = body.get("groups", layout["groups"])
+    groups = clean_groups(groups, tiles) if isinstance(groups, list) else None
+    if groups is None:
+        return {"error": "bad groups"}, 400
+    known = {t["id"] for t in tiles} | {g["id"] for g in groups}
     order, off = body.get("order"), body.get("off")
     if not isinstance(order, list) or not isinstance(off, list) or not set(order + off) <= known:
         return {"error": "bad layout"}, 400
-    LAYOUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
-        json.dump({"order": order, "off": off}, f, indent=2)
+    write_layout({"order": order, "off": off, "groups": groups, "seeded": layout["seeded"]})
     return {"ok": True}, 200
 
 
 def laid_out(tiles):
     """Tiles in the person's order (new ones keep their tiles.json place at the end), each marked
-    "off" if switched off. A group's apps (Live TV's) go off with their group."""
+    "off" if switched off. A group's apps (Live TV's, or the person's own) go off with their group,
+    and the apps in the person's groups are kept off the home screen: they're in their group's card."""
     layout = load_layout()
     rank = {tid: n for n, tid in enumerate(layout["order"])}
     tiles = sorted(tiles, key=lambda t: rank.get(t["id"], len(rank)))
     off = set(layout["off"])
+    grouped = {c["tile"]: t["id"] for t in tiles if t.get("userGroup") for c in t["choices"]}
     for t in tiles:
         if t["id"] in off:
             off |= {c["tile"] for c in t.get("choices", []) if c.get("tile")}
-    return [{**t, "off": t["id"] in off} for t in tiles]
+    return [{**t, "off": t["id"] in off, **({"hidden": True, "inGroup": grouped[t["id"]]} if t["id"] in grouped else {})}
+            for t in tiles]
 
 
 def public_config():
     cfg = load_config()
+    tiles = [t for t in cfg["tiles"] if installed(t)]
     return {
         "weather": cfg.get("weather", {}),
-        "tiles": laid_out([public_tile(t) for t in cfg["tiles"] if installed(t)]),
+        "tiles": laid_out([public_tile(t) for t in tiles + group_tiles(tiles)]),
+        "groupStyles": {k: {"color": c, "accent": a} for k, (c, a) in GROUP_STYLES.items()},
+        "layoutOff": load_layout()["off"],  # what's switched off, as Settings saved it (apps inside groups too)
         "actions": [{k: v for k, v in a.items() if k != "command"} for a in cfg["actions"]],
     }
 
@@ -568,7 +679,7 @@ def launch_item(item_id, choice_id=None):
     """Switch to a tile's app if it's open, else start it. A tile with "choices" (UFC: Results or
     Fights) opens on the chosen page. Returns (body, status)."""
     cfg = load_config()
-    item = {i["id"]: i for i in cfg["tiles"] + cfg["actions"]}.get(item_id)
+    item = {i["id"]: i for i in all_tiles() + cfg["actions"]}.get(item_id)
     if not item:
         return {"error": "unknown"}, 404
     choice = None

@@ -105,8 +105,8 @@
       "accent": "#FF3355"
     },
     {
-      "id": "ufc",
-      "name": "UFC",
+      "id": "ufc-fights",
+      "name": "UFC Fights",
       "sub": "Fight night",
       "color": "#4A2A12",
       "icon": "octagon",
@@ -129,49 +129,33 @@
         "~/.local/share/deck-tv/icons/ufc.png"
       ],
       "accent": "#FF5A2A",
-      "devtools_port": 9224,
-      "choices": [
-        {
-          "id": "results",
-          "name": "Results",
-          "icon": "trophy",
-          "url": "https://www.google.com/search?q=UFC"
-        },
-        {
-          "id": "fights",
-          "name": "Fights",
-          "icon": "octagon",
-          "url": "https://watchwrestling.ae/ufc43/"
-        }
-      ]
+      "devtools_port": 9224
     },
     {
-      "id": "tv",
-      "name": "Live TV",
-      "sub": "Live and catch-up",
-      "color": "#1F2A44",
-      "accent": "#FF4D6D",
-      "icon": "tv",
-      "image": "tv.svg",
-      "app_icon": [
-        "~/.local/share/deck-tv/icons/tv.png"
+      "id": "ufc-results",
+      "name": "UFC Results",
+      "sub": "Latest results",
+      "color": "#4A2A12",
+      "accent": "#FF5A2A",
+      "icon": "trophy",
+      "image": "ufc.svg",
+      "window_class": "ufc-results",
+      "fullscreen": true,
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/ufc-results",
+        "--class=ufc-results",
+        "--remote-debugging-port=9239",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.google.com/search?q=UFC"
       ],
-      "choices": [
-        {
-          "id": "rte",
-          "name": "RT\u00c9 Player",
-          "tile": "rte"
-        },
-        {
-          "id": "virginmedia",
-          "name": "Virgin Media",
-          "tile": "virginmedia"
-        },
-        {
-          "id": "plex",
-          "name": "Plex",
-          "tile": "plex"
-        }
+      "devtools_port": 9239,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/ufc-results.svg"
       ]
     },
     {
@@ -199,8 +183,7 @@
       "fullscreen": true,
       "app_icon": [
         "~/.local/share/deck-tv/icons/rte.png"
-      ],
-      "hidden": true
+      ]
     },
     {
       "id": "virginmedia",
@@ -227,8 +210,7 @@
       "fullscreen": true,
       "app_icon": [
         "~/.local/share/deck-tv/icons/virginmedia.png"
-      ],
-      "hidden": true
+      ]
     },
     {
       "id": "plex",
@@ -255,8 +237,7 @@
       "fullscreen": true,
       "app_icon": [
         "~/.local/share/deck-tv/icons/plex.png"
-      ],
-      "hidden": true
+      ]
     },
     {
       "id": "whatsapp",
@@ -551,6 +532,29 @@
       "requires": [
         "~/.local/share/applications/claude-*.desktop"
       ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "g-livetv",
+      "name": "Live TV",
+      "style": "ocean",
+      "apps": [
+        "rte",
+        "virginmedia",
+        "plex"
+      ],
+      "replaces": "tv"
+    },
+    {
+      "id": "g-ufc",
+      "name": "UFC",
+      "style": "ember",
+      "apps": [
+        "ufc-fights",
+        "ufc-results"
+      ],
+      "replaces": "ufc"
     }
   ],
   "actions": [

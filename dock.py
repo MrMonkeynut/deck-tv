@@ -313,7 +313,7 @@ class Dock(Gtk.Window):
         self.switch_icons = {"home": ("Deck TV", big_home)}  # the Alt+Tab switcher's icons, larger
         self.apps = {}
         for t in cfg["tiles"]:
-            if any(c.get("tile") for c in t.get("choices", [])):
+            if t.get("userGroup") or any(c.get("tile") for c in t.get("choices", [])):
                 continue  # a group tile (Live TV) isn't an app; its apps have their own icons
             try:
                 data = api(f"/appicon/{t['id']}") if t.get("appIcon") else None

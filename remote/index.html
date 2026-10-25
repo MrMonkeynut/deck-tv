@@ -186,7 +186,7 @@ async function loadApps() {
   const row = document.getElementById("apps");
   // Every app, including those grouped under Live TV on the TV; the group tile itself isn't an app
   // ... less any switched off in the TV's Settings
-  for (const t of cfg.tiles.filter(t => !t.off && !(t.choices || []).some(c => c.tile))) {
+  for (const t of cfg.tiles.filter(t => !t.off && !t.userGroup && !(t.choices || []).some(c => c.tile))) {
     const b = document.createElement("button");
     b.className = "app";
     b.setAttribute("aria-label", t.name);
