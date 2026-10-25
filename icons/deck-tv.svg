@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <rect width="256" height="256" rx="56" fill="#3B3FB6"/>
-  <rect x="38" y="54" width="180" height="120" rx="16" fill="#6A6FF0" stroke="#fff" stroke-width="10"/>
-  <path d="M120 174h16v22h-16z" fill="#fff"/>
-  <rect x="84" y="194" width="88" height="12" rx="6" fill="#fff"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A2A4F"/><stop offset="1" stop-color="#1B0F1E"/></linearGradient><linearGradient id="scr" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#6B3E73"/><stop offset="1" stop-color="#241328"/></linearGradient><linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity=".04"/><stop offset=".46" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="hl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".10"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="256" height="256" rx="56" fill="url(#bg)"/><rect width="256" height="256" rx="56" fill="url(#hl)"/><path d="M116 172h24l10 20H106z" fill="#F3E6F2" fill-opacity="0.9"/><rect x="40" y="56" width="176" height="116" rx="14" fill="url(#scr)" stroke="#F3E6F2" stroke-width="6"/><rect x="43" y="59" width="170" height="110" rx="11" fill="url(#sheen)"/></svg>
