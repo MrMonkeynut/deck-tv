@@ -449,11 +449,50 @@ def public_tile(t):
             "iconVersion": int(icon.stat().st_mtime) if icon else 0}  # changes the icon's URL when the file changes
 
 
+# The person's own card layout, from Settings: the order of the cards and which are switched off.
+# Kept apart from tiles.json, so reinstalling Deck TV doesn't undo it.
+LAYOUT_FILE = Path.home() / ".config/deck-tv/layout.json"
+
+
+def load_layout():
+    try:
+        with open(LAYOUT_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return {"order": [str(i) for i in data.get("order", [])], "off": [str(i) for i in data.get("off", [])]}
+    except (OSError, ValueError, AttributeError):
+        return {"order": [], "off": []}
+
+
+def save_layout(body):
+    """Store {"order": [ids], "off": [ids]} from the settings panel. Returns (body, status)."""
+    known = {t["id"] for t in load_config()["tiles"]}
+    order, off = body.get("order"), body.get("off")
+    if not isinstance(order, list) or not isinstance(off, list) or not set(order + off) <= known:
+        return {"error": "bad layout"}, 400
+    LAYOUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
+        json.dump({"order": order, "off": off}, f, indent=2)
+    return {"ok": True}, 200
+
+
+def laid_out(tiles):
+    """Tiles in the person's order (new ones keep their tiles.json place at the end), each marked
+    "off" if switched off. A group's apps (Live TV's) go off with their group."""
+    layout = load_layout()
+    rank = {tid: n for n, tid in enumerate(layout["order"])}
+    tiles = sorted(tiles, key=lambda t: rank.get(t["id"], len(rank)))
+    off = set(layout["off"])
+    for t in tiles:
+        if t["id"] in off:
+            off |= {c["tile"] for c in t.get("choices", []) if c.get("tile")}
+    return [{**t, "off": t["id"] in off} for t in tiles]
+
+
 def public_config():
     cfg = load_config()
     return {
         "weather": cfg.get("weather", {}),
-        "tiles": [public_tile(t) for t in cfg["tiles"] if installed(t)],
+        "tiles": laid_out([public_tile(t) for t in cfg["tiles"] if installed(t)]),
         "actions": [{k: v for k, v in a.items() if k != "command"} for a in cfg["actions"]],
     }
 
@@ -756,6 +795,12 @@ class Handler(SimpleHTTPRequestHandler):
         parts = self.path.strip("/").split("/")
         if len(parts) in (3, 4) and parts[:2] == ["api", "launch"]:
             return self._json(*launch_item(*parts[2:]))
+        if self.path == "/api/layout":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            return self._json(*save_layout(body if isinstance(body, dict) else {}))
         if len(parts) == 3 and parts[:2] == ["api", "close"]:
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:

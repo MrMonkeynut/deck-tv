@@ -8,8 +8,6 @@ _Started 2026-10-25_
 
 - [ ] **Bug: Sleep button doesn't work**: Power → Sleep doesn't put the Deck to sleep (reported 2026-10-25)
 - [ ] **More cards**: add more card types to the home screen
-- [ ] **Card settings panel**: a settings panel with a toggle per card to enable/disable it
-- [ ] **Moveable cards**: let the user change the order of the cards
 - [ ] **Profiles**: support multiple user profiles
 
 ## Later / ideas
@@ -28,4 +26,6 @@ _Started 2026-10-25_
 - [x] **UFC card: choice menu**: clicking UFC asks which to open
   - **Results** → Google search for "UFC" (`https://www.google.com/search?q=UFC`), which shows latest results/standings
   - **Fights** → the current watchwrestling URL (keep as-is) _(done 2026-10-25)_
-- [x] **Player controls in the dock bar**: play/pause, next and previous in the dock, beside the volume control (as well as on the main page) _(done 2026-10-25)_
+- [x] **Player controls in the dock bar**: play/pause, next and previous in the dock, via a button left of the volume that pops up the controls _(done 2026-10-25)_
+- [x] **Card settings panel**: gear button on the home screen opens Cards: switch cards on/off (saved in `~/.config/deck-tv/layout.json`; the phone remote follows it) _(done 2026-10-25)_
+- [x] **Moveable cards**: Settings → Rearrange cards: drag the cards into place on the home screen (or A to pick up, ◀ ▶ to move with a controller), then Confirm or Cancel _(done 2026-10-25)_
