@@ -271,6 +271,24 @@
   .set-wide.primary { background: #3FA66B; color: #fff; }
   .set-wide.primary:hover, .set-wide.primary.focus { background: #4CBB7B; }
 
+  /* Settings: the screensaver's wait, changed with left/right (or a click) */
+  .set-saver { display: flex; align-items: center; gap: 12px; padding: 4px 4px 4px 14px; }
+  .set-saver .set-name { font-size: 19px; color: var(--muted); }
+  .set-saver .set-wide { min-width: 170px; justify-content: space-between; }
+  .set-saver .set-wide span { opacity: .55; font-size: 22px; }
+
+  /* Screensaver: a dark screen with the time drifting slowly about, so nothing stays lit in one place */
+  #saver { position: fixed; inset: 0; z-index: 50; background: #000; display: none; cursor: none; }
+  #saver.on { display: block; }
+  #saver-box { position: absolute; transition: opacity 1.6s ease; opacity: 0; color: #C9CFDA; }
+  #saver-box.show { opacity: .85; }
+  #saver-time { font-size: 13vmin; font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  #saver-date { font-size: 3.4vmin; color: #8E97A8; margin-top: 1.2vmin; }
+  #saver-weather { display: flex; align-items: center; gap: 1vmin; font-size: 3vmin; color: #8E97A8; margin-top: 2.4vmin; }
+  #saver-weather svg { width: 3.6vmin; height: 3.6vmin; }
+  #saver-np { font-size: 2.8vmin; color: #8E97A8; margin-top: 2.4vmin; max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #saver-np:empty, #saver-weather:empty { display: none; }
+
   /* Rearranging: the cards on the home screen are dragged into place, then confirmed */
   #arrange {
     position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 9; display: none; align-items: center; gap: 14px;
@@ -398,6 +416,11 @@
       <b>Cards</b>
       <div class="set-hint">Switch off the cards you don't use. To change their order, rearrange them on the home screen.</div>
       <div id="set-list"></div>
+      <div class="set-saver">
+        <span class="set-name">Screensaver</span>
+        <span style="flex:1"></span>
+        <button class="set-wide" id="set-saver" aria-label="Screensaver"></button>
+      </div>
       <div class="set-btns">
         <button class="set-wide" id="set-rearrange">Rearrange cards</button>
         <button class="set-wide" id="set-done">Done</button>
@@ -413,6 +436,15 @@
     </div>
   </div>
 
+</div>
+
+<div id="saver" aria-hidden="true">
+  <div id="saver-box">
+    <div id="saver-time"></div>
+    <div id="saver-date"></div>
+    <div id="saver-weather"></div>
+    <div id="saver-np"></div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1054,8 +1086,8 @@ function renderSettings(at = setAt) {
   }));
   setFocusAt(at);
 }
-/* Focus runs down the switches, then Rearrange and Done side by side */
-const setControls = () => [...document.querySelectorAll("#set-list .set-btn"),
+/* Focus runs down the switches, the screensaver, then Rearrange and Done side by side */
+const setControls = () => [...document.querySelectorAll("#set-list .set-btn"), document.getElementById("set-saver"),
   document.getElementById("set-rearrange"), document.getElementById("set-done")];
 function setFocusAt(i) {
   const all = setControls();
@@ -1065,11 +1097,12 @@ function setFocusAt(i) {
   if (!document.body.classList.contains("mouse")) all[setAt].scrollIntoView({ block: "nearest" });
 }
 function settingsInput(cmd) {
-  const n = setCards.length;  // switches 0..n-1, then Rearrange (n) and Done (n + 1)
-  if (cmd === "up") setFocusAt(setAt >= n ? n - 1 : setAt - 1);
-  if (cmd === "down" && setAt < n) setFocusAt(setAt + 1);
-  if (cmd === "left" && setAt === n + 1) setFocusAt(n);
-  if (cmd === "right" && setAt === n) setFocusAt(n + 1);
+  const n = setCards.length;  // switches 0..n-1, the screensaver (n), then Rearrange (n + 1) and Done (n + 2)
+  if (cmd === "up") setFocusAt(setAt > n ? n : setAt - 1);
+  if (cmd === "down" && setAt <= n) setFocusAt(setAt + 1);
+  if ((cmd === "left" || cmd === "right") && setAt === n) return stepSaver(cmd === "left" ? -1 : 1);
+  if (cmd === "left" && setAt === n + 2) setFocusAt(n + 1);
+  if (cmd === "right" && setAt === n + 1) setFocusAt(n + 2);
   if (cmd === "ok") setControls()[setAt].click();
   if (cmd === "back") closeSettings();
 }
@@ -1098,8 +1131,9 @@ document.getElementById("set-rearrange").onclick = () => {
   location.reload();
 };
 document.getElementById("set-done").onclick = closeSettings;
-document.getElementById("set-rearrange").onmouseenter = () => setFocusAt(setCards.length);
-document.getElementById("set-done").onmouseenter = () => setFocusAt(setCards.length + 1);
+document.getElementById("set-saver").onmouseenter = () => setFocusAt(setCards.length);
+document.getElementById("set-rearrange").onmouseenter = () => setFocusAt(setCards.length + 1);
+document.getElementById("set-done").onmouseenter = () => setFocusAt(setCards.length + 2);
 document.getElementById("settings").onclick = e => { if (e.target.id === "settings") closeSettings(); };
 
 /* ---------- rearranging the cards, right on the home screen ----------
@@ -1222,6 +1256,102 @@ addEventListener("pointerup", () => {
 document.getElementById("arr-cancel").onclick = cancelArrange;
 document.getElementById("arr-ok").onclick = confirmArrange;
 
+/* ---------- screensaver ----------
+   After a while with no input while Deck TV is on screen, the screen goes dark apart from the time,
+   which fades to a new spot every 20 seconds so nothing stays lit in one place. Any key, button,
+   click or real mouse movement wakes it, and that press does nothing else. Never over another app. */
+const SAVER_STEPS = [0, 2, 5, 10, 15, 30];  // minutes; 0 is off
+let saverMins = SAVER_STEPS.includes(Number(store.get("deckTvSaver") ?? 5)) ? Number(store.get("deckTvSaver") ?? 5) : 5;
+let saverOn = false, idleSince = Date.now(), saverTimers = [], saverPoint = null, swallowClick = false;
+
+function showSaverSetting() {
+  document.getElementById("set-saver").innerHTML =
+    `<span aria-hidden="true">‹</span>${saverMins ? `After ${saverMins} min` : "Off"}<span aria-hidden="true">›</span>`;
+}
+function setSaver(mins) {
+  saverMins = mins;
+  store.set("deckTvSaver", mins);
+  idleSince = Date.now();
+  showSaverSetting();
+}
+function stepSaver(d) {
+  const i = SAVER_STEPS.indexOf(saverMins);
+  setSaver(SAVER_STEPS[Math.max(0, Math.min(SAVER_STEPS.length - 1, i + d))]);
+}
+// A click goes round: Off, 2, 5 ... 30, Off
+document.getElementById("set-saver").onclick = () =>
+  setSaver(SAVER_STEPS[(SAVER_STEPS.indexOf(saverMins) + 1) % SAVER_STEPS.length]);
+showSaverSetting();
+
+setInterval(() => {
+  // Only while Deck TV itself is in front; coming back to it starts the wait again
+  if (!document.hasFocus() || document.hidden) return void (idleSince = Date.now());
+  const busy = settingsOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer;
+  if (!saverOn && saverMins && !busy && Date.now() - idleSince > saverMins * 60000) startSaver();
+}, 5000);
+
+function startSaver() {
+  saverOn = true;
+  saverPoint = null;
+  hideCtx();
+  document.getElementById("saver").classList.add("on");
+  driftSaver();
+  saverTimers = [setInterval(fillSaver, 1000), setInterval(driftSaver, 20000)];
+}
+function fillSaver() {
+  document.getElementById("saver-time").textContent = document.getElementById("time").textContent;
+  document.getElementById("saver-date").textContent = document.getElementById("date").textContent;
+  document.getElementById("saver-weather").innerHTML = document.getElementById("weather").innerHTML;
+  document.getElementById("saver-np").textContent =
+    np && np.playing ? `♪ ${np.title}${np.sub ? " · " + np.sub : ""}` : "";
+}
+function driftSaver() {
+  const box = document.getElementById("saver-box");
+  const first = !box.style.left;
+  box.classList.remove("show");
+  setTimeout(() => {  // fade out, move somewhere new, fade back in
+    if (!saverOn) return;
+    fillSaver();
+    box.style.left = Math.random() * Math.max(0, innerWidth - box.offsetWidth) + "px";
+    box.style.top = Math.random() * Math.max(0, innerHeight - box.offsetHeight) + "px";
+    box.classList.add("show");
+  }, first ? 0 : 1600);
+}
+function wakeSaver() {
+  saverOn = false;
+  saverTimers.forEach(clearInterval);
+  document.getElementById("saver").classList.remove("on");
+  const box = document.getElementById("saver-box");
+  box.classList.remove("show");
+  box.style.left = "";
+  idleSince = Date.now();
+}
+
+/* Anything the person does counts as activity; while the screensaver is up it only wakes it.
+   These listen first (capture), so the waking press never reaches a tile or a menu. */
+const swallow = e => { e.preventDefault(); e.stopImmediatePropagation(); };
+addEventListener("keydown", e => {
+  idleSince = Date.now();
+  if (saverOn) { swallow(e); wakeSaver(); }
+}, true);
+for (const type of ["pointerdown", "wheel"]) {
+  addEventListener(type, e => {
+    idleSince = Date.now();
+    if (!saverOn) return;
+    swallow(e);
+    wakeSaver();
+    swallowClick = true;  // ... and the click that follows the press
+    setTimeout(() => { swallowClick = false; }, 800);
+  }, { capture: true, passive: false });
+}
+addEventListener("click", e => { if (swallowClick) { swallowClick = false; swallow(e); } }, true);
+addEventListener("pointermove", e => {
+  if (!saverOn) return void (idleSince = Date.now());
+  // A mouse resting on a table can twitch a pixel or two: only a real move wakes the screen
+  if (!saverPoint) saverPoint = [e.screenX, e.screenY];
+  else if (Math.hypot(e.screenX - saverPoint[0], e.screenY - saverPoint[1]) > 12) wakeSaver();
+}, true);
+
 /* ---------- countdown before sleep, restart or power off ----------
    The mouse's receiver can wake the Deck, so suspending the instant Sleep is clicked gets undone
    by the hand still on the mouse. Count down first, with time to let go (or change your mind). */
@@ -1263,6 +1393,8 @@ showPairing();
 
 /* ---------- input ---------- */
 function input(cmd) {
+  if (saverOn) return wakeSaver();  // the press that wakes the screen does nothing else
+  idleSince = Date.now();
   document.body.classList.remove("mouse");
   if (sleepTimer) return cancelSleep();
   if (forecastOpen) return closeForecast();

@@ -18,7 +18,6 @@ _Started 2026-10-25_
 - [ ] **Mobile app refinement**: polish and improve the mobile app
 - [ ] **Gamepad navigation**: navigate DeckTV fully with the D-pad/sticks and buttons
 - [ ] **Real-time interface scaling**: adjust UI scale on the fly without restarting
-- [ ] **Screensaver**: show a screensaver / ambient mode when idle
 - [ ] **Wi-Fi status & controls**: show connection status and manage Wi-Fi from DeckTV
 
 ## Done
@@ -29,3 +28,4 @@ _Started 2026-10-25_
 - [x] **Player controls in the dock bar**: play/pause, next and previous in the dock, via a button left of the volume that pops up the controls _(done 2026-10-25)_
 - [x] **Card settings panel**: gear button on the home screen opens Cards: switch cards on/off (saved in `~/.config/deck-tv/layout.json`; the phone remote follows it) _(done 2026-10-25)_
 - [x] **Moveable cards**: Settings → Rearrange cards: drag the cards into place on the home screen (or A to pick up, ◀ ▶ to move with a controller), then Confirm or Cancel _(done 2026-10-25)_
+- [x] **Screensaver**: after a set time with no input on the home screen, a dark screen with the time, date, weather and what's playing, drifting every 20 s to avoid burn-in; any input wakes it without doing anything else. Settings → Screensaver: Off / 2 / 5 (default) / 10 / 15 / 30 min. Never shows over another app _(done 2026-10-25)_
