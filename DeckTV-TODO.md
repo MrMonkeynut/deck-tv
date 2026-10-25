@@ -28,3 +28,4 @@ _Started 2026-10-25_
 - [x] **UFC card: choice menu**: clicking UFC asks which to open
   - **Results** → Google search for "UFC" (`https://www.google.com/search?q=UFC`), which shows latest results/standings
   - **Fights** → the current watchwrestling URL (keep as-is) _(done 2026-10-25)_
+- [x] **Player controls in the dock bar**: play/pause, next and previous in the dock, beside the volume control (as well as on the main page) _(done 2026-10-25)_

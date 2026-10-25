@@ -7,7 +7,10 @@ Dock:    Home plus every Deck TV tile; a short line under an icon means that app
          The chevron hides it again, and so does picking an app or clicking anywhere else.
          Only apps that are open are shown (Home is always there), so it stays short.
          Right-click an app for a small menu that closes it.
+Alt+Tab: Deck TV's own switcher between Home and the open apps (see switch()), drawn by this
+         process; the deck-tv-switch command (bound to Alt+Tab) pokes it with a signal.
          The speaker on the left sets the volume: click for a slider, or scroll over it.
+         Left of it, the player button pops up previous / play-pause / next.
 """
 import fcntl
 import json
@@ -33,6 +36,7 @@ ICON = 52
 STRIP = 3          # height of the invisible hover strip
 HINT_W, HINT_H = 420, 90   # click target around the glowing line
 MARGIN = 14        # gap between the dock and the bottom edge
+SWITCH_ICON = 88   # icon size in the Alt+Tab switcher
 DOCK_AWAY = 5      # seconds an open dock stays once the pointer leaves it
 DOCK_IDLE = 15     # ... or sits with the pointer still on it, untouched
 HOME_ICON = os.path.expanduser("~/.local/share/deck-tv/icons/deck-tv.png")
@@ -81,6 +85,13 @@ window { background: transparent; }
 }
 .menu button:hover { background: rgba(255, 90, 90, 0.22); }
 .menu label.note { color: rgba(242, 244, 248, 0.55); font-size: 15px; padding: 8px 16px; }
+.switcher {
+  background: rgba(20, 24, 31, 0.95); border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 30px; padding: 22px;
+}
+.switch-item { padding: 16px 18px 12px; border-radius: 22px; }
+.switch-item.sel { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 3px #ffffff; }
+.switch-item label { color: #F2F4F8; font-size: 17px; }
 .vol { color: #DDE2EB; padding: 6px 10px; border-radius: 16px; }
 .vol:hover { background: rgba(255, 255, 255, 0.09); }
 .menu.volume { padding: 10px 16px 10px 8px; }
@@ -130,6 +141,20 @@ class GrabProbe:
         self.x = x
         self.dpy = x.XOpenDisplay(None)
         self.root = x.XDefaultRootWindow(self.dpy)
+        x.XStringToKeysym.restype = ctypes.c_ulong
+        x.XKeysymToKeycode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+        x.XQueryKeymap.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        code = lambda name: x.XKeysymToKeycode(self.dpy, x.XStringToKeysym(name.encode())) if self.dpy else 0
+        self.alt_keys = [c for c in (code("Alt_L"), code("Alt_R")) if c]
+        self.esc_key = code("Escape")
+
+    def keys_down(self, codes):
+        """Is any of these keys held right now? (Reads the keyboard's state without taking it over.)"""
+        if not self.dpy:
+            return False
+        keys = ctypes.create_string_buffer(32)
+        self.x.XQueryKeymap(self.dpy, keys)
+        return any(keys.raw[c // 8] >> (c % 8) & 1 for c in codes)
 
     def held(self):
         if not self.dpy:
@@ -147,9 +172,9 @@ def api(path, method="GET", timeout=4):
         return r.read()
 
 
-def pixbuf_from(data):
+def pixbuf_from(data, size=ICON):
     loader = GdkPixbuf.PixbufLoader()
-    loader.connect("size-prepared", lambda l, w, h: l.set_size(ICON, ICON))
+    loader.connect("size-prepared", lambda l, w, h: l.set_size(size, size))
     loader.write(data)
     loader.close()
     return loader.get_pixbuf()
@@ -189,6 +214,7 @@ class Dock(Gtk.Window):
         self.menu = None              # the right-click menu or volume slider, while it's showing
         self.volume = None            # last known {"level", "muted"}
         self.vol_pending = None       # slider value waiting to be sent
+        self.playing = False          # whether the card's player is playing (play/pause icon)
 
         # Press and slide sideways to move the line or dock; a press that doesn't move stays a click
         self.drag = Gtk.GestureDrag.new(self)
@@ -207,6 +233,10 @@ class Dock(Gtk.Window):
         GLib.timeout_add(1000, self.keep_on_top)
         self.was_down = False
         GLib.timeout_add(40, self.watch_clicks)  # quick enough to catch a short click
+        # Alt+Tab and Alt+Shift+Tab arrive as signals from the deck-tv-switch command
+        self.switcher = None
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGUSR1, lambda: self.switch(1) or True)
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGUSR2, lambda: self.switch(-1) or True)
         GLib.timeout_add(2000, self.poll_state)
 
     # ---------- widgets ----------
@@ -246,6 +276,16 @@ class Dock(Gtk.Window):
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         bar.get_style_context().add_class("dock")
 
+        # Player controls, left of the volume: click for previous / play-pause / next
+        player = Gtk.Button()
+        player.add(Gtk.Image.new_from_icon_name("media-playlist-play-symbolic", Gtk.IconSize.DND))
+        player.set_relief(Gtk.ReliefStyle.NONE)
+        player.get_style_context().add_class("vol")
+        player.set_tooltip_text("Player controls")
+        player.set_valign(Gtk.Align.CENTER)
+        player.connect("clicked", lambda b: self.hide_menu() if self.menu else self.show_player(b))
+        bar.pack_start(player, False, False, 0)
+
         # Volume, always within reach: click for a slider, scroll to nudge it
         self.vol_img = Gtk.Image.new_from_icon_name("audio-volume-high-symbolic", Gtk.IconSize.DND)
         vol = Gtk.Button()
@@ -258,23 +298,31 @@ class Dock(Gtk.Window):
         vol.connect("clicked", lambda b: self.hide_menu() if self.menu else self.show_volume(b))
         vol.connect("scroll-event", self.on_volume_scroll)
         bar.pack_start(vol, False, False, 0)
+
         sep = Gtk.Box()
         sep.get_style_context().add_class("sep")
         bar.pack_start(sep, False, False, 0)
 
         try:
             home = GdkPixbuf.Pixbuf.new_from_file_at_size(HOME_ICON, ICON, ICON)
+            big_home = GdkPixbuf.Pixbuf.new_from_file_at_size(HOME_ICON, SWITCH_ICON, SWITCH_ICON)
         except GLib.Error:
             home = Gtk.IconTheme.get_default().load_icon("video-television", ICON, 0)
+            big_home = Gtk.IconTheme.get_default().load_icon("video-television", SWITCH_ICON, 0)
         bar.pack_start(self.item("home", "Deck TV", home, self.go_home), False, False, 0)
+        self.switch_icons = {"home": ("Deck TV", big_home)}  # the Alt+Tab switcher's icons, larger
         self.apps = {}
         for t in cfg["tiles"]:
             if any(c.get("tile") for c in t.get("choices", [])):
                 continue  # a group tile (Live TV) isn't an app; its apps have their own icons
             try:
-                pix = pixbuf_from(api(f"/appicon/{t['id']}")) if t.get("appIcon") else fallback_icon(t)
+                data = api(f"/appicon/{t['id']}") if t.get("appIcon") else None
+                pix = pixbuf_from(data) if data else fallback_icon(t)
+                big = pixbuf_from(data, SWITCH_ICON) if data else pix.scale_simple(SWITCH_ICON, SWITCH_ICON, GdkPixbuf.InterpType.BILINEAR)
             except Exception:
                 pix = fallback_icon(t)
+                big = pix.scale_simple(SWITCH_ICON, SWITCH_ICON, GdkPixbuf.InterpType.BILINEAR)
+            self.switch_icons[t["id"]] = (t["name"], big)
             btn = self.item(t["id"], t["name"], pix, lambda tid=t["id"]: self.launch(tid))
             btn.connect("button-press-event", lambda b, e, tile=t: e.button == 3 and self.show_menu(tile, b))
             btn.set_no_show_all(True)  # shown only while the app is open
@@ -391,6 +439,73 @@ class Dock(Gtk.Window):
             self.limit_clicks_to(self.get_child())
             if self.state == "hint":
                 self.leave_after(1500)  # the drag cancelled the fade; start it again
+
+    # ---------- Alt+Tab switcher ----------
+    # Home plus every open app, most recently used first, like the usual switcher. Each Alt+Tab
+    # moves along one; letting go of Alt switches to the highlighted one, Escape cancels.
+    def switch(self, step):
+        if self.switcher is None:
+            try:
+                state = json.loads(api("/api/state", timeout=1))
+            except Exception:
+                return
+            open_ids = set(state.get("open", [])) | {"home"}
+            order = [k for k in state.get("recent", []) if k in open_ids and k in self.switch_icons]
+            order += [k for k in self.switch_icons if k in open_ids and k not in order]
+            if not order:
+                return
+            self.show_switcher(order)
+            self.switch_at = (1 if step > 0 else -1) % len(order) if len(order) > 1 else 0
+            GLib.timeout_add(30, self.watch_alt)
+        else:
+            self.switch_at = (self.switch_at + step) % len(self.switch_order)
+        for n, box in enumerate(self.switch_boxes):
+            (box.get_style_context().add_class if n == self.switch_at else box.get_style_context().remove_class)("sel")
+
+    def show_switcher(self, order):
+        win = Gtk.Window(type=Gtk.WindowType.POPUP)
+        visual = win.get_screen().get_rgba_visual()
+        if visual:
+            win.set_visual(visual)
+        win.set_app_paintable(True)
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        row.get_style_context().add_class("switcher")
+        self.switch_boxes = []
+        for key in order:
+            name, pix = self.switch_icons[key]
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            col.get_style_context().add_class("switch-item")
+            col.pack_start(Gtk.Image.new_from_pixbuf(pix), False, False, 0)
+            label = Gtk.Label.new(name)
+            label.set_max_width_chars(12)
+            label.set_ellipsize(3)  # end
+            col.pack_start(label, False, False, 0)
+            row.pack_start(col, False, False, 0)
+            self.switch_boxes.append(col)
+        win.add(row)
+        win.show_all()
+        _, nat = row.get_preferred_size()
+        a = self.area
+        win.move(a.x + (a.width - nat.width) // 2, a.y + (a.height - nat.height) // 2)
+        self.switcher, self.switch_order = win, order
+
+    def watch_alt(self):
+        if self.switcher is None:
+            return False
+        if self.probe.keys_down([self.probe.esc_key]):
+            self.close_switcher()
+            return False
+        if self.probe.keys_down(self.probe.alt_keys):
+            return True  # still choosing
+        key = self.switch_order[self.switch_at]
+        self.close_switcher()
+        self.in_background(lambda: api("/api/home" if key == "home" else f"/api/launch/{key}", "POST"))
+        return False
+
+    def close_switcher(self):
+        if self.switcher is not None:
+            self.switcher.destroy()
+            self.switcher = None
 
     # ---------- right-click menu ----------
     # A window of its own rather than a Gtk.Menu: menus grab the mouse, and a grab is exactly what
@@ -517,6 +632,7 @@ class Dock(Gtk.Window):
 
     def show_hidden(self):
         self.hide_menu()
+        self.hidden_at = time.monotonic()
         self.state = "hidden"
         self.cancel_leave()
         self.place(self.strip, self.area.width, STRIP)
@@ -576,6 +692,36 @@ class Dock(Gtk.Window):
         self.request(self.show_hidden)
         self.in_background(lambda: api(f"/api/launch/{tile_id}", "POST"))
 
+    def show_player(self, btn):
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        for action, icon, tip in (("prev", "media-skip-backward-symbolic", "Previous"),
+                                  ("play", "media-playback-start-symbolic", "Play/pause"),
+                                  ("next", "media-skip-forward-symbolic", "Next")):
+            img = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.LARGE_TOOLBAR)
+            b = Gtk.Button()
+            b.add(img)
+            b.set_relief(Gtk.ReliefStyle.NONE)
+            b.get_style_context().add_class("mute")
+            b.set_tooltip_text(tip)
+            b.connect("clicked", lambda _b, a=action: self.media(a))
+            box.pack_start(b, False, False, 0)
+            if action == "play":
+                self.play_img = img
+        self.show_popup(box, btn)
+        self.show_playing(self.playing)
+
+    def media(self, action):
+        if action == "play":  # answer the click at once; the next poll corrects it if need be
+            self.show_playing(not self.playing)
+        self.in_background(lambda: api(f"/api/media/{action}", "POST"))
+
+    def show_playing(self, playing):
+        self.playing = playing
+        img = getattr(self, "play_img", None)
+        if self.menu and img and img.get_toplevel() is self.menu:  # only while the controls are showing
+            icon = "media-playback-pause-symbolic" if playing else "media-playback-start-symbolic"
+            img.set_from_icon_name(icon, Gtk.IconSize.LARGE_TOOLBAR)
+
     def go_home(self):
         self.hide_menu()
         self.request(self.show_hidden)
@@ -597,6 +743,7 @@ class Dock(Gtk.Window):
             return False
         open_ids = set(state.get("open", [])) | ({"home"} if state.get("home") else set())
         self.open_ids = open_ids
+        self.show_playing(bool((state.get("media") or {}).get("playing")))
         for key, dot in self.dots.items():
             ctx = dot.get_style_context()
             (ctx.add_class if key in open_ids else ctx.remove_class)("open")
@@ -659,6 +806,16 @@ class Dock(Gtk.Window):
             print("dock check failed:", repr(e), file=sys.stderr)
         return True
 
+    def mouse_held(self):
+        """Is something holding the mouse? Asking X means grabbing it for an instant, and every app
+        sees that as the mouse leaving and coming back: enough to keep Spotify's or a video
+        player's controls on screen. So X is only asked while the dock is in use (or just after),
+        the only time the dock could be the one holding it; otherwise GTK says whether it is."""
+        if self.state != "hidden" or self.menu is not None or time.monotonic() - self.hidden_at < 10:
+            return self.probe.held()
+        display = self.get_display()
+        return display.device_is_grabbed(display.get_default_seat().get_pointer())
+
     def check(self):
         win = self.get_window()
         if not win:
@@ -666,17 +823,19 @@ class Dock(Gtk.Window):
         win.raise_()
         if self.menu:
             self.menu.get_window().raise_()
+        if self.switcher is not None:
+            self.switcher.get_window().raise_()
         if self.buttons_down():
             # A press can legitimately hold the mouse; only a very long one (or a button X thinks is
             # stuck down) counts, and then only towards a restart
-            self.held_pressed = self.held_pressed + 1 if self.probe.held() else 0
+            self.held_pressed = self.held_pressed + 1 if self.mouse_held() else 0
             if self.held_pressed >= 8:
                 self.restart()
             return True
         self.held_pressed = 0
         # Never keep hold of the mouse once no button is pressed
         self.release_mouse()
-        if self.probe.held():
+        if self.mouse_held():
             self.grab_seconds += 1
             if self.grab_seconds == 2:
                 self.show_hidden()

@@ -140,10 +140,44 @@ for t in cfg["tiles"]:
                 f"Exec={' '.join(quote(a) for a in cmd)}\nIcon={icon}\nStartupWMClass={cls}\nCategories=AudioVideo;\n")
 PY
 
+# Alt+Tab: Deck TV's own switcher, drawn by the dock. If the dock isn't running, this hands
+# over to KDE's usual switcher, so Alt+Tab never goes dead.
+cat > "$BIN/deck-tv-switch" <<'EOS'
+#!/usr/bin/env bash
+SIG=USR1; NAME="Walk Through Windows"
+[ "${1:-}" = back ] && SIG=USR2 && NAME="Walk Through Windows (Reverse)"
+PID=$(cat "$HOME/.cache/deck-tv-dock.lock" 2>/dev/null)
+if [ -n "$PID" ] && grep -q dock.py "/proc/$PID/cmdline" 2>/dev/null; then
+  exec kill -"$SIG" "$PID"
+fi
+exec qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "$NAME"
+EOS
+chmod +x "$BIN/deck-tv-switch"
+cat > "$APPS/deck-tv-switch.desktop" <<EOS
+[Desktop Entry]
+Type=Application
+Name=Deck TV switcher
+Exec=$BIN/deck-tv-switch
+NoDisplay=true
+StartupNotify=false
+Actions=back;
+
+[Desktop Action back]
+Name=Previous app
+Exec=$BIN/deck-tv-switch back
+EOS
+
 # ---------- desktop settings ----------
 say "Setting up the Home shortcut and full-screen windows…"
 # Meta+H (the Super/Windows key + H on a keyboard) opens Deck TV or brings it back to the front
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv.desktop --key _launch "Meta+H"
+# Alt+Tab / Alt+Shift+Tab go to Deck TV's switcher instead of KWin's (uninstall.sh puts them back)
+kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows" "none,Alt+Tab,Walk Through Windows"
+kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows (Reverse)" "none,Alt+Shift+Tab,Walk Through Windows (Reverse)"
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key _launch "Alt+Tab"
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key back "Alt+Shift+Tab"
+# Shortcuts are read when the shortcut service starts: restart it so they apply now
+systemctl --user restart plasma-kglobalaccel.service 2>/dev/null || true
 
 # Window rules: Deck TV and the apps it opens start full screen with no title bar
 RULES=$(kreadconfig6 --file kwinrulesrc --group General --key rules 2>/dev/null || true)
@@ -168,6 +202,17 @@ for id in $(echo "$RULES" | tr ',' '\n' | grep '^deck-tv-'); do
 done
 kwriteconfig6 --file kwinrulesrc --group General --key rules "$RULES"
 kwriteconfig6 --file kwinrulesrc --group General --key count "$(echo "$RULES" | tr ',' '\n' | grep -c .)"
+# No screen-corner or edge actions: KDE opens Overview when the mouse hits the top-left corner,
+# which breaks the full-screen TV feel (uninstall.sh puts the defaults back)
+for k in TopLeft Top TopRight Right BottomRight Bottom BottomLeft Left; do
+  kwriteconfig6 --file kwinrc --group ElectricBorders --key "$k" None
+done
+for k in Top Right Bottom Left; do kwriteconfig6 --file kwinrc --group TouchEdges --key "$k" None; done
+for k in BorderActivate TouchBorderActivate; do kwriteconfig6 --file kwinrc --group Effect-overview --key "$k" 9; done
+for k in BorderActivate BorderActivateAll BorderActivateClass TouchBorderActivate TouchBorderActivateAll TouchBorderActivateClass; do
+  kwriteconfig6 --file kwinrc --group Effect-windowview --key "$k" 9
+done
+kwriteconfig6 --file kwinrc --group Effect-desktopgrid --key BorderActivate 9
 qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
 kbuildsycoca6 >/dev/null 2>&1 || true
 

@@ -37,6 +37,11 @@ can take a few minutes), then opens Deck TV full screen.
   - Right-click an app in the dock to close it.
   - Slide the dock left or right if it's in the way. It hides by itself, or click elsewhere.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
+- **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
+  Alt and press Tab to pick). If Deck TV isn't running, Alt+Tab works as normal.
+- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power and Sound) tucks
+  everything away to show the normal desktop. **Alt+F4** on the home screen closes Deck TV
+  completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.
 - **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
   skip. Starting something in another app pauses the first. Right-click a tile →
   **Show in now playing** to control that app instead.

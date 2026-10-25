@@ -9,6 +9,7 @@ import os
 import re
 import secrets
 import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -351,6 +352,26 @@ def make_fullscreen(wid):
     run(f"xdotool windowstate --add FULLSCREEN {int(wid, 16)}")
 
 
+# Most recently used first: tile ids, and "home" for Deck TV itself (for the Alt+Tab switcher)
+recent = []
+
+
+def used(item_id):
+    if item_id in recent:
+        recent.remove(item_id)
+    recent.insert(0, item_id)
+
+
+def shut_down():
+    """Deck TV's window was closed (Alt+F4, or its own close): take the dock and server down
+    with it, so nothing of Deck TV is left on screen. Opening Deck TV again starts it all afresh."""
+    try:
+        os.kill(int((Path.home() / ".cache/deck-tv-dock.lock").read_text().strip()), signal.SIGTERM)
+    except (OSError, ValueError):
+        pass
+    os._exit(0)
+
+
 # Tiles with "fullscreen": "launch" only go full screen when opened from Deck TV:
 # tile id -> time of the launch, so the watcher knows a new window came from us
 launched = {}
@@ -372,6 +393,7 @@ def watch_for_closed_apps():
     instead of leaving the bare desktop."""
     seen = set()
     dropped = {}  # window -> seen out of full screen once
+    home_seen = False
     while True:
         time.sleep(1)
         try:
@@ -391,6 +413,13 @@ def watch_for_closed_apps():
             # app in front straight back (it has to stay out for two checks, so a change in
             # progress isn't fought).
             active = active_window()
+            home = find_window(HOME_CLASS, wins)
+            if home_seen and not home:
+                shut_down()
+            home_seen = home is not None
+            in_front = next((t["id"] for t in tiles if active in owned[t["id"]]), None) or ("home" if active == home else None)
+            if in_front and (not recent or recent[0] != in_front):
+                used(in_front)
             front = next((t for t in tiles if t.get("fullscreen") is True and active in owned[t["id"]]), None)
             if front and not is_fullscreen(active):
                 if dropped.get(active):
@@ -441,7 +470,8 @@ def app_state():
     front = front_tile(wins)
     return {"open": open_tiles(wins), "home": find_window(HOME_CLASS, wins) is not None,
             "front": front["id"] if front else None, "media": now_playing.now_playing(),
-            "players": now_playing.players(), "page": page_version(), "unread": unread_counts(wins)}
+            "players": now_playing.players(), "page": page_version(), "unread": unread_counts(wins),
+            "recent": list(recent)}
 
 
 def unread_counts(wins):
@@ -516,6 +546,7 @@ def launch_item(item_id, choice_id=None):
         return {"error": "closing"}, 409
     # Already open: switch to it rather than starting a second copy
     found = tile_windows(item, client_windows())
+    used(item["id"])
     if found:
         if choice:
             open_url(item, choice["url"])
@@ -550,7 +581,14 @@ def close_item(item_id):
     return {"ok": True, "closed": len(found)}, 200
 
 
+def show_desktop():
+    """Step out to the ordinary desktop: KWin's Show Desktop, which tucks every window away."""
+    run('qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Show Desktop"')
+    return {"ok": True}
+
+
 def go_home():
+    used("home")
     wid = find_window(HOME_CLASS)
     if wid:
         activate(wid)
@@ -722,6 +760,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:
             return self._json({"ok": now_playing.focus(parts[3])})
+        if self.path == "/api/desktop":
+            return self._json(show_desktop())
         if self.path == "/api/audio/search":
             return self._json(search_speakers())
         if len(parts) == 4 and parts[:3] == ["api", "audio", "pair"]:
