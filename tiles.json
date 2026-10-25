@@ -287,6 +287,249 @@
       ]
     },
     {
+      "id": "netflix",
+      "name": "Netflix",
+      "sub": "Films & series",
+      "color": "#3A0A0C",
+      "accent": "#E50914",
+      "icon": "film",
+      "image": "netflix.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/netflix",
+        "--class=netflix",
+        "--remote-debugging-port=9230",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.netflix.com/browse"
+      ],
+      "window_class": "netflix",
+      "devtools_port": 9230,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/netflix.svg"
+      ]
+    },
+    {
+      "id": "disney",
+      "name": "Disney+",
+      "sub": "Films & series",
+      "color": "#0B1F52",
+      "accent": "#1F80E0",
+      "icon": "spark",
+      "image": "disney.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/disney",
+        "--class=disney",
+        "--remote-debugging-port=9231",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.disneyplus.com/"
+      ],
+      "window_class": "disney",
+      "devtools_port": 9231,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/disney.svg"
+      ]
+    },
+    {
+      "id": "prime",
+      "name": "Prime Video",
+      "sub": "Films & series",
+      "color": "#082C40",
+      "accent": "#1FA8E0",
+      "icon": "film",
+      "image": "prime.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/prime",
+        "--class=prime",
+        "--remote-debugging-port=9232",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.primevideo.com/"
+      ],
+      "window_class": "prime",
+      "devtools_port": 9232,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/prime.svg"
+      ]
+    },
+    {
+      "id": "appletv",
+      "name": "Apple TV+",
+      "sub": "Apple originals",
+      "color": "#24242B",
+      "accent": "#C9CDD6",
+      "icon": "tv",
+      "image": "appletv.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/appletv",
+        "--class=appletv",
+        "--remote-debugging-port=9233",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://tv.apple.com/"
+      ],
+      "window_class": "appletv",
+      "devtools_port": 9233,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/appletv.svg"
+      ]
+    },
+    {
+      "id": "now",
+      "name": "NOW",
+      "sub": "Sky shows",
+      "color": "#14283A",
+      "accent": "#3DDC97",
+      "icon": "tv",
+      "image": "now.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/now",
+        "--class=now",
+        "--remote-debugging-port=9234",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.nowtv.com/ie/watch/home"
+      ],
+      "window_class": "now",
+      "devtools_port": 9234,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/now.svg"
+      ]
+    },
+    {
+      "id": "paramount",
+      "name": "Paramount+",
+      "sub": "Films & series",
+      "color": "#0A1F5C",
+      "accent": "#2C6BFF",
+      "icon": "film",
+      "image": "paramount.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/paramount",
+        "--class=paramount",
+        "--remote-debugging-port=9235",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.paramountplus.com/"
+      ],
+      "window_class": "paramount",
+      "devtools_port": 9235,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/paramount.svg"
+      ]
+    },
+    {
+      "id": "dazn",
+      "name": "DAZN",
+      "sub": "Boxing",
+      "color": "#2A2A10",
+      "accent": "#F2F21A",
+      "icon": "octagon",
+      "image": "dazn.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/dazn",
+        "--class=dazn",
+        "--remote-debugging-port=9236",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.dazn.com/"
+      ],
+      "window_class": "dazn",
+      "devtools_port": 9236,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/dazn.svg"
+      ]
+    },
+    {
+      "id": "crunchyroll",
+      "name": "Crunchyroll",
+      "sub": "Anime",
+      "color": "#4A2208",
+      "accent": "#F47521",
+      "icon": "tv",
+      "image": "crunchyroll.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/crunchyroll",
+        "--class=crunchyroll",
+        "--remote-debugging-port=9237",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.crunchyroll.com/"
+      ],
+      "window_class": "crunchyroll",
+      "devtools_port": 9237,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/crunchyroll.svg"
+      ]
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "sub": "Live streams",
+      "color": "#2A1650",
+      "accent": "#9146FF",
+      "icon": "gamepad",
+      "image": "twitch.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/twitch",
+        "--class=twitch",
+        "--remote-debugging-port=9238",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://www.twitch.tv/"
+      ],
+      "window_class": "twitch",
+      "devtools_port": 9238,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/twitch.svg"
+      ]
+    },
+    {
       "id": "claude",
       "name": "Claude",
       "sub": "Assistant",

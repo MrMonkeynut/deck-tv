@@ -38,7 +38,7 @@ need_app com.spotify.Client "Spotify"
 say "Copying Deck TV…"
 mkdir -p "$DEST/images" "$DEST/icons" "$BIN" "$APPS"
 cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/dock.py" "$DEST/"
-cp "$SRC/icons/"*.png "$DEST/icons/"
+cp "$SRC/icons/"*.png "$SRC/icons/"*.svg "$DEST/icons/"
 cp "$SRC/images/"* "$DEST/images/"
 cp "$SRC/uninstall.sh" "$DEST/"
 

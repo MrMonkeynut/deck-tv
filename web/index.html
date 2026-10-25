@@ -108,6 +108,10 @@
   #tiles.rows2 .tile > svg { width: 64px; height: 64px; }
   #tiles.rows2 .tile .name { font-size: 21px; }
   #tiles.rows2 .tile .sub { font-size: 14px; margin-top: 2px; }
+  /* Eight or more cards to a row: narrow cards, so names and subtitles shrink to fit on one line */
+  #tiles.rows2.dense .tile .name { font-size: 17px; letter-spacing: -.3px; }
+  #tiles.rows2.dense .tile .sub { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tiles.rows2.dense .tile > div { max-width: 100%; min-width: 0; }
   #tiles.rows2 .tile.focus { transform: scale(1.05); }
   #tiles.rows2 .tile > .eq { top: 12px; right: 12px; }
 
@@ -592,6 +596,7 @@ async function build() {
   const shown = visible.length;
   tilesEl.classList.toggle("rows2", shown > 7);
   tilesEl.style.setProperty("--cols", Math.ceil(shown / 2));
+  tilesEl.classList.toggle("dense", shown > 14);
   const actEl = document.getElementById("actions");
 
   visible.forEach(t => {
