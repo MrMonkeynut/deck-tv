@@ -436,6 +436,7 @@
     background: #232937; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 50px rgba(0,0,0,.55);
   }
   .wl-menu.open { display: block; }
+  .wl-menu .menu-head { padding: 6px 14px 8px; font-size: 14px; color: var(--dim); }
   .wl-menu button {
     all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px;
     border-radius: 12px; font-size: 18px; color: var(--ink); cursor: pointer; outline: 3px solid transparent; outline-offset: -3px;
@@ -779,6 +780,7 @@
         <button class="set-wide" id="wl-editlist"></button>
       </div>
       <div class="wl-menu" id="wl-sortmenu" role="menu" aria-label="Sort by"></div>
+      <div class="wl-menu" id="wl-movemenu" role="menu" aria-label="Move to"></div>
       <div id="wl-items" role="list"></div>
       <div class="wl-empty" id="wl-empty" hidden></div>
       <button class="power-cancel" id="wl-close">Close</button>
@@ -2070,6 +2072,7 @@ async function openWatch() {
   if (wlAt.r === wlGrid().length - 1) wlFocus({ r: 1, c: WL_FILTERS.length + 1 });  // no films showing: Add
 }
 function closeWatch() {
+  closeWlMove();
   closeTrailer();
   closePoster();
   closeWlSort();
@@ -2184,6 +2187,7 @@ function wlRowFor(it) {
     act("primary", `${svg("play", "currentColor", 1.8)}Watch on Movy`, () => watchNow(it)),
     act("", `${svg("clapper", "currentColor", 1.8)}Trailer`, () => openTrailer(it)),
     act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)),
+    act("move", `${svg("arrow", "currentColor", 1.8)}Move`, e => openWlMove(it, e.currentTarget)),
     Object.assign(document.createElement("span"), { className: "wl-gap" }),
     act("mark", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)),
     act("mark remove", `${svg("trash", "currentColor", 1.8)}Remove`, () => removeFilm(it)));
@@ -2313,6 +2317,74 @@ function toggleWatched(it, undoing) {
   const r = wlRowOf(it.id);
   wlFocus(r >= 0 ? { r, c: 0 } : { r: at, c: 0 });
 }
+/* Move: a short menu of the other lists, under the button; the film goes to the end of the one picked,
+   with Undo on the toast to bring it back where it was */
+let wlMoveOpen = false, wlMoveAt = 0, wlMoveIt = null;
+const wlMoveOpts = () => [...document.querySelectorAll("#wl-movemenu button")];
+function openWlMove(it, btn) {
+  if (wlMoveOpen && wlMoveIt === it) return closeWlMove();
+  const from = wl.lists.find(l => l.items.includes(it));
+  const others = wl.lists.filter(l => l !== from);
+  if (!others.length) return toast("Make another list first: New list, at the top");
+  wlMoveIt = it;
+  const menu = document.getElementById("wl-movemenu");
+  menu.innerHTML = `<div class="menu-head">Move to</div>`;
+  others.forEach((l, n) => {
+    const b = document.createElement("button");
+    b.setAttribute("role", "menuitem");
+    b.innerHTML = `${svg("arrow", "currentColor", 2)}${esc(l.name)}`;
+    b.onclick = e => { e.stopPropagation(); moveFilm(it, l); };
+    b.onmouseenter = () => wlMoveFocus(n);
+    menu.append(b);
+  });
+  // Under the button, in the panel's own (scaled) pixels; above it if there's no room below
+  menu.classList.add("open");
+  const card = document.querySelector("#watch .wl-card"), c = card.getBoundingClientRect(), b = btn.getBoundingClientRect(), k = c.width / card.offsetWidth;
+  let top = (b.bottom - c.top) / k + 8;
+  if (top + menu.offsetHeight > card.offsetHeight - 10) top = (b.top - c.top) / k - menu.offsetHeight - 8;
+  menu.style.left = `${(b.left - c.left) / k}px`;
+  menu.style.top = `${top}px`;
+  wlMoveOpen = true;
+  wlMoveFocus(0);
+}
+function wlMoveFocus(i) {
+  wlMoveAt = clamp(i, 0, wlMoveOpts().length - 1);
+  wlMoveOpts().forEach((b, n) => b.classList.toggle("focus", n === wlMoveAt));
+}
+function closeWlMove() {
+  wlMoveOpen = false;
+  document.getElementById("wl-movemenu").classList.remove("open");
+}
+function wlMoveInput(cmd) {
+  if (cmd === "up") wlMoveFocus(wlMoveAt - 1);
+  if (cmd === "down") wlMoveFocus(wlMoveAt + 1);
+  if (cmd === "ok") wlMoveOpts()[wlMoveAt]?.click();
+  if (cmd === "back" || cmd === "left" || cmd === "right") closeWlMove();
+}
+function moveFilm(it, to, undoing) {
+  closeWlMove();
+  const from = wl.lists.find(l => l.items.includes(it));
+  if (!from || from === to) return;
+  const at = from.items.indexOf(it), row = wlRowOf(it.id);
+  from.items.splice(at, 1);
+  to.items.splice(undoing ? Math.min(undoing.at, to.items.length) : to.items.length, 0, it);
+  saveWatch();
+  if (undoing) {  // back where it was, opened up
+    wlOpenId = it.id;
+    renderWatch(wlAt);
+    const r = wlRowOf(it.id);
+    if (r >= 0) wlFocus({ r, c: 0 });
+    return toast(`${it.title} is back on ${to.name}`);
+  }
+  if (wlOpenId === it.id) wlOpenId = null;
+  renderWatch(wlAt);
+  wlFocus({ r: row, c: 0 });  // the next film takes its place
+  toast(`Moved ${it.title} to ${to.name}`, () => {
+    // As things are now: reopening the watchlist loads new copies
+    const film = wl.lists.flatMap(l => l.items).find(x => x.id === it.id), back = wl.lists.find(l => l.id === from.id);
+    if (film && back) moveFilm(film, back, { at });
+  });
+}
 /* Remove: off the list straight away, with Undo on the toast to put it back where it was */
 function removeFilm(it) {
   const list = wl.lists.find(l => l.items.includes(it));
@@ -2379,7 +2451,10 @@ function wlSortInput(cmd) {
   if (cmd === "back" || cmd === "left" || cmd === "right") closeWlSort();
 }
 document.getElementById("wl-sort").onclick = e => { e.stopPropagation(); wlSortOpen ? closeWlSort() : openWlSort(); };
-document.getElementById("watch").addEventListener("click", e => { if (wlSortOpen && !e.target.closest("#wl-sortmenu")) closeWlSort(); });
+document.getElementById("watch").addEventListener("click", e => {
+  if (wlSortOpen && !e.target.closest("#wl-sortmenu")) closeWlSort();
+  if (wlMoveOpen && !e.target.closest("#wl-movemenu, .set-wide.move")) closeWlMove();
+});
 /* The poster, larger. The small one shows straight away while the large one loads. */
 let wlPvOpen = false;
 function openPoster(it, info) {
@@ -3125,6 +3200,7 @@ function input(cmd) {
   if (wlTrOpen) return trInput(cmd);
   if (wlPvOpen) return void (cmd === "ok" || cmd === "back" ? closePoster() : null);  // the X is all there is
   if (wlSortOpen) return wlSortInput(cmd);
+  if (wlMoveOpen) return wlMoveInput(cmd);
   if (wlEdOpen) return wleInput(cmd);
   if (watchOpen) return watchInput(cmd);
   if (settingsOpen) return settingsInput(cmd);
