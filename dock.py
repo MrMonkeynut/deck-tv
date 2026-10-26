@@ -8,7 +8,8 @@ Dock:    Home plus every Deck TV tile; a short line under an icon means that app
          Only apps that are open are shown (Home is always there), so it stays short.
          Right-click an app for a small menu that closes it.
 Alt+Tab: Deck TV's own switcher between Home and the open apps (see switch()), drawn by this
-         process; the deck-tv-switch command (bound to Alt+Tab) pokes it with a signal.
+         process; the deck-tv-switch command (bound to Alt+Tab) pokes it with a signal. Alt+Tab
+         is only Deck TV's while the dock runs: it gives it back to KDE when it closes.
          The speaker on the left sets the volume: click for a slider, or scroll over it.
          Left of it, the player button pops up previous / play-pause / next.
 """
@@ -17,6 +18,7 @@ import json
 import os
 import signal
 import sys
+import subprocess
 import threading
 import time
 import urllib.request
@@ -895,7 +897,20 @@ def main():
         except Exception:
             GLib.usleep(500_000)
     Dock()
-    Gtk.main()
+    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, lambda: Gtk.main_quit() or False)
+    alt_tab("claim")
+    try:
+        Gtk.main()
+    finally:
+        alt_tab("release")  # with Deck TV closed, Alt+Tab is KDE's own switcher again
+
+
+def alt_tab(how):
+    """Take Alt+Tab from KDE ("claim") or give it back ("release"); see install.sh."""
+    try:
+        subprocess.run([os.path.expanduser("~/.local/bin/deck-tv-alttab"), how], timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 if __name__ == "__main__":

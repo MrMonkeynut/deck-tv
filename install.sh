@@ -140,8 +140,32 @@ for t in cfg["tiles"]:
                 f"Exec={' '.join(quote(a) for a in cmd)}\nIcon={icon}\nStartupWMClass={cls}\nCategories=AudioVideo;\n")
 PY
 
-# Alt+Tab: Deck TV's own switcher, drawn by the dock. If the dock isn't running, this hands
-# over to KDE's usual switcher, so Alt+Tab never goes dead.
+# Alt+Tab: Deck TV's own switcher, drawn by the dock. The dock takes Alt+Tab from KDE while it
+# runs ("deck-tv-alttab claim") and gives it back when it closes ("deck-tv-alttab release"), so
+# with Deck TV closed Alt+Tab is KDE's usual switcher, overlay and all.
+cat > "$BIN/deck-tv-alttab" <<'EOS'
+#!/usr/bin/env bash
+set_keys() {  # component, action, key code (none: no key)
+  local keys="@a(ai) []"; [ -n "$3" ] && keys="[([$3, 0, 0, 0],)]"
+  gdbus call --session --dest org.kde.kglobalaccel --object-path /kglobalaccel \
+    --method org.kde.KGlobalAccel.setForeignShortcutKeys "['$1', '$2', '', '']" "$keys" >/dev/null
+}
+ALT_TAB=150994945; ALT_SHIFT_TAB=184549377  # Qt's codes for Alt+Tab and Alt+Shift+Tab
+if [ "${1:-}" = claim ]; then  # take keys away before giving them out: two owners would clash
+  set_keys kwin "Walk Through Windows" ""
+  set_keys kwin "Walk Through Windows (Reverse)" ""
+  set_keys deck-tv-switch.desktop _launch $ALT_TAB
+  set_keys deck-tv-switch.desktop back $ALT_SHIFT_TAB
+else
+  set_keys deck-tv-switch.desktop _launch ""
+  set_keys deck-tv-switch.desktop back ""
+  set_keys kwin "Walk Through Windows" $ALT_TAB
+  set_keys kwin "Walk Through Windows (Reverse)" $ALT_SHIFT_TAB
+fi
+EOS
+chmod +x "$BIN/deck-tv-alttab"
+# Bound to Alt+Tab while the dock runs. If the dock died without giving Alt+Tab back, this does
+# it, then opens KDE's switcher (Alt is still held, so it shows as usual).
 cat > "$BIN/deck-tv-switch" <<'EOS'
 #!/usr/bin/env bash
 SIG=USR1; NAME="Walk Through Windows"
@@ -150,6 +174,7 @@ PID=$(cat "$HOME/.cache/deck-tv-dock.lock" 2>/dev/null)
 if [ -n "$PID" ] && grep -q dock.py "/proc/$PID/cmdline" 2>/dev/null; then
   exec kill -"$SIG" "$PID"
 fi
+"$HOME/.local/bin/deck-tv-alttab" release
 exec qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "$NAME"
 EOS
 chmod +x "$BIN/deck-tv-switch"
@@ -171,11 +196,11 @@ EOS
 say "Setting up the Home shortcut and full-screen windows…"
 # Meta+H (the Super/Windows key + H on a keyboard) opens Deck TV or brings it back to the front
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv.desktop --key _launch "Meta+H"
-# Alt+Tab / Alt+Shift+Tab go to Deck TV's switcher instead of KWin's (uninstall.sh puts them back)
-kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows" "none,Alt+Tab,Walk Through Windows"
-kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows (Reverse)" "none,Alt+Shift+Tab,Walk Through Windows (Reverse)"
-kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key _launch "Alt+Tab"
-kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key back "Alt+Shift+Tab"
+# Alt+Tab starts with KDE; the dock takes it while it runs (see deck-tv-alttab above)
+kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows" "Alt+Tab,Alt+Tab,Walk Through Windows"
+kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows (Reverse)" "Alt+Shift+Tab,Alt+Shift+Tab,Walk Through Windows (Reverse)"
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key _launch "none"
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key back "none"
 # Shortcuts are read when the shortcut service starts: restart it so they apply now
 systemctl --user restart plasma-kglobalaccel.service 2>/dev/null || true
 
