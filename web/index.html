@@ -457,6 +457,7 @@
   .wl-row.focus { outline-color: var(--ring); }
   .wl-row b { flex: 1; min-width: 0; font-size: 19px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wl-row span { flex: none; font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-row .time { width: 72px; text-align: left; }  /* a set width, so every name starts at the same place */
   .wl-row svg { flex: none; width: 18px; height: 18px; }
   .wl-row .seen { color: #7BD3A2; }
   .wl-row .more { color: var(--dim); transition: transform .15s; }
@@ -1961,7 +1962,7 @@ const wlGrid = () => [
   }),
   [document.getElementById("wl-close")],
 ];
-/* A film's row: its name and running time (and a tick once watched). Opened, it shows the poster and
+/* A film's row: its running time, then its name (and a tick once watched). Opened, it shows the poster and
    what it's about (from Wikipedia, fetched the first time), the facts, and Watch / Mark watched / Edit. */
 function wlRowFor(it) {
   const item = document.createElement("div");
@@ -1972,8 +1973,8 @@ function wlRowFor(it) {
   row.className = "wl-row";
   row.dataset.id = it.id;
   row.setAttribute("aria-expanded", String(open));
-  row.innerHTML = `<b>${esc(it.title)}</b>${it.watched ? `<span class="seen" title="Watched">${svg("check", "currentColor", 2.4)}</span>` : ""}` +
-    `<span>${it.runtime ? wlTime(it.runtime) : ""}</span><span class="more">${svg("chev", "currentColor", 2)}</span>`;
+  row.innerHTML = `<span class="time">${it.runtime ? wlTime(it.runtime) : "–"}</span><b>${esc(it.title)}</b>` +
+    `${it.watched ? `<span class="seen" title="Watched">${svg("check", "currentColor", 2.4)}</span>` : ""}<span class="more">${svg("chev", "currentColor", 2)}</span>`;
   row.onclick = () => wlToggleOpen(it);
   item.append(row);
   if (!open) return item;
