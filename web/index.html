@@ -562,6 +562,7 @@
     box-shadow: inset 0 0 0 1px #3A4252; }
   .wl-acts .set-wide.mark svg { width: 15px; height: 15px; }
   .wl-acts .set-wide.mark:hover, .wl-acts .set-wide.mark.focus { color: var(--ink); background: #2F3747; }
+  .wl-acts .set-wide.mark.remove:hover, .wl-acts .set-wide.mark.remove.focus { color: #FF8A8A; background: #3A2228; }
   .wl-empty { height: 312px; margin: -6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     font-size: 20px; color: var(--muted); text-align: center; }
   .wl-empty small { font-size: 16px; color: var(--dim); }
@@ -922,6 +923,7 @@ const ICONS = {
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
   play: '<path d="M7 4.5v15l12.5-7.5z"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
   skip: '<path d="M6 5v14l9-7zM18 5v14"/>',
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
@@ -2165,7 +2167,8 @@ function wlRowFor(it) {
     act("", `${svg("clapper", "currentColor", 1.8)}Trailer`, () => openTrailer(it)),
     act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)),
     Object.assign(document.createElement("span"), { className: "wl-gap" }),
-    act("mark", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)));
+    act("mark", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)),
+    act("mark remove", `${svg("trash", "currentColor", 1.8)}Remove`, () => removeFilm(it)));
   item.append(more);
   wlInfo(it).then(info => {
     if (!more.isConnected) return;
@@ -2252,7 +2255,11 @@ function toggleWatched(it, undoing) {
     if (undoing.open) wlOpenId = it.id;  // back as it was, opened up if it was
     toast(`Undone: ${it.title} ${it.watched ? "is watched" : "is back on the list"}`);
   } else {
-    toast(it.watched ? `Watched ${it.title}` : `${it.title} is back on the list`, () => toggleWatched(it, before));
+    // Undo finds the film afresh: reopening the watchlist in the meantime loads new copies
+    toast(it.watched ? `Watched ${it.title}` : `${it.title} is back on the list`, () => {
+      const now = wl.lists.flatMap(l => l.items).find(x => x.id === it.id);
+      if (now && now.watched !== before.watched) toggleWatched(now, before);
+    });
   }
   // Showing To watch, it drops off and the next film takes its place; otherwise focus goes back to its row
   if (!wlShown(wlList()).includes(it)) wlOpenId = null;
@@ -2260,6 +2267,29 @@ function toggleWatched(it, undoing) {
   renderWatch(wlAt);
   const r = wlRowOf(it.id);
   wlFocus(r >= 0 ? { r, c: 0 } : { r: at, c: 0 });
+}
+/* Remove: off the list straight away, with Undo on the toast to put it back where it was */
+function removeFilm(it) {
+  const list = wl.lists.find(l => l.items.includes(it));
+  if (!list) return;
+  const at = list.items.indexOf(it), row = wlRowOf(it.id);
+  list.items.splice(at, 1);
+  if (wlOpenId === it.id) wlOpenId = null;
+  saveWatch();
+  renderWatch(wlAt);
+  wlFocus({ r: row, c: 0 });  // the next film takes its place
+  toast(`Removed ${it.title}`, () => {
+    // The list as it is now (reopening the watchlist loads it afresh), unless it's gone too
+    const now = wl.lists.find(l => l.id === list.id);
+    if (!now) return toast(`Couldn't put ${it.title} back: its list is gone`);
+    now.items.splice(Math.min(at, now.items.length), 0, it);
+    wlOpenId = it.id;
+    saveWatch();
+    renderWatch(wlAt);
+    const r = wlRowOf(it.id);
+    if (r >= 0) wlFocus({ r, c: 0 });
+    toast(`${it.title} is back`);
+  });
 }
 /* Sort by: drops down a menu under its button; up and down move, OK picks, back (or left/right) closes */
 let wlSortOpen = false, wlSortAt = 0;

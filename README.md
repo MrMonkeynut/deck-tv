@@ -62,7 +62,8 @@ can take a few minutes), then opens Deck TV full screen.
   **Liam and Laura**, **Top 100** (the scratch poster, with the ones already scratched off marked
   watched) and **Kids**. Each film is one slim row (its name and running time): click it (or press A) to open it up for its
   poster, what it's about (from Wikipedia) and **Watch on Movy** (opens Movy and searches it for
-  the film), **Trailer**, **Mark watched** and **Edit**. **Trailer** plays it right there, with a scrub bar,
+  the film), **Trailer**, **Edit**, and (small, off to the right)
+  **Mark watched** and **Remove**, each with Undo on the message that follows. **Trailer** plays it right there, with a scrub bar,
   sound and volume, a button per trailer and Fullscreen (nothing in the player can take you off to YouTube); click the poster to see it larger. **To watch / Watched / All**
   picks what shows, and **Sort** orders them (list order, title, year or running time). **Add**
   puts a film on the list you're looking at (a keyboard, or the phone
