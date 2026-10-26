@@ -168,6 +168,14 @@
   .action.power { width: 52px; padding: 0; justify-content: center; }
   .action.power svg { width: 24px; height: 24px; }
 
+  /* The status pill beside the corner buttons: Wi-Fi, battery and free space at a glance */
+  .action.status { gap: 18px; padding: 0 22px 0 20px; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .action.status .seg { display: flex; align-items: center; gap: 8px; }
+  .action.status .seg + .seg { padding-left: 18px; border-left: 1px solid #343B49; }
+  .action.status svg { width: 22px; height: 22px; flex: none; }
+  .action.status .low { color: #F2B84B; }
+  .action.status .crit { color: #FF8A8A; }
+
   /* Right-click menu on a tile */
   #ctx {
     position: absolute; z-index: 12; display: none; min-width: 280px; padding: 8px; border-radius: 18px;
@@ -182,6 +190,42 @@
   #ctx button svg { width: 22px; height: 22px; flex: none; }
   #ctx button:hover { background: #2A3140; }
   #ctx button:disabled { color: var(--dim); cursor: default; background: none; }
+
+  /* System: storage first (the thing that runs out), then Wi-Fi, sound, battery and the Deck */
+  #system {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #system.open { display: flex; }
+  .sys-card { width: 1040px; gap: 22px; padding: 32px 36px 26px; }
+  .sys-head { display: flex; align-items: baseline; gap: 16px; }
+  .sys-head span { font-size: 18px; color: var(--muted); }
+  #sys-storage { display: flex; flex-direction: column; gap: 12px; }
+  .drive { display: grid; grid-template-columns: 56px 1fr auto; grid-template-rows: auto auto; column-gap: 18px; row-gap: 12px;
+           align-items: center; padding: 20px 24px; border-radius: 22px; background: #232937; }
+  .drive > svg { grid-row: 1 / 3; width: 44px; height: 44px; color: var(--pill-ink); }
+  .drive .d-name { font-size: 18px; color: var(--muted); }
+  .drive .d-name b { display: block; font-size: 30px; color: var(--ink); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .drive .d-name b small { font-size: 20px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .drive .d-pct { font-size: 18px; color: var(--muted); text-align: right; align-self: end; font-variant-numeric: tabular-nums; }
+  .drive .d-bar { grid-column: 2 / 4; height: 14px; border-radius: 7px; background: #39414F; overflow: hidden; }
+  .drive .d-bar i { display: block; height: 100%; border-radius: 7px; background: #7BD3A2; }
+  .drive.low .d-bar i { background: #F2B84B; }
+  .drive.crit .d-bar i { background: #FF8A8A; }
+  .drive .d-warn { grid-column: 2 / 4; font-size: 16px; color: #F2B84B; margin-top: -4px; }
+  .drive.crit .d-warn { color: #FF8A8A; }
+  #sys-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .sys-tile { all: unset; box-sizing: border-box; position: relative; min-width: 0; padding: 18px 20px 20px; border-radius: 22px; background: #232937;
+              display: flex; flex-direction: column; gap: 4px; outline: 4px solid transparent; outline-offset: 3px; transition: outline-color .15s, background .15s; }
+  .sys-tile > svg { width: 30px; height: 30px; color: var(--pill-ink); margin-bottom: 8px; }
+  .sys-tile .t-label { font-size: 15px; color: var(--muted); }
+  .sys-tile .t-main { font-size: 24px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sys-tile .t-sub { font-size: 15px; color: var(--muted); line-height: 1.45; }
+  button.sys-tile { cursor: pointer; }
+  button.sys-tile .t-go { position: absolute; top: 18px; right: 18px; width: 22px; height: 22px; color: var(--muted); }
+  button.sys-tile:hover, .sys-tile.focus { background: #2D3443; }
+  .sys-tile.focus, #sys-close.focus { outline-color: var(--ring); }
+  #sys-close { outline: 3px solid transparent; outline-offset: 2px; }
 
   /* Power menu: sleep, restart, power off */
   #power {
@@ -531,6 +575,15 @@
     </div>
   </div>
 
+  <div id="system" role="dialog" aria-label="System">
+    <div class="power-card sys-card">
+      <div class="sys-head"><b>System</b><span id="sys-model"></span></div>
+      <div id="sys-storage"></div>
+      <div id="sys-grid"></div>
+      <button class="power-cancel" id="sys-close">Close</button>
+    </div>
+  </div>
+
   <div id="power" role="dialog" aria-label="Power">
     <div class="power-card">
       <b id="power-title">Power</b>
@@ -572,6 +625,11 @@ const ICONS = {
   chev: '<path d="m9 6 6 6-6 6"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   move: '<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',
+  disk: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="16.5" cy="17" r=".9"/><circle cx="13" cy="17" r=".9"/>',
+  sdcard: '<path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6z"/><path d="M9.5 7v2.5M12.5 7v2.5M15.5 7v2.5"/>',
+  usb: '<rect x="6" y="9" width="12" height="12" rx="2"/><path d="M8.5 9V3h7v6M10.5 5.5h.01M13.5 5.5h.01"/>',
+  thermo: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 9v7"/>',
+  cable: '<path d="M7 3v5M17 3v5M5 8h14v4a7 7 0 0 1-14 0zM12 19v3"/>',
   desktop: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M9 10.5l3-3 3 3M12 7.5v6"/>',
   trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
   restart: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>',
@@ -743,23 +801,14 @@ async function build() {
   pw.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 0);
   pw.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(pw); rows[1].push(pw);
-  // Sound, beside it: volume, and which speaker the sound comes out of
-  const sb = document.createElement("button");
-  sb.className = "action power";
-  sb.setAttribute("aria-label", "Sound");
-  sb.innerHTML = svg("volume", "currentColor", 1.9);
-  sb.onclick = () => { setFocus(1, 1); openSound(); };
-  sb.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 1);
-  sb.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
-  actEl.appendChild(sb); rows[1].push(sb);
   // And a way out: the ordinary desktop, every window tucked away (the dock and Super+H bring you back)
   const db = document.createElement("button");
   db.className = "action power";
   db.setAttribute("aria-label", "Desktop");
   db.title = "Go to the desktop";
   db.innerHTML = svg("desktop", "currentColor", 1.9);
-  db.onclick = () => { setFocus(1, 2); toast("Going to the desktop…"); api("/api/desktop", "POST").catch(() => {}); };
-  db.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 2);
+  db.onclick = () => { setFocus(1, 1); toast("Going to the desktop…"); api("/api/desktop", "POST").catch(() => {}); };
+  db.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 1);
   db.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(db); rows[1].push(db);
   // Settings: which cards are on the home screen, and in what order
@@ -768,10 +817,22 @@ async function build() {
   gb.setAttribute("aria-label", "Settings");
   gb.title = "Settings";
   gb.innerHTML = svg("gear", "currentColor", 1.8);
-  gb.onclick = () => { setFocus(1, 3); openSettings(); };
-  gb.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 3);
+  gb.onclick = () => { setFocus(1, 2); openSettings(); };
+  gb.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 2);
   gb.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(gb); rows[1].push(gb);
+  // System: Wi-Fi, battery and free space at a glance; opens the full panel (sound is in there too)
+  const sy = document.createElement("button");
+  sy.className = "action status";
+  sy.id = "status";
+  sy.setAttribute("aria-label", "System");
+  sy.title = "System";
+  sy.onclick = () => { setFocus(1, 3); openSystem(); };
+  sy.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 3);
+  sy.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
+  actEl.appendChild(sy); rows[1].push(sy);
+  refreshStatus();
+  setInterval(refreshStatus, 30 * 1000);
 
   const last = rows[0].findIndex(b => b.dataset.id === store.get("deckTvLast"));
   setFocus(0, last >= 0 ? last : 0);
@@ -1097,6 +1158,7 @@ async function pairSpeaker(mac) {
 document.getElementById("snd-back").onclick = stopAdding;
 
 function closeSound() {
+  if (soundFromSystem) { soundFromSystem = false; setTimeout(() => openSystem(0), 0); }
   soundOpen = false;
   adding = false;
   document.getElementById("sound").classList.remove("adding");
@@ -1136,6 +1198,112 @@ document.getElementById("sound").addEventListener("wheel", e => {
   lastWheel = now;
   soundStep(e.deltaY < 0 ? "up" : "down");
 }, { passive: false });
+
+/* ---------- system: storage, Wi-Fi, sound, battery ---------- */
+let systemOpen = false, sysAt = 0, sysPoll = null, soundFromSystem = false;
+const sysOpts = () => [...document.querySelectorAll("#sys-grid button.sys-tile, #sys-close")];
+const GB = 1e9;
+function size(bytes) {
+  const gb = bytes / GB;
+  return gb >= 1000 ? `${(gb / 1000).toFixed(1)} TB` : gb >= 10 ? `${Math.round(gb)} GB` : `${gb.toFixed(1)} GB`;
+}
+const tight = d => d.free / d.total < .05 || d.free < 5 * GB ? "crit" : d.free / d.total < .15 ? "low" : "";
+/* Wi-Fi arcs lit by signal strength; a slash through them when there's no network */
+function wifiIcon(net) {
+  const on = !net.connected ? 0 : net.kind === "ethernet" ? 3 : net.signal >= 67 ? 3 : net.signal >= 34 ? 2 : 1;
+  if (net.connected && net.kind === "ethernet") return svg("cable", "currentColor", 1.8);
+  const arc = (d, n) => `<path d="${d}" opacity="${on >= n ? 1 : .3}"/>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+    ${arc("M2.5 8.8a14 14 0 0 1 19 0", 3)}${arc("M5.6 12.2a9.5 9.5 0 0 1 12.8 0", 2)}${arc("M8.8 15.5a5 5 0 0 1 6.4 0", 1)}
+    <circle cx="12" cy="19" r="1.1" fill="currentColor" opacity="${on ? 1 : .3}"/>${on ? "" : '<path d="M4 4l16 16"/>'}</svg>`;
+}
+/* Battery outline filled to its level; a bolt while charging */
+function batteryIcon(b) {
+  const w = Math.max(1.5, 13 * b.level / 100);
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2" y="7" width="18" height="10" rx="2.5"/><path d="M22.5 10.5v3" stroke-linecap="round"/>
+    <rect x="4.5" y="9.5" width="${w}" height="5" rx="1" fill="currentColor" stroke="none" opacity="${b.charging ? .35 : 1}"/>
+    ${b.charging ? '<path d="M12 8.5 9 12.5h3.5L10 15.5" stroke-width="1.6" stroke-linecap="round"/>' : ""}</svg>`;
+}
+const signalWords = s => s >= 75 ? "Strong signal" : s >= 50 ? "Good signal" : s >= 30 ? "Fair signal" : "Weak signal";
+function batteryWords(b) {
+  if (b.charging) return "Charging";
+  if (b.plugged) return b.full ? "Plugged in · full" : "Plugged in";
+  return "On battery";
+}
+function upFor(secs) {
+  const d = Math.floor(secs / 86400), h = Math.floor(secs / 3600) % 24, m = Math.floor(secs / 60) % 60;
+  return d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min`;
+}
+
+async function refreshStatus() {
+  const el = document.getElementById("status");
+  const info = await api("/api/system").catch(() => null);
+  if (!el || !info) return;
+  const main = info.storage[0], bat = info.battery, net = info.network;
+  const segs = [`<span class="seg" title="${net.connected ? net.name : "No network"}">${wifiIcon(net)}</span>`];
+  if (bat) segs.push(`<span class="seg${!bat.plugged && bat.level <= 20 ? " low" : ""}">${batteryIcon(bat)}${bat.level}%</span>`);
+  if (main) segs.push(`<span class="seg ${tight(main)}">${svg("disk", "currentColor", 1.8)}${size(main.free)} free</span>`);
+  el.innerHTML = segs.join("");
+  if (systemOpen) showSystem(info);
+}
+
+function showSystem(info) {
+  const d = info.deck;
+  document.getElementById("sys-model").textContent = `${d.model} · ${d.os}`;
+  document.getElementById("sys-storage").innerHTML = info.storage.map(dr => {
+    const pct = dr.free > 0 ? Math.min(99, Math.round(100 * dr.used / dr.total)) : 100, t = tight(dr);  // "100%" only when truly full
+    const warn = t === "crit" ? "Almost full. Uninstall a game in Steam → Storage to make room."
+               : t === "low" ? "Getting full." : "";
+    return `<div class="drive ${t}">${svg(dr.kind === "sd" ? "sdcard" : dr.kind === "usb" ? "usb" : "disk", "currentColor", 1.5)}
+      <div class="d-name">${dr.name}<b>${size(dr.free)} free<small>of ${size(dr.total)}</small></b></div>
+      <div class="d-pct">${size(dr.used)} used · ${pct}%</div>
+      <div class="d-bar"><i style="width:${pct}%"></i></div>${warn ? `<div class="d-warn">${warn}</div>` : ""}</div>`;
+  }).join("");
+  const net = info.network, snd = info.sound, bat = info.battery;
+  const tile = (icon, label, main, sub, btn) =>
+    `<${btn ? 'button class="sys-tile" id="sys-sound"' : 'div class="sys-tile"'}>${icon}
+      ${btn ? svg("chev", "currentColor", 2).replace("<svg", '<svg class="t-go"') : ""}
+      <div class="t-label">${label}</div><div class="t-main">${main}</div><div class="t-sub">${sub}</div></${btn ? "button" : "div"}>`;
+  const keep = sysAt;
+  document.getElementById("sys-grid").innerHTML = [
+    tile(wifiIcon(net), net.connected && net.kind === "ethernet" ? "Network" : "Wi-Fi",
+         net.connected ? net.name : net.wifiOff ? "Wi-Fi is off" : "Not connected",
+         net.connected ? `${net.kind === "wifi" ? `${signalWords(net.signal)} · ${net.band}<br>` : "Wired<br>"}${net.ip}` : "No internet"),
+    tile(svg(snd.muted ? "muted" : OUT_ICONS[snd.kind] || "volume", "currentColor", 1.7), "Sound",
+         snd.output || "No output", snd.muted ? "Muted" : `Volume ${snd.level}%`, true),
+    bat ? tile(batteryIcon(bat), "Battery", `${bat.level}%`, batteryWords(bat)) : "",
+    tile(svg("thermo", "currentColor", 1.7), "Steam Deck", d.temp != null ? `${d.temp}°C` : d.model,
+         `On for ${upFor(d.uptime)}<br>Memory ${size(d.memUsed)} of ${size(d.memTotal)}`),
+  ].join("");
+  const sb = document.getElementById("sys-sound");
+  sb.onclick = () => { closeSystem(); soundFromSystem = true; openSound(); };
+  sb.onmouseenter = () => sysFocus(0);
+  sysFocus(keep);
+}
+function sysFocus(i) {
+  sysAt = clamp(i, 0, sysOpts().length - 1);
+  sysOpts().forEach((b, n) => b.classList.toggle("focus", n === sysAt));
+}
+async function openSystem(focus = 0) {
+  systemOpen = true;
+  sysAt = focus;
+  const info = await api("/api/system").catch(() => null);
+  if (!systemOpen) return;
+  if (info) showSystem(info);
+  document.getElementById("system").classList.add("open");
+  sysFocus(focus);
+  clearInterval(sysPoll);
+  sysPoll = setInterval(refreshStatus, 3000);  // Wi-Fi, temperature and space move while it's open
+}
+function closeSystem() {
+  systemOpen = false;
+  clearInterval(sysPoll);
+  document.getElementById("system").classList.remove("open");
+}
+document.getElementById("sys-close").onclick = closeSystem;
+document.getElementById("sys-close").onmouseenter = () => sysFocus(sysOpts().length - 1);
+document.getElementById("system").onclick = e => { if (e.target.id === "system") closeSystem(); };
 
 /* ---------- power menu (also a tile's choices, like UFC's Results or Fights) ---------- */
 let powerOpen = false, powerAt = 0;
@@ -1803,6 +1971,13 @@ function input(cmd) {
     if (cmd === "down") soundAt + 4 < soundOpts().length ? soundFocus(soundAt + 4) : soundStep("down");
     if (cmd === "ok") soundOpts()[soundAt] && soundOpts()[soundAt].click();
     if (cmd === "back") adding ? stopAdding() : closeSound();
+    return;
+  }
+  if (systemOpen) {
+    if (cmd === "left" || cmd === "up") sysFocus(sysAt - 1);
+    if (cmd === "right" || cmd === "down") sysFocus(sysAt + 1);
+    if (cmd === "ok") sysOpts()[sysAt]?.click();
+    if (cmd === "back") closeSystem();
     return;
   }
   if (settingsOpen) return settingsInput(cmd);

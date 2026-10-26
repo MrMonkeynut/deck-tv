@@ -40,7 +40,7 @@ can take a few minutes), then opens Deck TV full screen.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
 - **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
   Alt and press Tab to pick). If Deck TV isn't running, Alt+Tab works as normal.
-- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power and Sound) tucks
+- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power) tucks
   everything away to show the normal desktop. **Alt+F4** on the home screen closes Deck TV
   completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.
 - **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
@@ -48,7 +48,11 @@ can take a few minutes), then opens Deck TV full screen.
   **Show in now playing** to control that app instead.
 - **Weather**: click it for the 5-day forecast.
 - **Power**: the button in the bottom-left corner: Sleep, Restart or Power off.
-- **Sound**: the speaker button beside it: the volume, and where sound plays: the TV, the Deck's
+- **System**: the wide button at the end of the row shows Wi-Fi, battery and free space. Click it
+  for the details: space on the Deck (and any microSD card or USB drive), the Wi-Fi network and
+  signal, sound, battery, and the Deck's temperature and memory. Space turns amber when it's
+  getting full and red when it's almost out.
+- **Sound** (System → Sound): the volume, and where sound plays: the TV, the Deck's
   speakers, headphones or a Bluetooth speaker. A paired speaker that isn't connected shows
   "Connect": switch it on and click it. **Add speaker** pairs a new one: put it in pairing mode,
   pick it from the list, and sound moves to it.

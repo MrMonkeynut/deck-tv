@@ -768,6 +768,103 @@ def go_home():
     return {"ok": True}
 
 
+# ---------- system info: storage, Wi-Fi, sound, battery ----------
+POWER = Path("/sys/class/power_supply")
+
+
+def drives():
+    """Internal storage (/home: the games, apps and files; the system's own small partitions are
+    left out) and any microSD card or USB drive, with their space in bytes."""
+    found = [("Internal storage", "internal", "/home")]
+    seen = set()
+    try:
+        mounts = Path("/proc/mounts").read_text().splitlines()
+    except OSError:
+        mounts = []
+    for line in mounts:
+        dev, mnt, fstype = line.split()[:3]
+        mnt = mnt.replace("\\040", " ")
+        if not mnt.startswith("/run/media/") or fstype.startswith("fuse") or dev in seen:
+            continue
+        seen.add(dev)
+        kind = "sd" if "mmcblk" in dev else "usb"
+        found.append(("microSD card" if kind == "sd" else os.path.basename(mnt) or "USB drive", kind, mnt))
+    out = []
+    for name, kind, mnt in found:
+        try:
+            st = os.statvfs(mnt)
+        except OSError:
+            continue
+        total, free = st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize
+        out.append({"name": name, "kind": kind, "total": total, "free": free, "used": total - free})
+    return out
+
+
+def network():
+    """The Wi-Fi network (name, signal, band) or a cable, and the Deck's address on it."""
+    _, devs = run("nmcli -t -c no -f DEVICE,TYPE,STATE,CONNECTION dev")
+    info = {"connected": False}
+    for line in devs.splitlines():
+        dev, kind, state, conn = (line.split(":") + ["", "", "", ""])[:4]
+        if state == "connected" and kind in ("wifi", "ethernet"):
+            info = {"connected": True, "kind": kind, "device": dev, "name": conn}
+            break
+    if info["connected"] and info["kind"] == "wifi":
+        _, nets = run("nmcli -t -c no -f ACTIVE,SSID,SIGNAL,FREQ dev wifi list --rescan no")
+        for line in nets.splitlines():
+            m = re.match(r"yes:(.*):(\d+):(\d+) MHz$", line)
+            if m:
+                ghz = int(m.group(3)) / 1000
+                info.update(name=m.group(1).replace("\\:", ":"), signal=int(m.group(2)),
+                            band="6 GHz" if ghz > 5.9 else "5 GHz" if ghz > 4.9 else "2.4 GHz")
+    elif not info["connected"]:
+        _, radio = run("nmcli -t -c no radio wifi")
+        info["wifiOff"] = radio.strip() == "disabled"
+    info["ip"] = lan_ip() if info["connected"] else None
+    return info
+
+
+def battery():
+    try:
+        bat = next(p for p in POWER.iterdir() if p.name.startswith("BAT"))
+        level = int((bat / "capacity").read_text())
+        status = (bat / "status").read_text().strip()
+    except (OSError, StopIteration, ValueError):
+        return None
+    plugged = any((p / "online").read_text().strip() == "1"
+                  for p in POWER.iterdir() if (p / "online").exists())
+    return {"level": level, "charging": status == "Charging", "full": status == "Full" or level >= 100,
+            "plugged": plugged}
+
+
+def deck_info():
+    """The Deck itself: model, SteamOS version, how long it's been on, temperature and memory."""
+    def read(path, default=""):
+        try:
+            return Path(path).read_text().strip()
+        except OSError:
+            return default
+    model = {"Jupiter": "Steam Deck LCD", "Galileo": "Steam Deck OLED"}.get(read("/sys/class/dmi/id/product_name"), "Steam Deck")
+    os_release = dict(re.findall(r'^(\w+)="?([^"\n]*)"?$', read("/etc/os-release"), re.M))
+    temp = None
+    for h in Path("/sys/class/hwmon").glob("hwmon*"):
+        if read(h / "name") == "amdgpu":  # the APU: the chip that runs everything
+            t = read(h / "temp1_input")
+            temp = round(int(t) / 1000) if t.isdigit() else None
+    mem = dict(re.findall(r"^(\w+):\s+(\d+) kB", read("/proc/meminfo"), re.M))
+    total, avail = int(mem.get("MemTotal", 0)) * 1024, int(mem.get("MemAvailable", 0)) * 1024
+    up = float(read("/proc/uptime", "0").split()[0] or 0)
+    return {"model": model, "os": f"{os_release.get('NAME', 'SteamOS')} {os_release.get('VERSION_ID', '')}".strip(),
+            "uptime": int(up), "temp": temp, "memTotal": total, "memUsed": total - avail}
+
+
+def system_info():
+    vol = get_volume()
+    out = next((o for o in audio_outputs().get("outputs", []) if o.get("active")), None)
+    return {"storage": drives(), "network": network(), "battery": battery(), "deck": deck_info(),
+            "sound": {"output": out["name"] if out else None, "kind": out["kind"] if out else None, **vol}}
+
+
 # ---------- phone remote ----------
 # A second listener on the home network for the phone remote. Everything except the page
 # itself needs the pairing token, which only the Deck TV screen shows (as a QR code).
@@ -888,6 +985,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(speakers_found())
             if self.path == "/api/state":
                 return self._json(app_state())
+            if self.path == "/api/system":
+                return self._json(system_info())
             if self.path == "/api/remote":
                 return self._json({"url": remote_url()})
             return self._json({"error": "not found"}, 404)
