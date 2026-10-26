@@ -10,9 +10,8 @@ Dock:    Home plus every Deck TV tile; a short line under an icon means that app
 Alt+Tab: Deck TV's own switcher between Home and the open apps (see switch()), drawn by this
          process; the deck-tv-switch command (bound to Alt+Tab) pokes it with a signal. Alt+Tab
          is only Deck TV's while the dock runs: it gives it back to KDE when it closes.
-         The speaker on the left sets the volume: click for a slider, or scroll over it.
-         Left of it, the player button pops up previous / play-pause / next.
-         On the right, next to Hide, the desktop button steps out to the ordinary desktop.
+         The speaker on the left opens one menu: what's playing with previous / play-pause /
+         next, the volume, and a way out to the desktop. Scroll over it for the volume.
 """
 import fcntl
 import json
@@ -40,7 +39,9 @@ STRIP = 3          # height of the invisible hover strip
 HINT_W, HINT_H = 420, 90   # click target around the glowing line
 MARGIN = 14        # gap between the dock and the bottom edge
 SWITCH_ICON = 88   # icon size in the Alt+Tab switcher
-DOCK_AWAY = 5      # seconds an open dock stays once the pointer leaves it
+DOCK_AWAY = 4     # seconds an open dock stays once the pointer leaves it
+SLIDE_IN = 150     # ms for the dock to slide up into place ...
+SLIDE_OUT = 120    # ... and back down out of sight
 DOCK_IDLE = 15     # ... or sits with the pointer still on it, untouched
 HOME_ICON = os.path.expanduser("~/.local/share/deck-tv/icons/deck-tv.png")
 
@@ -78,7 +79,6 @@ window { background: transparent; }
 .dot { min-width: 18px; min-height: 4px; border-radius: 2px; background: transparent; }
 .dot.open { background: #F2F4F8; }
 .sep { min-width: 1px; background: rgba(255, 255, 255, 0.12); margin: 10px 6px 14px; }
-.hide { color: #DDE2EB; padding: 6px 10px; }
 .menu {
   background: rgba(20, 24, 31, 0.95); border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px; padding: 6px;
@@ -106,6 +106,17 @@ window { background: transparent; }
 .menu label.vol-num { color: #F2F4F8; font-size: 16px; min-width: 40px; }
 .menu button.mute { padding: 6px 10px; }
 .menu button.mute:hover { background: rgba(255, 255, 255, 0.12); }
+.menu.controls { padding: 6px; min-width: 330px; }
+.controls .group { padding: 10px 12px; }
+.controls .group-sep { min-height: 1px; background: rgba(255, 255, 255, 0.10); margin: 0 10px; }
+.controls label.np-title { color: #F2F4F8; font-size: 16px; font-weight: bold; }
+.controls label.np-sub { color: rgba(242, 244, 248, 0.6); font-size: 14px; }
+.controls label.note { padding: 0; }
+.controls button.mute { padding: 8px 12px; }
+.controls button.play { background: rgba(255, 255, 255, 0.10); }
+.controls button.wide { color: #F2F4F8; font-size: 15px; padding: 8px 10px; }
+.controls button.wide:hover { background: rgba(255, 255, 255, 0.12); }
+.controls scale { min-width: 220px; }
 """
 
 
@@ -220,11 +231,14 @@ class Dock(Gtk.Window):
         self.grab_seconds = 0         # how long the mouse has been held with no button pressed
         self.held_pressed = 0         # ... and with a button pressed
         self.leave_timer = None
+        self.slide_timer = None
         self.dots = {}
         self.state = None
         self.offset = load_offset()   # px right of centre; the line and dock share it
         self.dragged = False
         self.open_ids = set()
+        self.closing = {}
+        self.now = None  # what's playing, for the controls menu  # tile id -> until when it counts as closed (just closed from the dock)
         self.menu = None              # the right-click menu or volume slider, while it's showing
         self.volume = None            # last known {"level", "muted"}
         self.vol_pending = None       # slider value waiting to be sent
@@ -290,28 +304,18 @@ class Dock(Gtk.Window):
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         bar.get_style_context().add_class("dock")
 
-        # Player controls, left of the volume: click for previous / play-pause / next
-        player = Gtk.Button()
-        player.add(Gtk.Image.new_from_icon_name("media-playlist-play-symbolic", Gtk.IconSize.DND))
-        player.set_relief(Gtk.ReliefStyle.NONE)
-        player.get_style_context().add_class("vol")
-        player.set_tooltip_text("Player controls")
-        player.set_valign(Gtk.Align.CENTER)
-        player.connect("clicked", lambda b: self.hide_menu() if self.menu else self.show_player(b))
-        bar.pack_start(player, False, False, 0)
-
-        # Volume, always within reach: click for a slider, scroll to nudge it
+        # Controls: one button, showing the volume. Click for a menu of what's playing (previous /
+        # play-pause / next), the volume, and the way out to the desktop; scroll over it for the volume
         self.vol_img = Gtk.Image.new_from_icon_name("audio-volume-high-symbolic", Gtk.IconSize.DND)
-        vol = Gtk.Button()
-        vol.add(self.vol_img)
-        vol.set_relief(Gtk.ReliefStyle.NONE)
-        vol.get_style_context().add_class("vol")
-        vol.set_tooltip_text("Volume")
-        vol.set_valign(Gtk.Align.CENTER)
-        vol.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK)
-        vol.connect("clicked", lambda b: self.hide_menu() if self.menu else self.show_volume(b))
-        vol.connect("scroll-event", self.on_volume_scroll)
-        bar.pack_start(vol, False, False, 0)
+        ctl = Gtk.Button()
+        ctl.add(self.vol_img)
+        ctl.set_relief(Gtk.ReliefStyle.NONE)
+        ctl.get_style_context().add_class("vol")
+        ctl.set_valign(Gtk.Align.CENTER)
+        ctl.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK)
+        ctl.connect("clicked", lambda b: self.hide_menu() if self.menu else self.show_controls(b))
+        ctl.connect("scroll-event", self.on_volume_scroll)
+        bar.pack_start(ctl, False, False, 0)
 
         sep = Gtk.Box()
         sep.get_style_context().add_class("sep")
@@ -342,28 +346,6 @@ class Dock(Gtk.Window):
             btn.set_no_show_all(True)  # shown only while the app is open
             self.apps[t["id"]] = btn
             bar.pack_start(btn, False, False, 0)
-
-        sep = Gtk.Box()
-        sep.get_style_context().add_class("sep")
-        bar.pack_start(sep, False, False, 0)
-
-        # A way out to the ordinary desktop, as on the home screen (the dock and Super+H bring you back)
-        desk = Gtk.Button()
-        desk.add(Gtk.Image.new_from_pixbuf(line_icon("desktop")))  # the home screen's icon; Breeze's is a plain square
-        desk.set_relief(Gtk.ReliefStyle.NONE)
-        desk.get_style_context().add_class("vol")
-        desk.set_tooltip_text("Go to the desktop")
-        desk.set_valign(Gtk.Align.CENTER)
-        desk.connect("clicked", lambda *_: self.go_desktop())
-        bar.pack_start(desk, False, False, 0)
-
-        hide = Gtk.Button.new_from_icon_name("go-down-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
-        hide.set_relief(Gtk.ReliefStyle.NONE)
-        hide.get_style_context().add_class("hide")
-        hide.set_tooltip_text("Hide dock")
-        hide.set_valign(Gtk.Align.CENTER)
-        hide.connect("clicked", lambda *_: self.request(self.show_hidden))
-        bar.pack_start(hide, False, False, 0)
 
         bar.set_margin_bottom(MARGIN)
         return bar
@@ -409,7 +391,9 @@ class Dock(Gtk.Window):
             return False
         GLib.timeout_add(40, attempt)
 
-    def place(self, child, w, h):
+    def place(self, child, w, h, slide=False):
+        """Show child at the bottom of the screen; slide=True brings it up from below the edge."""
+        self.cancel_slide()
         a = self.area
         self.resize(w, h)  # size first, so the new child is never squeezed into the old window
         old = self.get_child()
@@ -419,10 +403,33 @@ class Dock(Gtk.Window):
             self.add(child)
         child.show_all()
         offset = 0 if child is self.strip else self.offset
-        self.move(self.clamp_x(a.x + (a.width - w) // 2 + offset, w), a.y + a.height - h)
+        x, y = self.clamp_x(a.x + (a.width - w) // 2 + offset, w), a.y + a.height - h
+        self.move(x, a.y + a.height if slide else y)
         self.show()
+        if slide:
+            self.slide(x, a.y + a.height, y, SLIDE_IN, lambda t: 1 - (1 - t) ** 3)  # fast, then settles
         self.away_since = None
         GLib.idle_add(self.limit_clicks_to, child)
+
+    def slide(self, x, y0, y1, ms, ease, done=None):
+        """Move the window from y0 to y1 over ms, a step per frame."""
+        start = time.monotonic()
+
+        def step():
+            t = min(1.0, (time.monotonic() - start) * 1000 / ms)
+            self.move(x, round(y0 + (y1 - y0) * ease(t)))
+            if t < 1:
+                return True
+            self.slide_timer = None
+            if done:
+                done()
+            return False
+        self.slide_timer = GLib.timeout_add(8, step)
+
+    def cancel_slide(self):
+        if self.slide_timer:
+            GLib.source_remove(self.slide_timer)
+            self.slide_timer = None
 
     def limit_clicks_to(self, child):
         """Only the visible part takes clicks; the see-through rest of the window lets them pass."""
@@ -568,10 +575,59 @@ class Dock(Gtk.Window):
         self.show_popup(box, btn)
         return True  # the right-click stops here
 
-    # ---------- volume ----------
-    def show_volume(self, btn):
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        box.get_style_context().add_class("volume")
+    # ---------- controls menu: what's playing, volume, desktop ----------
+    def show_controls(self, btn):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        box.get_style_context().add_class("controls")
+        for n, group in enumerate((self.player_group(), self.volume_group(), self.desktop_group())):
+            if n:
+                line = Gtk.Box()
+                line.get_style_context().add_class("group-sep")
+                box.pack_start(line, False, False, 0)
+            box.pack_start(group, False, False, 0)
+        self.show_popup(box, btn)
+        self.show_playing(self.playing)
+        self.show_volume_state(self.volume)
+        self.in_background(lambda: json.loads(api("/api/volume")), self.show_volume_state)
+
+    def player_group(self):
+        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        group.get_style_context().add_class("group")
+        m = self.now or {}
+        title = Gtk.Label.new(m.get("title") or "Nothing playing")
+        title.get_style_context().add_class("np-title" if m else "note")
+        sub = Gtk.Label.new(" · ".join(x for x in (m.get("app"), m.get("sub")) if x))
+        sub.get_style_context().add_class("np-sub")
+        for label in (title, sub):
+            label.set_xalign(0)
+            label.set_max_width_chars(30)
+            label.set_ellipsize(3)  # end
+        group.pack_start(title, False, False, 0)
+        if sub.get_text():
+            group.pack_start(sub, False, False, 0)
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        row.set_halign(Gtk.Align.CENTER)
+        row.set_margin_top(6)
+        for action, icon, tip in (("prev", "media-skip-backward-symbolic", "Previous"),
+                                  ("play", "media-playback-start-symbolic", "Play/pause"),
+                                  ("next", "media-skip-forward-symbolic", "Next")):
+            img = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.LARGE_TOOLBAR)
+            b = Gtk.Button()
+            b.add(img)
+            b.set_relief(Gtk.ReliefStyle.NONE)
+            b.get_style_context().add_class("mute")
+            if action == "play":
+                b.get_style_context().add_class("play")
+                self.play_img = img
+            b.set_tooltip_text(tip)
+            b.connect("clicked", lambda _b, a=action: self.media(a))
+            row.pack_start(b, False, False, 0)
+        group.pack_start(row, False, False, 0)
+        return group
+
+    def volume_group(self):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        row.get_style_context().add_class("group")
         self.mute_img = Gtk.Image.new_from_icon_name("audio-volume-high-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
         mute = Gtk.Button()
         mute.add(self.mute_img)
@@ -586,10 +642,23 @@ class Dock(Gtk.Window):
         self.vol_num = Gtk.Label.new("")
         self.vol_num.get_style_context().add_class("vol-num")
         for w in (mute, self.scale, self.vol_num):
-            box.pack_start(w, False, False, 0)
-        self.show_popup(box, btn)
-        self.show_volume_state(self.volume)
-        self.in_background(lambda: json.loads(api("/api/volume")), self.show_volume_state)
+            row.pack_start(w, False, False, 0)
+        return row
+
+    def desktop_group(self):
+        # A way out to the ordinary desktop, as on the home screen (the dock and Super+H bring you back)
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        row.pack_start(Gtk.Image.new_from_pixbuf(line_icon("desktop", 24)), False, False, 0)
+        row.pack_start(Gtk.Label.new("Go to the desktop"), False, False, 0)
+        b = Gtk.Button()
+        b.add(row)
+        b.set_relief(Gtk.ReliefStyle.NONE)
+        b.get_style_context().add_class("wide")
+        b.connect("clicked", lambda *_: self.go_desktop())
+        group = Gtk.Box()
+        group.get_style_context().add_class("group")
+        group.pack_start(b, True, True, 0)
+        return group
 
     def volume_icon(self, v):
         if not v or v["muted"] or v["level"] == 0:
@@ -649,18 +718,32 @@ class Dock(Gtk.Window):
         return x <= px < x + w and y <= py < y + h
 
     def close_app(self, tile_id):
-        # Tuck the dock away straight off, so a click while the app shuts down can't land on an icon
+        # The dock stays open, to close something else or switch. The app's icon goes straight away
+        # (the dock shrinks now, not under the pointer a moment later), and clicks on the icons are
+        # ignored for a moment while it shuts down. An app that refuses to close comes back on the next check.
         self.hide_menu()
-        self.quiet_until = time.monotonic() + 2
-        self.request(self.show_hidden)
+        self.quiet_until = time.monotonic() + 1
+        self.moved_at = time.monotonic()
+        self.open_ids.discard(tile_id)
+        self.closing[tile_id] = time.monotonic() + 4  # a check already on its way still has it open
+        if tile_id in self.apps:
+            self.apps[tile_id].hide()
+            self.request(self.fit_dock)
         self.in_background(lambda: api(f"/api/close/{tile_id}", "POST"))
 
     def show_hidden(self):
         self.hide_menu()
         self.hidden_at = time.monotonic()
-        self.state = "hidden"
+        was, self.state = self.state, "hidden"
         self.cancel_leave()
-        self.place(self.strip, self.area.width, STRIP)
+        strip = lambda: self.place(self.strip, self.area.width, STRIP)
+        if was == "dock" and self.get_child() is self.dock and not self.slide_timer:
+            # Slide down out of sight, then leave the hover strip in its place
+            x, y = self.get_position()
+            self.slide(x, y, self.area.y + self.area.height, SLIDE_OUT, lambda t: t * t,
+                       lambda: self.state == "hidden" and strip())
+        else:
+            strip()
 
     def on_strip_enter(self):
         if self.buttons_down():
@@ -681,7 +764,7 @@ class Dock(Gtk.Window):
             pass
         self.dock.show_all()
         _, nat = self.dock.get_preferred_size()
-        self.place(self.dock, nat.width, nat.height)
+        self.place(self.dock, nat.width, nat.height, slide=True)
         self.poll_state()
 
     def leave_after(self, ms):
@@ -716,24 +799,6 @@ class Dock(Gtk.Window):
         self.hide_menu()
         self.request(self.show_hidden)
         self.in_background(lambda: api(f"/api/launch/{tile_id}", "POST"))
-
-    def show_player(self, btn):
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        for action, icon, tip in (("prev", "media-skip-backward-symbolic", "Previous"),
-                                  ("play", "media-playback-start-symbolic", "Play/pause"),
-                                  ("next", "media-skip-forward-symbolic", "Next")):
-            img = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.LARGE_TOOLBAR)
-            b = Gtk.Button()
-            b.add(img)
-            b.set_relief(Gtk.ReliefStyle.NONE)
-            b.get_style_context().add_class("mute")
-            b.set_tooltip_text(tip)
-            b.connect("clicked", lambda _b, a=action: self.media(a))
-            box.pack_start(b, False, False, 0)
-            if action == "play":
-                self.play_img = img
-        self.show_popup(box, btn)
-        self.show_playing(self.playing)
 
     def media(self, action):
         if action == "play":  # answer the click at once; the next poll corrects it if need be
@@ -772,8 +837,12 @@ class Dock(Gtk.Window):
         if not state:
             return False
         open_ids = set(state.get("open", [])) | ({"home"} if state.get("home") else set())
+        now = time.monotonic()
+        self.closing = {k: t for k, t in self.closing.items() if t > now}
+        open_ids -= set(self.closing)
         self.open_ids = open_ids
-        self.show_playing(bool((state.get("media") or {}).get("playing")))
+        self.now = state.get("media")
+        self.show_playing(bool((self.now or {}).get("playing")))
         for key, dot in self.dots.items():
             ctx = dot.get_style_context()
             (ctx.add_class if key in open_ids else ctx.remove_class)("open")
@@ -823,6 +892,14 @@ class Dock(Gtk.Window):
                     and not self.pointer_in(self):
                 self.hide_menu()
             self.was_down = down
+            # Tuck away a dock (or a line) once the pointer has been off it for DOCK_AWAY seconds
+            if self.state in ("hint", "dock") and not self.slide_timer:
+                if self.pointer_in(self) or (self.menu is not None and self.pointer_in(self.menu)):
+                    self.away_since = None
+                elif self.away_since is None:
+                    self.away_since = time.monotonic()
+                elif time.monotonic() - self.away_since > (DOCK_AWAY if self.state == "dock" else 3):
+                    self.show_hidden()
         except Exception as e:
             print("dock click watch failed:", repr(e), file=sys.stderr)
         return True
@@ -885,12 +962,6 @@ class Dock(Gtk.Window):
             if time.monotonic() - getattr(self, "moved_at", time.monotonic()) > DOCK_IDLE:
                 self.show_hidden()
                 return True
-            if in_menu or self.pointer_in(self):
-                self.away_since = None
-            elif self.away_since is None:
-                self.away_since = time.monotonic()
-            elif time.monotonic() - self.away_since > (DOCK_AWAY if self.state == "dock" else 3):
-                self.show_hidden()
         return True
 
 

@@ -33,10 +33,12 @@ can take a few minutes), then opens Deck TV full screen.
   **Live TV** (RTÉ, Virgin Media, Plex) and **UFC** (Fights, Results) are groups: they ask which
   app you want first. Make your own groups, or change these, in Settings (the gear button).
 - **The dock**: move the mouse to the very bottom edge of the screen and a glowing line appears.
-  Click it to open the dock: Home (Deck TV), the apps you have open, and the volume on the left.
-  - Scroll over the speaker to change the volume, or click it for a slider.
+  Click it to open the dock: Home (Deck TV), the apps you have open, and the speaker on the left.
+  - Click the speaker for what's playing (previous, play/pause, next), the volume, and
+    **Go to the desktop**. Scroll over it to change the volume.
   - Right-click an app in the dock to close it.
-  - Slide the dock left or right if it's in the way. It hides by itself, or click elsewhere.
+  - Slide the dock left or right if it's in the way. It hides 4 seconds after the pointer leaves
+    it, or click elsewhere.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
 - **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
   Alt and press Tab to pick). If Deck TV isn't running, Alt+Tab works as normal.
