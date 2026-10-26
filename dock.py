@@ -12,13 +12,14 @@ Alt+Tab: Deck TV's own switcher between Home and the open apps (see switch()), d
          is only Deck TV's while the dock runs: it gives it back to KDE when it closes.
          The speaker on the left sets the volume: click for a slider, or scroll over it.
          Left of it, the player button pops up previous / play-pause / next.
+         On the right, next to Hide, the desktop button steps out to the ordinary desktop.
 """
 import fcntl
 import json
 import os
 import signal
-import sys
 import subprocess
+import sys
 import threading
 import time
 import urllib.request
@@ -45,6 +46,7 @@ HOME_ICON = os.path.expanduser("~/.local/share/deck-tv/icons/deck-tv.png")
 
 # Same line icons as the Deck TV page, for tiles without an installed app icon
 LINE_ICONS = {
+    "desktop": '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M9 10.5l3-3 3 3M12 7.5v6"/>',
     "film": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>',
     "gamepad": '<path d="M6 11h4M8 9v4"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7V14a4 4 0 0 0 7 2.6L10 15h4l1 1.6A4 4 0 0 0 22 14V9.7A4.7 4.7 0 0 0 17.3 5z"/>',
     "music": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
@@ -193,6 +195,16 @@ def fallback_icon(tile):
     return pixbuf_from(svg.encode())
 
 
+def line_icon(name, size=32, color="#DDE2EB"):
+    """One of the line icons on its own, drawn like the home screen's (the desktop button)."""
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 26 26" width="{size}" height="{size}">'
+        f'<g fill="none" stroke="{color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+        f'{LINE_ICONS[name]}</g></svg>'
+    )
+    return pixbuf_from(svg.encode(), size)
+
+
 class Dock(Gtk.Window):
     def __init__(self):
         super().__init__(type=Gtk.WindowType.POPUP)  # unmanaged: no focus, no taskbar entry, no border
@@ -334,6 +346,17 @@ class Dock(Gtk.Window):
         sep = Gtk.Box()
         sep.get_style_context().add_class("sep")
         bar.pack_start(sep, False, False, 0)
+
+        # A way out to the ordinary desktop, as on the home screen (the dock and Super+H bring you back)
+        desk = Gtk.Button()
+        desk.add(Gtk.Image.new_from_pixbuf(line_icon("desktop")))  # the home screen's icon; Breeze's is a plain square
+        desk.set_relief(Gtk.ReliefStyle.NONE)
+        desk.get_style_context().add_class("vol")
+        desk.set_tooltip_text("Go to the desktop")
+        desk.set_valign(Gtk.Align.CENTER)
+        desk.connect("clicked", lambda *_: self.go_desktop())
+        bar.pack_start(desk, False, False, 0)
+
         hide = Gtk.Button.new_from_icon_name("go-down-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
         hide.set_relief(Gtk.ReliefStyle.NONE)
         hide.get_style_context().add_class("hide")
@@ -728,6 +751,11 @@ class Dock(Gtk.Window):
         self.hide_menu()
         self.request(self.show_hidden)
         self.in_background(lambda: api("/api/home", "POST"))
+
+    def go_desktop(self):
+        self.hide_menu()
+        self.request(self.show_hidden)
+        self.in_background(lambda: api("/api/desktop", "POST"))
 
     def poll_state(self):
         # One question at a time: if the server is slow, don't pile more requests on top
