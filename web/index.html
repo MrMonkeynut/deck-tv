@@ -29,6 +29,39 @@
   }
   #weather:hover { background: #1B2029; }
 
+  /* Top right: Features over the weather */
+  .head-right { align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
+  #feat-btn {
+    all: unset; display: flex; align-items: center; gap: 8px; font-size: 16px; color: var(--muted); padding: 7px 14px 7px 11px;
+    margin-right: -14px; border-radius: 16px; cursor: pointer; outline: 3px solid transparent; outline-offset: 2px;
+    transition: background .15s, color .15s, outline-color .15s;
+  }
+  #feat-btn svg { width: 18px; height: 18px; }
+  #feat-btn:hover, #feat-btn.focus { background: #1B2029; color: var(--ink); }
+  #feat-btn.focus { outline-color: var(--ring); }
+
+  /* Features: what Deck TV does, in groups; columns that pack themselves, and scroll if need be */
+  #features { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(8,10,14,.82); z-index: 10; }
+  #features.open { display: flex; }
+  .ft-card { width: 1220px; max-height: 688px; gap: 14px; padding: 22px 24px 18px; }
+  .ft-head { display: flex; align-items: baseline; gap: 14px; }
+  .ft-head span { font-size: 18px; color: var(--muted); }
+  .ft-close { all: unset; margin-left: auto; align-self: center; width: 40px; height: 40px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; color: var(--muted); cursor: pointer; }
+  .ft-close svg { width: 22px; height: 22px; }
+  .ft-close:hover { background: #2A3140; color: var(--ink); }
+  /* Four columns, two groups each, paired so they come out about even */
+  .ft-cols { display: flex; align-items: flex-start; gap: 12px; overflow-y: auto; padding-right: 4px; margin-right: -4px;
+    scrollbar-width: thin; scrollbar-color: #4A5366 transparent; }
+  .ft-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .ft-group { margin: 0; padding: 13px 15px 12px; border-radius: 16px; background: #232937; }
+  .ft-group h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
+  .ft-group h3 i { display: flex; width: 30px; height: 30px; border-radius: 9px; align-items: center; justify-content: center; background: #2F3747; color: #C9D1E0; }
+  .ft-group h3 svg { width: 18px; height: 18px; }
+  .ft-group ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .ft-group li { font-size: 14px; line-height: 1.32; color: var(--muted); }
+  .ft-group li b { font-size: inherit; color: var(--ink); font-weight: 600; margin-right: 6px; }
+
   /* Five-day forecast, from clicking the weather */
   #forecast {
     position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
@@ -680,7 +713,10 @@
       <button class="np-ctl main" id="np-play" aria-label="Pause"><svg viewBox="0 0 24 24"><path id="np-play-icon" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
       <button class="np-ctl" id="np-next" aria-label="Next"><svg viewBox="0 0 24 24"><path id="np-next-icon" d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg></button>
     </div>
-    <button id="weather" aria-live="polite" aria-label="Weather forecast"></button>
+    <div class="head-right">
+      <button id="feat-btn" aria-label="Deck TV features"></button>
+      <button id="weather" aria-live="polite" aria-label="Weather forecast"></button>
+    </div>
   </header>
 
   <div id="tiles" role="list"></div>
@@ -858,6 +894,30 @@
         <button class="set-wide danger" id="wle-delete">Delete</button>
         <button class="set-wide" id="wle-cancel">Cancel</button>
         <button class="set-wide primary" id="wle-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="features" role="dialog" aria-label="Deck TV features">
+    <div class="power-card ft-card">
+      <div class="ft-head"><b>Deck TV</b><span>What it can do</span><button class="ft-close" id="ft-close" aria-label="Close"></button></div>
+      <div class="ft-cols" id="ft-cols">
+        <div class="ft-col">
+        <section class="ft-group"><h3><i data-icon="grid"></i>Home screen</h3><ul><li><b>Cards</b><span>one press opens an app full screen; press again to switch back to it</span></li><li><b>Groups</b><span>folders of apps like Live TV and Streaming, each with its own look</span></li><li><b>Your layout</b><span>hide, group and rearrange cards, by mouse or controller</span></li><li><b>Badges</b><span>unread WhatsApp messages and what's playing, right on the card</span></li><li><b>Weather</b><span>the town's weather; press it for the five-day forecast</span></li></ul></section>
+        <section class="ft-group"><h3><i data-icon="gamepad"></i>Controller</h3><ul><li><b>Everywhere</b><span>D-pad or stick to move, A to choose, B to go back</span></li><li><b>Y</b><span>undoes the last watchlist change</span></li></ul></section>
+        </div>
+        <div class="ft-col">
+        <section class="ft-group"><h3><i data-icon="desktop"></i>Switching apps</h3><ul><li><b>Dock</b><span>nudge the mouse to the bottom edge: Home, open apps and the sound menu</span></li><li><b>Alt+Tab</b><span>Deck TV's own switcher; hold Alt and tap, or click an app</span></li><li><b>Home</b><span>Super+H or the dock's TV icon, from anywhere</span></li><li><b>Desktop</b><span>tuck everything away in one press; Alt+F4 closes Deck TV</span></li></ul></section>
+        <section class="ft-group"><h3><i data-icon="music"></i>Now playing & sound</h3><ul><li><b>Now playing</b><span>whatever's playing, with play/pause and skip, wherever it is</span></li><li><b>One at a time</b><span>starting something new pauses the last</span></li><li><b>Sound</b><span>volume, and play on the TV, the Deck, headphones or Bluetooth</span></li><li><b>Speakers</b><span>pair a new Bluetooth speaker from the sofa</span></li></ul></section>
+        </div>
+        <div class="ft-col">
+        <section class="ft-group"><h3><i data-icon="bookmark"></i>Watchlist</h3><ul><li><b>Lists</b><span>Liam and Laura, Top 100 (the scratch poster), Kids, or your own</span></li><li><b>Films & shows</b><span>poster, plot, running time; seasons and years for shows</span></li><li><b>Watch on Movy</b><span>opens Movy and searches it for you</span></li><li><b>Sort & filter</b><span>to watch or watched; by title, year or length</span></li><li><b>Safety net</b><span>Undo after marking watched, removing or moving</span></li></ul></section>
+        <section class="ft-group"><h3><i data-icon="clapper"></i>Trailers</h3><ul><li><b>Right here</b><span>plays inside Deck TV; nothing can take you off to YouTube</span></li><li><b>Controls</b><span>scrub, volume, captions, fullscreen</span></li><li><b>Every trailer</b><span>Trailer 1, 2, 3…; one that won't play gives way to the next</span></li></ul></section>
+        </div>
+        <div class="ft-col">
+        <section class="ft-group"><h3><i data-icon="phone"></i>Phone remote</h3><ul><li><b>Scan & go</b><span>the QR code on the home screen; no app to install</span></li><li><b>Touchpad & keys</b><span>mouse, keyboard, app switching and media keys</span></li><li><b>Search</b><span>type into Movy, YouTube or Spotify's search from the phone</span></li></ul></section>
+        <section class="ft-group"><h3><i data-icon="gear"></i>System</h3><ul><li><b>At a glance</b><span>Wi-Fi, battery and free space in the bottom row</span></li><li><b>System panel</b><span>storage (SD card and USB too), Wi-Fi, battery, temperature</span></li><li><b>Power</b><span>sleep, restart or power off, with a countdown to cancel</span></li><li><b>Screensaver</b><span>a drifting clock when left alone; never over an app</span></li></ul></section>
+        </div>
       </div>
     </div>
   </div>
@@ -1186,12 +1246,39 @@ function showUnread(counts) {
   unreadWas = counts;
 }
 
+/* ---------- Features: what Deck TV does, from the button in the top right ----------
+   Up from the cards reaches the button; in the panel, up and down scroll, B (or A) closes it. */
+let featOpen = false, featFocus = false;
+function openFeatures() {
+  featOpen = true;
+  featFocus = false;
+  document.getElementById("feat-btn").classList.remove("focus");
+  document.getElementById("ft-cols").scrollTop = 0;
+  document.getElementById("features").classList.add("open");
+}
+function closeFeatures() {
+  featOpen = false;
+  document.getElementById("features").classList.remove("open");
+}
+function featInput(cmd) {
+  const cols = document.getElementById("ft-cols");
+  if (cmd === "down" || cmd === "up") cols.scrollBy({ top: cmd === "down" ? 160 : -160, behavior: "smooth" });
+  if (cmd === "back" || cmd === "ok") closeFeatures();
+}
+document.getElementById("feat-btn").innerHTML = `${svg("spark", "currentColor", 1.8)}Features`;
+document.getElementById("feat-btn").onclick = openFeatures;
+document.getElementById("ft-close").innerHTML = svg("close", "currentColor", 2.2);
+document.getElementById("ft-close").onclick = closeFeatures;
+document.getElementById("features").onclick = e => { if (e.target.id === "features") closeFeatures(); };  // clicking off it closes it
+document.querySelectorAll("#features .ft-group h3 i").forEach(i => { i.innerHTML = svg(i.dataset.icon, "currentColor", 1.8); });
+
 /* When Deck TV is updated, pick up the new page by itself (once nothing is open on top of it) */
 let pageVersion = null;
 function reloadIfUpdated(v) {
   if (!v) return;
   if (pageVersion === null) pageVersion = v;
-  const busy = forecastOpen || powerOpen || soundOpen || settingsOpen || groupOpen || arranging || sleepTimer || ctx.classList.contains("open");
+  const busy = forecastOpen || powerOpen || soundOpen || settingsOpen || groupOpen || arranging || sleepTimer || ctx.classList.contains("open")
+    || watchOpen || featOpen;
   if (v !== pageVersion && !busy) location.reload();
 }
 
@@ -3122,7 +3209,7 @@ showSaverSetting();
 setInterval(() => {
   // Only while Deck TV itself is in front; coming back to it starts the wait again
   if (!document.hasFocus() || document.hidden) return void (idleSince = Date.now());
-  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer || wlTrOpen;
+  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer || wlTrOpen || featOpen;
   if (!saverOn && saverMins && !busy && Date.now() - idleSince > saverMins * 60000) startSaver();
 }, 5000);
 
@@ -3235,6 +3322,12 @@ function input(cmd) {
   document.body.classList.remove("mouse");
   if (sleepTimer) return cancelSleep();
   if (forecastOpen) return closeForecast();
+  if (featOpen) return featInput(cmd);
+  if (featFocus) {  // on the Features button, above the cards
+    if (cmd === "ok") return openFeatures();
+    if (cmd === "down" || cmd === "back") { featFocus = false; document.getElementById("feat-btn").classList.remove("focus"); return setFocus(0, pos.c); }
+    return;
+  }
   if (soundOpen) {
     if (cmd === "left") soundFocus(soundAt - 1);
     if (cmd === "right") soundFocus(soundAt + 1);
@@ -3278,6 +3371,11 @@ function input(cmd) {
   if (cmd === "right") setFocus(r, c + 1);
   if (cmd === "down" && r === 0) setFocus(1, Math.min(c, rows[1].length - 1));
   if (cmd === "up" && r === 1) setFocus(0, Math.min(c, rows[0].length - 1));
+  if (cmd === "up" && r === 0) {  // up from the cards: the Features button in the corner
+    clearFocus();
+    featFocus = true;
+    return document.getElementById("feat-btn").classList.add("focus");
+  }
   if (cmd === "ok") rows[r][c].click();
 }
 
@@ -3299,6 +3397,8 @@ addEventListener("mousemove", e => {
   if (document.body.classList.contains("mouse")) return;
   document.body.classList.add("mouse");
   if (!e.target.closest?.(".tile, .action")) clearFocus();
+  featFocus = false;
+  document.getElementById("feat-btn").classList.remove("focus");
 });
 
 /* Gamepad (when the controller isn't already sending arrow keys) */

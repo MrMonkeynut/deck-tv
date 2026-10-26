@@ -49,6 +49,7 @@ can take a few minutes), then opens Deck TV full screen.
   skip. Starting something in another app pauses the first. Right-click a tile →
   **Show in now playing** to control that app instead.
 - **Weather**: click it for the 5-day forecast.
+- **Features**: the button in the top-right corner (or up from the cards) lists what Deck TV can do, in groups.
 - **Power**: the button in the bottom-left corner: Sleep, Restart or Power off.
 - **System**: the wide button at the end of the row shows Wi-Fi, battery and free space. Click it
   for the details: space on the Deck (and any microSD card or USB drive), the Wi-Fi network and

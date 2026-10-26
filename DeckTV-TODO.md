@@ -23,6 +23,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Features panel**: a Features button in the top-right corner (up from the cards with the controller) opens a one-screen summary of what Deck TV does, in eight groups. Also: an update no longer reloads the page while the watchlist (or a trailer) is open _(done 2026-10-27)_
 - [x] **Trailers: captions**: a CC button beside the volume turns captions on or off (English where there is some), remembered for the next trailer. Also fixed: with the controller, focus couldn't get past the volume slider; it's now A to adjust it, A or B to finish _(done 2026-10-27)_
 - [x] **Watchlist: Move**: a Move button on an opened film drops down the other lists; the film goes to the end of the one picked, with Undo putting it back where it was _(done 2026-10-27)_
 - [x] **Watchlist: films and shows**: a Film / Show switch when adding or editing. Trailers, posters and summaries look up the right one (Fargo the series vs the film); a show gets its seasons, episodes, episode length, years running and status from TMDB, kept with it, and its row shows its seasons. Sorting by running time puts shows after films. A show with no trailer on TMDB plays its opening credits or a clip _(done 2026-10-27)_
