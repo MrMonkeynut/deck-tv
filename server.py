@@ -1024,13 +1024,15 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json({"url": remote_url()})
             if self.path == "/api/watchlist":
                 return self._json(watchlist.load())
-            if self.path.startswith("/api/trailers?"):
+            if self.path.startswith(("/api/trailers?", "/api/details?")):
                 q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
                 title = (q.get("title") or [""])[0].strip()[:80]
                 year = (q.get("year") or [""])[0]
+                kind = "show" if (q.get("kind") or [""])[0] == "show" else "film"
                 if not title:
                     return self._json({"error": "no title"}, 400)
-                return self._json(trailers.find(title, int(year) if year.isdigit() else None))
+                look = trailers.find if self.path.startswith("/api/trailers?") else trailers.details
+                return self._json(look(title, int(year) if year.isdigit() else None, kind))
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
 

@@ -69,6 +69,9 @@ can take a few minutes), then opens Deck TV full screen.
   puts a film on the list you're looking at (a keyboard, or the phone
   remote's, is easiest for typing), **Edit** changes it, moves it to another list or deletes it, and
   **New list / Edit list** make, rename or delete lists. Kept in `~/.config/deck-tv/watchlist.json`.
+  Films and shows: when adding or editing, pick **Film** or **Show**. A show's row says how many
+  seasons it has, and opening it shows its years running, episodes, episode length and whether it's
+  still running (from TMDB); its trailer, poster and summary are the show's, not a film's of the same name.
 - **Phone remote**: scan the QR code in the bottom-right corner with your phone (on the same
   Wi-Fi). You get a touchpad, a keyboard for search boxes, app switching and media controls.
   Tip: "Add to Home Screen" in your phone's browser makes it an app.

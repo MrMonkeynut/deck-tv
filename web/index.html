@@ -457,7 +457,9 @@
   .wl-row.focus { outline-color: var(--ring); }
   .wl-row b { flex: 1; min-width: 0; font-size: 19px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wl-row span { flex: none; font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .wl-row .time { width: 72px; text-align: left; }  /* a set width, so every name starts at the same place */
+  .wl-row .time { width: 88px; text-align: left; }  /* a set width, so every name starts at the same place */
+  .wl-row .tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #8FB8FF; padding: 2px 7px; border-radius: 6px; background: rgba(120,160,255,.14); }
+  .wle-kind { display: flex; gap: 10px; }
   .wl-row svg { flex: none; width: 18px; height: 18px; }
   .wl-row .seen { color: #7BD3A2; }
   .wl-row .more { color: var(--dim); transition: transform .15s; }
@@ -831,6 +833,7 @@
     <div class="power-card set-card">
       <b id="wle-title">Add a film</b>
       <input id="wle-name" class="ge-name" type="text" maxlength="80" placeholder="Film or show" autocomplete="off" spellcheck="false">
+      <div class="wle-kind film-only" id="wle-kind" role="radiogroup" aria-label="Film or show"></div>
       <div class="wle-pair film-only">
         <input id="wle-year" class="ge-name short" type="text" inputmode="numeric" maxlength="4" placeholder="Year" autocomplete="off">
         <input id="wle-time" class="ge-name short" type="text" maxlength="7" placeholder="Minutes" autocomplete="off" spellcheck="false" title="Running time: minutes, or like 2h 15m">
@@ -2028,9 +2031,21 @@ const WL_BY = {
   title: (a, b) => wlSortKey(a.title).localeCompare(wlSortKey(b.title)),
   newest: (a, b) => (b.year || 0) - (a.year || 0),
   oldest: (a, b) => (a.year || 9999) - (b.year || 9999),
-  shortest: (a, b) => (a.runtime || 9999) - (b.runtime || 9999),
-  longest: (a, b) => (b.runtime || 0) - (a.runtime || 0),
+  shortest: (a, b) => (wlFilmMins(a) || 9999) - (wlFilmMins(b) || 9999),
+  longest: (a, b) => (wlFilmMins(b) || 0) - (wlFilmMins(a) || 0),
 };
+const wlFilmMins = it => it.kind === "show" ? null : it.runtime;  // shows sort after the films, by running time
+/* The facts line of an opened film or show, and the short one over its poster and trailer */
+const WL_STATUS = { "Returning Series": "Still running", "Canceled": "Cancelled", "In Production": "In production" };
+function wlFacts(it) {
+  if (it.kind !== "show") return [it.year, it.runtime && wlTime(it.runtime), it.note].filter(Boolean).join(" · ");
+  return [it.years || it.year, it.seasons && `${it.seasons} season${it.seasons === 1 ? "" : "s"}`,
+          it.episodes && `${it.episodes} episodes`, it.runtime && `${wlTime(it.runtime)} episodes`,
+          it.status && (WL_STATUS[it.status] || it.status), it.note].filter(Boolean).join(" · ");
+}
+const wlShort = it => it.kind === "show"
+  ? [it.years || it.year, it.seasons && `${it.seasons} season${it.seasons === 1 ? "" : "s"}`].filter(Boolean).join(" · ")
+  : [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
 const wlTime = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`;
 /* A running time typed in: minutes ("142"), or hours and minutes ("2h 22m", "2h22", "2h") */
 function wlMinutes(v) {
@@ -2138,7 +2153,10 @@ function wlRowFor(it) {
   row.className = "wl-row";
   row.dataset.id = it.id;
   row.setAttribute("aria-expanded", String(open));
-  row.innerHTML = `<span class="time">${it.runtime ? wlTime(it.runtime) : "–"}</span><b>${esc(it.title)}</b>` +
+  // The first column: a film's running time; a show's seasons (or its episodes' length, before TMDB has said)
+  const first = it.kind === "show" ? (it.seasons ? `${it.seasons} season${it.seasons === 1 ? "" : "s"}` : it.runtime ? `${wlTime(it.runtime)} eps` : "–")
+    : it.runtime ? wlTime(it.runtime) : "–";
+  row.innerHTML = `<span class="time">${first}</span><b>${esc(it.title)}</b>${it.kind === "show" ? `<span class="tag">SHOW</span>` : ""}` +
     `${it.watched ? `<span class="seen" title="Watched">${svg("check", "currentColor", 2.4)}</span>` : ""}<span class="more">${svg("chev", "currentColor", 2)}</span>`;
   row.onclick = () => wlToggleOpen(it);
   item.append(row);
@@ -2147,7 +2165,7 @@ function wlRowFor(it) {
   more.className = "wl-more";
   const day = t => new Date(t * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   const when = [it.added && `Added ${day(it.added)}`, it.watched && it.watchedAt && `Watched ${day(it.watchedAt)}`].filter(Boolean).join(" · ");
-  const facts = [it.year, it.runtime && wlTime(it.runtime), it.note].filter(Boolean).join(" · ");
+  const facts = wlFacts(it);
   more.innerHTML = `<button class="wl-poster" disabled aria-label="Poster">${svg("film", "currentColor", 1.4)}</button>
     <div class="wl-detail">
       ${facts ? `<div class="wl-facts">${esc(facts)}</div>` : ""}
@@ -2200,12 +2218,16 @@ function wlToggleOpen(it) {
    Asked once per film for the visit; nothing found (or offline) leaves the poster as a plain icon. */
 const wlInfoCache = new Map();
 function wlInfo(it) {
-  const key = `${it.title}|${it.year || ""}`;
+  const show = it.kind === "show", key = `${show ? "show" : "film"}|${it.title}|${it.year || ""}`;
   if (!wlInfoCache.has(key)) wlInfoCache.set(key, (async () => {
-    const q = `${it.title.replace(/\s*\([^)]*\)/g, "")} ${it.year || ""} film`;
+    if (show) {  // TMDB knows shows best (and doesn't mix them up with a film of the same name)
+      const d = await wlFillShow(it);
+      if (d && (d.overview || d.poster)) return { text: d.overview, img: d.poster, big: d.posterBig };
+    }
+    const q = `${it.title.replace(/\s*\([^)]*\)/g, "")} ${it.year || ""} ${show ? "TV series" : "film"}`;
     const found = await fetch(`https://en.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=5`).then(r => r.json());
     const pages = found.pages || [];
-    const page = pages.find(p => /\b(film|movie|series|miniseries)\b/i.test(p.description || "")) || pages[0];
+    const page = pages.find(p => (show ? /\b(television|tv|series|sitcom|miniseries|anime)\b/i : /\b(film|movie)\b/i).test(p.description || "")) || pages[0];
     if (!page) return null;
     const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`).then(r => r.json());
     // The larger view: the original if it isn't huge, otherwise a 900-pixel copy of it
@@ -2214,6 +2236,29 @@ function wlInfo(it) {
     return { text: sum.extract, img, big };
   })().catch(() => { wlInfoCache.delete(key); return null; }));  // offline: try again next time
   return wlInfoCache.get(key);
+}
+/* A show's seasons, episodes, episode length, years running and status, from TMDB: kept with it in the
+   list (so its row can say "5 seasons"), asked for when it's added, edited or opened. Its own running
+   time and year, if typed in, are kept. Returns TMDB's answer (with the overview and poster). */
+const wlFilling = new Map();
+function wlFillShow(it) {
+  if (it.kind !== "show") return Promise.resolve(null);
+  const key = `${it.title}|${it.year || ""}`;
+  if (wlFilling.has(key)) return wlFilling.get(key);
+  const job = api(`/api/details?kind=show&title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).then(d => {
+    if (!d || d.needKey || d.error || !d.tmdb) return d;
+    const before = JSON.stringify([it.seasons, it.episodes, it.years, it.status, it.runtime, it.year]);
+    Object.assign(it, { seasons: d.seasons, episodes: d.episodes, years: d.years, status: d.status });
+    if (!it.runtime && d.runtime) it.runtime = d.runtime;
+    if (!it.year && d.year) it.year = d.year;
+    if (JSON.stringify([it.seasons, it.episodes, it.years, it.status, it.runtime, it.year]) !== before) {
+      saveWatch();
+      if (watchOpen && !wlEdOpen) renderWatch(wlAt);  // the row and facts catch up (focus stays where it is)
+    }
+    return d;
+  }).catch(() => null).finally(() => setTimeout(() => wlFilling.delete(key), 60000));
+  wlFilling.set(key, job);
+  return job;
 }
 function wlFocus(at) { wlAt = gridFocus(wlGrid(), "#watch", at); }
 function wlFocusEl(el) {
@@ -2339,7 +2384,7 @@ document.getElementById("watch").addEventListener("click", e => { if (wlSortOpen
 let wlPvOpen = false;
 function openPoster(it, info) {
   document.getElementById("wl-pv-name").textContent = it.title;
-  document.getElementById("wl-pv-time").textContent = [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
+  document.getElementById("wl-pv-time").textContent = wlShort(it);
   const img = document.getElementById("wl-pv-img");
   img.onerror = () => { img.onerror = null; img.src = info.img; };  // no large copy: the small one, stretched a little
   img.src = info.big || info.img;
@@ -2373,11 +2418,11 @@ async function openTrailer(it) {
   wlTrOpen = true;
   trList = [];
   tr("wl-tr-name").textContent = it.title;
-  tr("wl-tr-time").textContent = [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
+  tr("wl-tr-time").textContent = wlShort(it);
   tr("wl-tr-which").textContent = "";
   tr("wl-tr").classList.add("open");
   trMessage(`<span class="spin"></span>Finding the trailer…`);
-  const found = await api(`/api/trailers?title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).catch(() => ({ error: "server" }));
+  const found = await api(`/api/trailers?kind=${it.kind || "film"}&title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).catch(() => ({ error: "server" }));
   if (!wlTrOpen || trFilm !== it) return;
   if (found.needKey) return trAskKey(found.error);
   if (found.error) return trMessage(`Couldn't look up the trailer<small>${esc(found.error === "server" ? "Deck TV's server didn't answer" : found.error)}</small>`);
@@ -2646,14 +2691,15 @@ const wleTime = document.getElementById("wle-time");
 function openWatchEd(kind, thing) {
   const list = wlList();
   if (kind === "film" && !list) return;
-  wle = { kind, thing, listId: list && list.id, watched: kind === "film" && !!(thing && thing.watched), sure: false };
+  wle = { kind, thing, listId: list && list.id, watched: kind === "film" && !!(thing && thing.watched), sure: false,
+          show: kind === "film" && !!(thing && thing.kind === "show") };  // kind is what's being edited; show, a film's type
   wlEdOpen = true;
   document.getElementById("watch").classList.remove("open");
   const ed = document.getElementById("wl-ed");
   ed.classList.add("open");
   ed.querySelectorAll(".film-only").forEach(el => { el.hidden = kind !== "film"; });
   ed.setAttribute("aria-label", kind === "film" ? "Film" : "List");
-  document.getElementById("wle-title").textContent = kind === "film" ? (thing ? "Edit film" : `Add to ${list.name}`)
+  document.getElementById("wle-title").textContent = kind === "film" ? (thing ? (wle.show ? "Edit show" : "Edit film") : `Add to ${list.name}`)
     : thing ? `Edit ${thing.name}` : "New list";
   wleName.placeholder = kind === "film" ? "Film or show" : "Name the list";
   wleName.maxLength = kind === "film" ? 80 : 28;
@@ -2674,9 +2720,16 @@ function closeWatchEd(at = wlAt) {
   renderWatch(at);
 }
 function renderWatchEd(at = wleAt) {
+  // Film or show: which TMDB and Wikipedia look it up as; a show's running time is its episodes'
+  document.getElementById("wle-kind").replaceChildren(...[["Film", false], ["Show", true]].map(([name, show], n) => wlChip(name, wle.show === show, () => {
+    wle.show = show;
+    renderWatchEd({ r: 1, c: n });
+  })));
+  wleTime.placeholder = wle.show ? "Mins/ep" : "Minutes";
+  wleTime.title = wle.show ? "How long an episode runs: minutes, or like 1h 5m (filled in from TMDB if left empty)" : "Running time: minutes, or like 2h 15m";
   document.getElementById("wle-lists").replaceChildren(...wl.lists.map((l, n) => wlChip(esc(l.name), l.id === wle.listId, () => {
     wle.listId = l.id;
-    renderWatchEd({ r: 2, c: n });
+    renderWatchEd({ r: 3, c: n });
   })));
   document.getElementById("wle-watched").setAttribute("aria-checked", String(wle.watched));
   wleDeleteLabel();
@@ -2692,7 +2745,8 @@ function wleDeleteLabel() {
 /* Focus grid: the name, then for a film the year and note, the lists, watched; then Delete / Cancel / Save */
 const wleGrid = () => [
   [wleName],
-  ...(wle.kind === "film" ? [[wleYear, wleTime, wleNote], [...document.querySelectorAll("#wle-lists .wl-tab")], [document.getElementById("wle-watched")]] : []),
+  ...(wle.kind === "film" ? [[...document.querySelectorAll("#wle-kind .wl-tab")], [wleYear, wleTime, wleNote],
+                             [...document.querySelectorAll("#wle-lists .wl-tab")], [document.getElementById("wle-watched")]] : []),
   [...document.querySelectorAll("#wle-bottom .set-wide")].filter(b => !b.hidden),
 ];
 function wleFocus(at) {
@@ -2735,8 +2789,13 @@ function saveWatchEd() {
     return closeWatchEd({ r: 0, c: wl.lists.findIndex(l => l.id === wlListId) });
   }
   const year = parseInt(wleYear.value, 10), it = wle.thing || { id: wlNewId("i-"), added: wlNow() };
-  Object.assign(it, { title: name, year: year >= 1870 && year <= 2100 ? year : null, runtime: wlMinutes(wleTime.value), note: wleNote.value.trim(),
+  const was = it.kind === "show" ? `${it.title}|${it.year}` : null;
+  Object.assign(it, { kind: wle.show ? "show" : "film", title: name, year: year >= 1870 && year <= 2100 ? year : null,
+                      runtime: wlMinutes(wleTime.value), note: wleNote.value.trim(),
                       watchedAt: wle.watched ? (it.watched ? it.watchedAt : wlNow()) : null, watched: wle.watched });
+  // A show's details: new ones from TMDB if it's new or renamed; none at all once it's a film
+  if (it.kind === "show" && was !== `${it.title}|${it.year}`) { it.seasons = it.episodes = it.years = it.status = null; }
+  if (it.kind === "film") ["seasons", "episodes", "years", "status"].forEach(k => delete it[k]);
   // On its list (a new film goes at the end); picking another list moves it there
   const from = wl.lists.find(l => l.items.includes(it)), dest = wl.lists.find(l => l.id === wle.listId);
   if (from !== dest) {
@@ -2751,6 +2810,7 @@ function saveWatchEd() {
   closeWatchEd(wlAt);
   const r = wlRowOf(it.id);
   if (r >= 2) wlFocus({ r, c: 0 });
+  wlFillShow(it);
 }
 function deleteWatchEd() {
   if (!wle.sure) {

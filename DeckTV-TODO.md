@@ -23,6 +23,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Watchlist: films and shows**: a Film / Show switch when adding or editing. Trailers, posters and summaries look up the right one (Fargo the series vs the film); a show gets its seasons, episodes, episode length, years running and status from TMDB, kept with it, and its row shows its seasons. Sorting by running time puts shows after films. A show with no trailer on TMDB plays its opening credits or a clip _(done 2026-10-27)_
 - [x] **Watchlist: Remove**: a small Remove button beside Mark watched takes a film off its list straight away, with Undo on the toast putting it back in the same place (even after closing and reopening the watchlist) _(done 2026-10-27)_
 - [x] **Watchlist: safer Mark watched, with Undo**: Mark watched is a small button on its own at the far right of an opened film; marking (or unmarking) shows a toast with Undo for 6 s (click it, Y on the controller, U or Ctrl+Z). Fixed the hover outline landing on the button to the left once a poster had loaded _(done 2026-10-27)_
 - [x] **Trailers: scrubbing, sound, a button per trailer**: a scrub bar with the time (click or drag; left/right on the controller skip 10 s), mute and a volume slider (remembered), and Trailer 1…n buttons in place of Next trailer _(done 2026-10-27)_

@@ -150,12 +150,22 @@ def clean(data):
                 continue
             year = it.get("year")
             year = year if isinstance(year, int) and 1870 <= year <= 2100 else None
+            # A show's running time is its episodes' (and it has seasons, episodes and years running, from TMDB)
+            kind = "show" if it.get("kind") == "show" else "film"
             runtime = it.get("runtime")
             runtime = runtime if isinstance(runtime, int) and 1 <= runtime <= 999 else None
             watched = bool(it.get("watched"))
-            items.append({"id": it["id"], "title": title, "year": year, "runtime": runtime, "note": str(it.get("note") or "").strip()[:60],
-                          "watched": watched, "added": _ts(it.get("added")) or int(time.time()),
-                          "watchedAt": (_ts(it.get("watchedAt")) or int(time.time())) if watched else None})
+            entry = {"id": it["id"], "kind": kind, "title": title, "year": year, "runtime": runtime,
+                     "note": str(it.get("note") or "").strip()[:60],
+                     "watched": watched, "added": _ts(it.get("added")) or int(time.time()),
+                     "watchedAt": (_ts(it.get("watchedAt")) or int(time.time())) if watched else None}
+            if kind == "show":
+                for field, top in (("seasons", 200), ("episodes", 20000)):
+                    v = it.get(field)
+                    entry[field] = v if isinstance(v, int) and 1 <= v <= top else None
+                entry["years"] = str(it.get("years") or "")[:12] or None      # "2014–2019", "2022–"
+                entry["status"] = str(it.get("status") or "")[:24] or None    # "Ended", "Returning Series"
+            items.append(entry)
         lists.append({"id": lst["id"], "name": str(lst.get("name", "")).strip()[:28] or "Watchlist", "items": items})
     return {"lists": lists}
 

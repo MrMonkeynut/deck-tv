@@ -63,41 +63,95 @@ def _videos(kind, tmdb_id, key):
     vids = _call(f"/{kind}/{tmdb_id}/videos", key, include_video_language="en,null").get("results", [])
     vids = [v for v in vids if v.get("site") == "YouTube" and re.fullmatch(r"[\w-]{11}", v.get("key", ""))]
     # Official trailers first, then other trailers, then teasers; each oldest first (the original
-    # release's trailer before an anniversary re-release's)
-    rank = {"Trailer": 0, "Teaser": 1}
+    # release's trailer before an anniversary re-release's). A show with none: its opening credits or a clip.
+    rank = {"Trailer": 0, "Teaser": 1, "Opening Credits": 2, "Clip": 3}
     vids = [v for v in vids if v.get("type") in rank]
+    if any(v["type"] in ("Trailer", "Teaser") for v in vids):
+        vids = [v for v in vids if v["type"] in ("Trailer", "Teaser")]
     vids.sort(key=lambda v: (rank[v["type"]], not v.get("official"), v.get("published_at") or ""))
     return [{"id": v["key"], "name": v.get("name", "")} for v in vids[:8]]
 
 
-def find(title, year=None):
-    """The film's trailers: {"videos": [{"id", "name"}...]}, {"needKey": True}, or {"error": ...}."""
-    key = get_key()
-    if not key:
-        return {"needKey": True}
-    title = re.sub(r"\s*\([^)]*\)", "", title).strip() or title
-    if (title, year) in _found:
-        return _found[(title, year)]
-    try:
-        # A film first (with its year, then without); a show if no film matches
-        hits = []
-        for kind, params in (("movie", {"year": year} if year else None), ("movie", {}), ("tv", {})):
-            if params is None:
-                continue
-            hits = [(kind, h) for h in _call(f"/search/{kind}", key, query=title, include_adult="false", **params).get("results", [])]
+def _matches(kind, title, year, key):
+    """TMDB's best matches, as (catalogue, hit): a show is looked for among TV first (by the year it
+    first aired), a film among films; then the other, in case it was put down as the wrong one."""
+    order = ("tv", "movie") if kind == "show" else ("movie", "tv")
+    year_param = {"tv": "first_air_date_year", "movie": "year"}
+    for cat in order:
+        for params in (({year_param[cat]: year},) if year else ()) + ({},):
+            hits = _call(f"/search/{cat}", key, query=title, include_adult="false", **params).get("results", [])
             if hits:
-                break
-        out = {"videos": []}
-        for kind, hit in hits[:3]:  # the best match, or the next if it has no trailer
-            videos = _videos(kind, hit["id"], key)
-            if videos:
-                out = {"videos": videos, "tmdb": f"{kind}/{hit['id']}"}
-                break
+                return [(cat, h) for h in hits[:3]]
+    return []
+
+
+def _clean_title(title):
+    return re.sub(r"\s*\([^)]*\)", "", title).strip() or title
+
+
+def _tmdb_errors(fn):
+    """TMDB's failures as answers the page can show."""
+    try:
+        return fn()
     except urllib.error.HTTPError as e:
         if e.code == 401:
             return {"needKey": True, "error": "TMDB no longer accepts the saved key"}
         return {"error": f"TMDB answered {e.code}"}
     except OSError:
         return {"error": "Couldn't reach TMDB"}
-    _found[(title, year)] = out
+
+
+def find(title, year=None, kind="film"):
+    """Its trailers: {"videos": [{"id", "name"}...]}, {"needKey": True}, or {"error": ...}."""
+    key = get_key()
+    if not key:
+        return {"needKey": True}
+    title = _clean_title(title)
+    if ("videos", kind, title, year) in _found:
+        return _found[("videos", kind, title, year)]
+
+    def look():
+        for cat, hit in _matches(kind, title, year, key):  # the best match, or the next if it has no trailer
+            videos = _videos(cat, hit["id"], key)
+            if videos:
+                return {"videos": videos, "tmdb": f"{cat}/{hit['id']}"}
+        return {"videos": []}
+    out = _tmdb_errors(look)
+    if "videos" in out:
+        _found[("videos", kind, title, year)] = out
+    return out
+
+
+IMG = "https://image.tmdb.org/t/p/"
+
+
+def details(title, year=None, kind="show"):
+    """A show's facts: seasons, episodes, episode length, years running, status, plus its overview and
+    poster. {"needKey": True} without a key; {} if TMDB doesn't know it."""
+    key = get_key()
+    if not key:
+        return {"needKey": True}
+    title = _clean_title(title)
+    if ("details", kind, title, year) in _found:
+        return _found[("details", kind, title, year)]
+
+    def look():
+        hits = [(c, h) for c, h in _matches(kind, title, year, key) if c == "tv"]
+        if not hits:
+            return {}
+        d = _call(f"/tv/{hits[0][1]['id']}", key)
+        first, last = (d.get("first_air_date") or "")[:4], (d.get("last_air_date") or "")[:4]
+        ended = d.get("status") in ("Ended", "Canceled")
+        years = first and (first if ended and last == first else f"{first}–{last if ended else ''}")
+        # Episode length: TMDB's list of typical lengths is often empty; the latest episode's will do
+        mins = (d.get("episode_run_time") or [None])[0] or ((d.get("last_episode_to_air") or {}).get("runtime"))
+        poster = d.get("poster_path")
+        return {"tmdb": f"tv/{d['id']}", "name": d.get("name"), "seasons": d.get("number_of_seasons") or None,
+                "episodes": d.get("number_of_episodes") or None, "runtime": mins or None, "years": years or None,
+                "year": int(first) if first.isdigit() else None, "status": d.get("status"),
+                "overview": d.get("overview") or None,
+                "poster": poster and IMG + "w342" + poster, "posterBig": poster and IMG + "w780" + poster}
+    out = _tmdb_errors(look)
+    if "error" not in out and not out.get("needKey"):
+        _found[("details", kind, title, year)] = out
     return out
