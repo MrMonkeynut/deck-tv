@@ -582,6 +582,22 @@ screenEl.addEventListener("pointerup", screenUp);
 screenEl.addEventListener("pointercancel", screenUp);
 screenEl.addEventListener("contextmenu", e => e.preventDefault());
 
+/* ---------- a new version of this page: load it (unless something's being typed or searched) ---------- */
+let pageStamp = null;
+async function checkForUpdate() {
+  if (document.hidden) return;
+  try {
+    const r = await fetch(location.pathname, { method: "HEAD", cache: "no-store" });
+    const stamp = r.headers.get("Last-Modified");
+    if (!stamp) return;
+    if (pageStamp === null) pageStamp = stamp;
+    else if (stamp !== pageStamp && document.activeElement !== input && !document.body.classList.contains("searching")) location.reload();
+  } catch {}
+}
+checkForUpdate();
+setInterval(checkForUpdate, 30000);
+document.addEventListener("visibilitychange", checkForUpdate);
+
 /* ---------- start ---------- */
 if (token) {
   setScreen(screenOn);

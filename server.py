@@ -1136,6 +1136,13 @@ class RemoteHandler(Handler):
     def __init__(self, *args, **kwargs):
         SimpleHTTPRequestHandler.__init__(self, *args, directory=str(ROOT / "remote"), **kwargs)
 
+    def end_headers(self):
+        # The remote page and its files: always checked with the Deck before a saved copy is used, so a
+        # phone (or its home-screen shortcut) gets a new version without anyone clearing anything
+        if not self.path.startswith(("/api/", "/appicon/")):
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def do_GET(self):
         if self.path.startswith("/api/screen"):
             return self._screen()
