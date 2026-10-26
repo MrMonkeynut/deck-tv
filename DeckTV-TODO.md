@@ -23,6 +23,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Phone remote: tidier**: the touchpad gets most of the screen; one bar at the bottom (Apps, Play/Pause, Sound, Type) replaces the app row, the media and volume buttons and the always-there type box. Apps and Sound open as sheets; Type brings up the keyboard and tucks away again; the header names the app in front _(done 2026-10-27)_
 - [x] **Phone remote: see the TV**: a Screen button shows the TV live (10 fps, 960 px, the pointer drawn in); tap the picture to click there, hold to right-click, two fingers to scroll; sideways it fills the phone. Only captures while a phone is watching (about a quarter of a core then) _(done 2026-10-27)_
 - [x] **Features panel**: a Features button in the top-right corner (up from the cards with the controller) opens a one-screen summary of what Deck TV does, in eight groups. Also: an update no longer reloads the page while the watchlist (or a trailer) is open _(done 2026-10-27)_
 - [x] **Trailers: captions**: a CC button beside the volume turns captions on or off (English where there is some), remembered for the next trailer. Also fixed: with the controller, focus couldn't get past the volume slider; it's now A to adjust it, A or B to finish _(done 2026-10-27)_

@@ -74,7 +74,9 @@ can take a few minutes), then opens Deck TV full screen.
   seasons it has, and opening it shows its years running, episodes, episode length and whether it's
   still running (from TMDB); its trailer, poster and summary are the show's, not a film's of the same name.
 - **Phone remote**: scan the QR code in the bottom-right corner with your phone (on the same
-  Wi-Fi). You get a touchpad, a keyboard for search boxes, app switching and media controls.
+  Wi-Fi). Most of the phone is a touchpad; the bar along the bottom has **Apps** (switch app),
+  **Play/Pause**, **Sound** (skip, volume, mute) and **Type** (a keyboard for the TV, or **Search** in
+  Movy and YouTube). The top shows which app is in front on the TV.
   The **screen** button (top right) shows the TV live on the phone, about 10 times a second: tap the
   picture to click there, hold to right-click, two fingers to scroll. Turn the phone sideways for a
   bigger picture. Nothing is captured unless a phone is showing it.

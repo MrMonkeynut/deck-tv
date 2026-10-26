@@ -37,14 +37,19 @@
   }
   .round:active { background: var(--panel-2); transform: scale(.94); }
 
-  #apps { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: none; }
-  #apps::-webkit-scrollbar { display: none; }
-  .app { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 64px; transition: transform .12s; }
+  /* The header names the app in front on the TV */
+  .brand { min-width: 0; }
+  #front { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #front small { font-size: 13px; font-weight: 500; color: var(--dim); margin-left: 6px; }
+
+  #apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 8px; padding: 4px 0 2px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; transition: transform .12s; }
   .app:active { transform: scale(.92); }
   .app .ic { width: 56px; height: 56px; border-radius: 16px; overflow: hidden; display: grid; place-items: center; background: var(--panel); }
   .app .ic img { width: 100%; height: 100%; object-fit: cover; }
   .app .ic svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.6; }
-  .app .lbl { font-size: 12px; color: var(--muted); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app .lbl { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app.front .lbl { color: var(--ink); font-weight: 700; }
   .app .dot { width: 16px; height: 3px; border-radius: 2px; background: transparent; }
   .app.open .dot { background: var(--ink); }
 
@@ -60,10 +65,34 @@
   }
   @keyframes ripple { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 
-  .controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .group { display: flex; gap: 8px; }
+  /* One slim bar at the bottom: Apps, Play, Sound, Type */
+  .bar { display: flex; gap: 6px; padding: 6px; border-radius: 22px; background: var(--panel); }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 0 6px; border-radius: 16px;
+    font-size: 11.5px; color: var(--muted); transition: background .12s, color .12s; }
+  .tab svg { width: 22px; height: 22px; }
+  .tab:active { background: var(--panel-2); }
+  .tab.on { background: var(--panel-2); color: var(--ink); }
+  .tab.playing { color: var(--ok); }
+
+  /* Sheets: rise from the bottom over everything; tap outside (or the X) to close */
+  .sheet { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end;
+    background: rgba(8,10,14,.55); opacity: 0; pointer-events: none; transition: opacity .18s; }
+  .sheet.open { opacity: 1; pointer-events: auto; }
+  .sheet-card { background: var(--panel); border-radius: 26px 26px 0 0; padding: 14px 16px max(18px, env(safe-area-inset-bottom));
+    transform: translateY(24px); transition: transform .2s ease; max-height: 75vh; overflow-y: auto; }
+  .sheet.open .sheet-card { transform: none; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 17px; font-weight: 700; }
+  .sheet-head .x { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); }
+  .sheet-head .x svg { width: 18px; height: 18px; }
+  #np { font-size: 14px; color: var(--muted); margin: -6px 0 14px; min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #np b { color: var(--ink); font-weight: 600; }
+  .sound-row { display: flex; justify-content: space-around; align-items: center; padding: 6px 0; }
+  .sound-row .round { width: 58px; height: 58px; background: var(--panel-2); }
+  .sound-row .round.big { width: 68px; height: 68px; background: var(--ink); color: var(--bg); }
+  .sound-row + .sound-row { margin-top: 8px; padding-top: 14px; border-top: 1px solid #2B3240; }
 
   .typebar { display: flex; gap: 8px; align-items: center; }
+  .typebar[hidden] { display: none; }
   #type {
     flex: 1; min-width: 0; height: 52px; border-radius: 26px; border: 1px solid #2E3542; background: var(--panel);
     color: var(--ink); font: inherit; font-size: 17px; padding: 0 20px; outline: none;
@@ -76,7 +105,7 @@
     border-radius: 26px; background: var(--panel); padding: 10px;
   }
   body.searching #results { display: flex; }
-  body.searching #pad, body.searching .controls { display: none; }
+  body.searching #pad, body.searching .bar { display: none; }
   .result-row { display: flex; align-items: center; gap: 6px; }
   .result-row .play { flex: 0 0 auto; width: 44px; height: 44px; background: var(--panel-2); }
   .result { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 16px; text-align: left; }
@@ -106,7 +135,7 @@
   body.screen #pad .hint { font-size: 13px; line-height: 1.5; }
   /* Sideways, the picture gets the screen (the type box stays for typing) */
   @media (orientation: landscape) {
-    body.screen header, body.screen #apps, body.screen #pad, body.screen .controls { display: none; }
+    body.screen header, body.screen #pad { display: none; }  /* the bar stays: type, apps and sound are a press away */
     body.screen #screen { flex: 1; min-height: 0; aspect-ratio: auto; }
     body.screen { padding-top: max(8px, env(safe-area-inset-top)); gap: 8px; }
   }
@@ -122,7 +151,7 @@
 </head>
 <body>
   <header>
-    <div class="brand"><span class="status" id="status"></span>Deck TV</div>
+    <div class="brand"><span class="status" id="status"></span><span id="front">Deck TV</span></div>
     <div class="head-btns">
       <button class="round" id="screen-btn" aria-label="Show the TV's screen" aria-pressed="false">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -133,8 +162,6 @@
     </div>
   </header>
 
-  <div id="apps" role="list"></div>
-
   <div id="screen" hidden aria-label="The TV's screen: tap to click there">
     <img id="screen-img" alt="">
     <div class="note" id="screen-note" hidden></div>
@@ -142,27 +169,52 @@
   </div>
 
   <div id="pad" aria-label="Touchpad">
-    <div class="hint">Drag to move<br>Tap to click · two-finger tap to right-click<br>Two fingers to scroll</div>
+    <div class="hint">Drag to move · tap to click<br>Two fingers: tap to right-click, drag to scroll</div>
   </div>
 
   <div id="results" aria-label="Search results" aria-live="polite"></div>
 
-  <div class="controls">
-    <div class="group">
-      <button class="round" data-media="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M18 6v12L9 12zM6 6v12"/></svg></button>
-      <button class="round" data-media="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg></button>
-      <button class="round" data-media="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M6 6v12l9-6zM18 6v12"/></svg></button>
-    </div>
-    <div class="group">
-      <button class="round" data-vol="down" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5"/></svg></button>
-      <button class="round" data-vol="up" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5M18.5 9.5v5"/></svg></button>
-    </div>
-  </div>
-
-  <div class="typebar">
+  <div class="typebar" id="typebar" hidden>
     <input id="type" type="text" placeholder="Type on TV…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Type on TV">
     <button class="round" id="backspace" aria-label="Backspace"><svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m12 9 6 6M18 9l-6 6"/></svg></button>
     <button class="round" id="enter" aria-label="Enter"><svg viewBox="0 0 24 24"><path d="M20 5v7a3 3 0 0 1-3 3H5"/><path d="m9 11-4 4 4 4"/></svg></button>
+  </div>
+
+  <nav class="bar" aria-label="Remote">
+    <button class="tab" id="tab-apps" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Apps</span>
+    </button>
+    <button class="tab" id="tab-play" data-media="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path id="tab-play-icon" d="M7 5v14l11-7z"/></svg><span id="tab-play-lbl">Play</span></button>
+    <button class="tab" id="tab-sound" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span>Sound</span>
+    </button>
+    <button class="tab" id="tab-type">
+      <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg><span id="tab-type-lbl">Type</span>
+    </button>
+  </nav>
+
+  <div class="sheet" id="sheet-apps" role="dialog" aria-label="Apps">
+    <div class="sheet-card">
+      <div class="sheet-head"><span>Apps</span><button class="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div id="apps" role="list"></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-sound" role="dialog" aria-label="Sound">
+    <div class="sheet-card">
+      <div class="sheet-head"><span>Sound</span><button class="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div id="np"></div>
+      <div class="sound-row">
+        <button class="round" data-media="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M18 6v12L9 12zM6 6v12"/></svg></button>
+        <button class="round big" data-media="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path id="sheet-play-icon" d="M7 5v14l11-7z"/></svg></button>
+        <button class="round" data-media="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M6 6v12l9-6zM18 6v12"/></svg></button>
+      </div>
+      <div class="sound-row">
+        <button class="round" data-vol="down" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5"/></svg></button>
+        <button class="round" data-vol="mute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/></svg></button>
+        <button class="round" data-vol="up" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM16 12h5M18.5 9.5v5"/></svg></button>
+      </div>
+    </div>
   </div>
 
   <div id="pair">
@@ -237,7 +289,7 @@ async function loadApps() {
     }
     b.append(ic);
     b.insertAdjacentHTML("beforeend", `<span class="lbl">${t.name}</span><span class="dot"></span>`);
-    b.onclick = () => { buzz(); endSearch(); api(`/api/launch/${t.id}`, {}).then(refresh).catch(fail); };
+    b.onclick = () => { buzz(); endSearch(); closeSheets(); api(`/api/launch/${t.id}`, {}).then(refresh).catch(fail); };
     row.append(b);
     appEls[t.id] = b;
   }
@@ -247,16 +299,66 @@ async function refresh() {
   if (document.hidden || !token || document.getElementById("pair").classList.contains("show")) return;
   try {
     const s = await api("/api/state");
-    for (const [id, el] of Object.entries(appEls)) el.classList.toggle("open", s.open.includes(id));
+    for (const [id, el] of Object.entries(appEls)) {
+      el.classList.toggle("open", s.open.includes(id));
+      el.classList.toggle("front", id === s.front);
+    }
     if (s.front !== frontApp) { frontApp = s.front; updateSearchBox(); }
+    showFront(s);
+    showPlaying(s.media);
   } catch { fail(); }
 }
 
 const buzz = () => navigator.vibrate && navigator.vibrate(12);
 
 document.getElementById("home").onclick = () => { buzz(); endSearch(); api("/api/home", {}).then(refresh).catch(fail); };
-document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => { buzz(); api(`/api/media/${b.dataset.media}`, {}).catch(fail); });
+// After a press, look again shortly so Play/Pause shows what happened
+document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => { buzz(); api(`/api/media/${b.dataset.media}`, {}).then(() => setTimeout(refresh, 700)).catch(fail); });
 document.querySelectorAll("[data-vol]").forEach(b => b.onclick = () => { buzz(); api(`/api/volume/${b.dataset.vol}`, {}).catch(fail); });
+
+/* ---------- the bar at the bottom, and its sheets ---------- */
+const PLAY = "M7 5v14l11-7z", PAUSE = "M8 5v14M16 5v14";
+function showFront(s) {
+  // The header says what's in front on the TV: an app, or Deck TV's home screen
+  const t = s.front && tiles[s.front];
+  document.getElementById("front").innerHTML = t ? `${t.name}<small>on the TV</small>` : "Deck TV";
+}
+function showPlaying(m) {
+  const playing = !!(m && m.playing);
+  for (const id of ["tab-play-icon", "sheet-play-icon"]) document.getElementById(id).setAttribute("d", playing ? PAUSE : PLAY);
+  document.getElementById("tab-play-lbl").textContent = playing ? "Pause" : "Play";
+  document.getElementById("tab-play").classList.toggle("playing", playing);
+  const np = document.getElementById("np");
+  np.innerHTML = "";
+  if (m && m.title) {
+    const app = tiles[m.tile];
+    np.append(Object.assign(document.createElement("b"), { textContent: m.title }),
+              ` · ${playing ? "playing" : "paused"}${app ? ` in ${app.name}` : ""}`);
+  } else np.textContent = "Nothing playing";
+}
+function openSheet(id) {
+  closeSheets();
+  document.getElementById(id).classList.add("open");
+  document.getElementById(id === "sheet-apps" ? "tab-apps" : "tab-sound").classList.add("on");
+}
+function closeSheets() {
+  document.querySelectorAll(".sheet.open").forEach(s => s.classList.remove("open"));
+  document.querySelectorAll(".tab.on:not(#tab-type)").forEach(t => t.classList.remove("on"));
+}
+document.querySelectorAll(".sheet").forEach(sh => {
+  sh.addEventListener("click", e => { if (e.target === sh || e.target.closest(".x")) closeSheets(); });
+});
+document.getElementById("tab-apps").onclick = () => { buzz(); openSheet("sheet-apps"); };
+document.getElementById("tab-sound").onclick = () => { buzz(); refresh(); openSheet("sheet-sound"); };
+
+// Type: the box (and the phone's keyboard) only when wanted; it goes again once done with
+const typebar = document.getElementById("typebar"), typeTab = document.getElementById("tab-type");
+function showTypebar(on) {
+  typebar.hidden = !on;
+  typeTab.classList.toggle("on", on);
+  if (on) document.getElementById("type").focus();
+}
+typeTab.onclick = () => { buzz(); showTypebar(typebar.hidden); };
 
 /* ---------- touchpad ---------- */
 const pad = document.getElementById("pad");
@@ -353,6 +455,7 @@ function updateSearchBox() {
   const t = frontApp && tiles[frontApp];
   const m = mode();
   input.placeholder = !t ? "Type on TV…" : m === "type" ? `Type on ${t.name}…` : `Search ${t.name}`;
+  document.getElementById("tab-type-lbl").textContent = m === "type" ? "Type" : "Search";
   input.enterKeyHint = m === "type" ? "enter" : m === "send" ? "search" : "done";
   if (document.activeElement !== input) { input.value = ""; sent = ""; }
 }
@@ -416,6 +519,7 @@ input.addEventListener("blur", () => {
   // With results listed, keep them up (keyboard closed) so they're easy to scroll and pick
   setTimeout(() => {
     if (document.activeElement !== input && !resultsEl.querySelector(".result")) endSearch();
+    if (document.activeElement !== input && !input.value && !document.body.classList.contains("searching")) showTypebar(false);
   }, 250);
 });
 
