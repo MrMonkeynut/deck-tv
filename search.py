@@ -13,6 +13,9 @@ from cdp import Page
 
 # ---------- Movy: a search box that opens from a button, with live results underneath ----------
 MOVY_INPUT = 'document.querySelector(\'input[placeholder^="Search movies"]\')'
+# Really open: its Close button shows. A box that has just closed stays on the page, see-through, until
+# its closing animation ends, and that waits while Movy is behind another window; typing into it finds nothing.
+MOVY_IS_OPEN = '[...document.querySelectorAll(\'button[aria-label="Close search"]\')].some(b => b.offsetWidth)'
 MOVY_RESULTS = """(() => {
   const inp = %s;
   if (!inp) return [];
@@ -26,12 +29,11 @@ MOVY_RESULTS = """(() => {
 
 def movy_open_box(page):
     opened = """(() => {
-      const inp = %s;
-      if (inp && inp.offsetWidth) return true;
+      if (%s) return true;
       const b = [...document.querySelectorAll('button[aria-label=Search]')].find(b => b.offsetWidth);
       if (b) b.click();
       return !!b;
-    })()""" % MOVY_INPUT
+    })()""" % MOVY_IS_OPEN
     if not page.eval(opened):
         # Title and player pages have no search button: search from Movy's home page
         page.call("Page.navigate", url="https://www.movy.sx/")
@@ -41,8 +43,8 @@ def movy_open_box(page):
                  return !!b && Object.keys(b).some(k => k.startsWith('__reactProps')); })()"""):
                 break
         page.eval(opened)
-    for _ in range(10):
-        if page.eval(f"!!({MOVY_INPUT})"):
+    for _ in range(20):
+        if page.eval(MOVY_IS_OPEN):
             break
         time.sleep(0.1)
 

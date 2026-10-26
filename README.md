@@ -58,6 +58,15 @@ can take a few minutes), then opens Deck TV full screen.
   speakers, headphones or a Bluetooth speaker. A paired speaker that isn't connected shows
   "Connect": switch it on and click it. **Add speaker** pairs a new one: put it in pairing mode,
   pick it from the list, and sound moves to it.
+- **Watchlist**: the bookmark button at the end of the bottom row. Lists of films to watch:
+  **Liam and Laura**, **Top 100** (the scratch poster, with the ones already scratched off marked
+  watched) and **Kids**. Each film is one slim row (its name and running time): click it (or press A) to open it up for its
+  poster, what it's about (from Wikipedia) and **Watch on Movy** (opens Movy and searches it for
+  the film), **Mark watched** and **Edit**. **To watch / Watched / All**
+  picks what shows, and **Sort** orders them (list order, title, year or running time). **Add**
+  puts a film on the list you're looking at (a keyboard, or the phone
+  remote's, is easiest for typing), **Edit** changes it, moves it to another list or deletes it, and
+  **New list / Edit list** make, rename or delete lists. Kept in `~/.config/deck-tv/watchlist.json`.
 - **Phone remote**: scan the QR code in the bottom-right corner with your phone (on the same
   Wi-Fi). You get a touchpad, a keyboard for search boxes, app switching and media controls.
   Tip: "Add to Home Screen" in your phone's browser makes it an app.

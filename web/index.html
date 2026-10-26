@@ -397,6 +397,101 @@
   #ge-apps { display: flex; flex-direction: column; gap: 8px; max-height: 210px; overflow-y: auto; padding: 6px; margin: -6px;
     scrollbar-width: thin; scrollbar-color: #4A5366 transparent; }
 
+  /* Watchlist: a few lists of films (Liam and Laura, Top 100, Kids), each film ticked off once watched */
+  #watch, #wl-ed {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #watch.open, #wl-ed.open { display: flex; }
+  .wl-card { position: relative; width: 1000px; gap: 18px; padding: 30px 34px 22px; }
+  .wl-head { display: flex; align-items: center; gap: 18px; }
+  .wl-head b { flex: none; }
+  .wl-prog { flex: 1; display: flex; align-items: center; gap: 14px; font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-prog .track { flex: 1; max-width: 260px; height: 8px; border-radius: 4px; background: #2E3542; overflow: hidden; }
+  .wl-prog .track i { display: block; height: 100%; border-radius: 4px; background: #7BD3A2; }
+  .wl-tabs, .wl-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .wl-tab {
+    all: unset; display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 22px; font-size: 19px;
+    background: #232934; color: var(--pill-ink); cursor: pointer; outline: 3px solid transparent; outline-offset: 2px;
+    transition: background .15s, outline-color .15s;
+  }
+  .wl-tab small { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-tab[aria-checked="true"] { background: var(--ink); color: var(--bg); font-weight: 700; }
+  .wl-tab[aria-checked="true"] small { color: #4A5366; }
+  .wl-tab svg { width: 20px; height: 20px; }
+  .wl-tab:hover, .wl-tab.focus { filter: brightness(1.12); }
+  .wl-tab.focus { outline-color: var(--ring); }
+  .wl-tab.ghost { background: none; color: var(--muted); }
+  .wl-tab.ghost:hover, .wl-tab.ghost.focus { background: #2A3140; color: var(--ink); }
+  .wl-seg { display: flex; padding: 4px; border-radius: 24px; background: #232934; gap: 2px; }
+  .wl-seg .wl-tab { padding: 8px 18px; font-size: 17px; background: none; }
+  .wl-seg .wl-tab[aria-checked="true"] { background: #39414F; color: var(--ink); font-weight: 500; }
+  .wl-bar .set-wide { padding: 10px 20px; font-size: 18px; }
+  /* Sort by: a button that drops down a short menu of orders */
+  #wl-sort { font-size: 17px; padding: 10px 14px 10px 18px; gap: 6px; }
+  #wl-sort b { font-size: inherit; font-weight: 500; color: var(--ink); }
+  #wl-sort svg { width: 18px; height: 18px; transform: rotate(90deg); color: var(--muted); }
+  .wl-menu {
+    position: absolute; z-index: 3; display: none; min-width: 230px; padding: 8px; border-radius: 18px;
+    background: #232937; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 50px rgba(0,0,0,.55);
+  }
+  .wl-menu.open { display: block; }
+  .wl-menu button {
+    all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    border-radius: 12px; font-size: 18px; color: var(--ink); cursor: pointer; outline: 3px solid transparent; outline-offset: -3px;
+  }
+  .wl-menu button svg { width: 20px; height: 20px; flex: none; visibility: hidden; color: #7BD3A2; }
+  .wl-menu button[aria-checked="true"] svg { visibility: visible; }
+  .wl-menu button:hover, .wl-menu button.focus { background: #2F3747; }
+  .wl-menu button.focus { outline-color: var(--ring); }
+  #wl-items { display: flex; flex-direction: column; gap: 4px; height: 312px; overflow-y: auto; padding: 6px; margin: -6px;
+    scrollbar-width: thin; scrollbar-color: #4A5366 transparent; }
+  /* A film: one slim row (its name and running time) that opens up to show more */
+  .wl-item { flex: none; border-radius: 14px; background: #232934; }
+  .wl-item.open { background: #2A3140; }
+  .wl-row {
+    all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+    border-radius: 14px; cursor: pointer; outline: 3px solid transparent; outline-offset: -3px; transition: background .15s;
+  }
+  .wl-row:hover { background: #2D3443; }
+  .wl-row.focus { outline-color: var(--ring); }
+  .wl-row b { flex: 1; min-width: 0; font-size: 19px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-row span { flex: none; font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-row svg { flex: none; width: 18px; height: 18px; }
+  .wl-row .seen { color: #7BD3A2; }
+  .wl-row .more { color: var(--dim); transition: transform .15s; }
+  .wl-item.open .wl-row .more { transform: rotate(90deg); }
+  .wl-item.done .wl-row b { color: var(--muted); }
+  /* ... opened: the poster, what it's about, and what to do with it */
+  .wl-more { display: flex; gap: 18px; padding: 4px 16px 14px; }
+  .wl-poster { flex: none; width: 92px; height: 136px; border-radius: 10px; background: #1B2029 center / cover no-repeat;
+    display: flex; align-items: center; justify-content: center; color: #4A5366; }
+  .wl-poster svg { width: 34px; height: 34px; }
+  .wl-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .wl-facts { font-size: 16px; color: var(--pill-ink); }
+  .wl-about { font-size: 15px; line-height: 1.4; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .wl-about.wait { color: var(--dim); }
+  .wl-when { font-size: 14px; color: var(--dim); }
+  .wl-acts { display: flex; gap: 8px; margin-top: 4px; }
+  .wl-acts .set-wide { padding: 8px 16px; font-size: 16px; gap: 8px; }
+  .wl-acts .set-wide svg { width: 18px; height: 18px; }
+  .wl-empty { height: 312px; margin: -6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    font-size: 20px; color: var(--muted); text-align: center; }
+  .wl-empty small { font-size: 16px; color: var(--dim); }
+  .wl-empty[hidden], #wl-items[hidden] { display: none; }
+  #wl-close { outline: 3px solid transparent; outline-offset: 2px; }
+  #wl-close.focus { outline-color: var(--ring); }
+  /* The film (or list) editor */
+  #wl-ed .power-card { gap: 18px; }
+  .wle-pair { display: flex; gap: 12px; }
+  .wle-pair .ge-name { flex: 1; min-width: 0; }
+  .wle-pair .ge-name.short { flex: none; width: 120px; }
+  .wle-lists { display: flex; flex-wrap: wrap; gap: 10px; }
+  #wl-ed [hidden] { display: none; }
+  .wle-watched { display: flex; align-items: center; gap: 12px; padding: 4px 4px 4px 2px; }
+  .wle-watched .set-name { font-size: 19px; }
+  .set-wide.danger.sure { background: #7A2630; color: #fff; }
+
   /* Settings: the screensaver's wait, changed with left/right (or a click) */
   .set-saver { display: flex; align-items: center; gap: 12px; padding: 4px 4px 4px 14px; }
   .set-saver .set-name { font-size: 19px; color: var(--muted); }
@@ -439,6 +534,7 @@
     position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(20px);
     background: #F2F4F8; color: #0E1116; font-size: 22px; font-weight: 600;
     padding: 14px 28px; border-radius: 30px; opacity: 0; transition: .25s; pointer-events: none;
+    z-index: 20;  /* above the panels, so what a button did there shows too */
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -575,6 +671,47 @@
     </div>
   </div>
 
+  <div id="watch" role="dialog" aria-label="Watchlist">
+    <div class="power-card wl-card">
+      <div class="wl-head"><b>Watchlist</b><div class="wl-prog" id="wl-prog"></div></div>
+      <div class="wl-tabs" id="wl-tabs"></div>
+      <div class="wl-bar" id="wl-bar">
+        <div class="wl-seg" id="wl-filter" role="radiogroup" aria-label="Show"></div>
+        <button class="wl-tab ghost" id="wl-sort" aria-haspopup="menu"></button>
+        <span style="flex:1"></span>
+        <button class="set-wide primary" id="wl-add"></button>
+        <button class="set-wide" id="wl-editlist"></button>
+      </div>
+      <div class="wl-menu" id="wl-sortmenu" role="menu" aria-label="Sort by"></div>
+      <div id="wl-items" role="list"></div>
+      <div class="wl-empty" id="wl-empty" hidden></div>
+      <button class="power-cancel" id="wl-close">Close</button>
+    </div>
+  </div>
+
+  <div id="wl-ed" role="dialog" aria-label="Film">
+    <div class="power-card set-card">
+      <b id="wle-title">Add a film</b>
+      <input id="wle-name" class="ge-name" type="text" maxlength="80" placeholder="Film or show" autocomplete="off" spellcheck="false">
+      <div class="wle-pair film-only">
+        <input id="wle-year" class="ge-name short" type="text" inputmode="numeric" maxlength="4" placeholder="Year" autocomplete="off">
+        <input id="wle-time" class="ge-name short" type="text" maxlength="7" placeholder="Minutes" autocomplete="off" spellcheck="false" title="Running time: minutes, or like 2h 15m">
+        <input id="wle-note" class="ge-name" type="text" maxlength="60" placeholder="Note: who it's by, where to watch it…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="ge-label film-only">On the list</div>
+      <div class="wle-lists film-only" id="wle-lists"></div>
+      <div class="wle-watched film-only">
+        <span class="set-name">Watched it</span><span style="flex:1"></span>
+        <button class="set-btn switch" id="wle-watched" role="switch" aria-checked="false" aria-label="Watched it"><i></i></button>
+      </div>
+      <div class="set-btns" id="wle-bottom">
+        <button class="set-wide danger" id="wle-delete">Delete</button>
+        <button class="set-wide" id="wle-cancel">Cancel</button>
+        <button class="set-wide primary" id="wle-save">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div id="system" role="dialog" aria-label="System">
     <div class="power-card sys-card">
       <div class="sys-head"><b>System</b><span id="sys-model"></span></div>
@@ -642,7 +779,11 @@ const ICONS = {
   snow: '<path d="M17.5 15H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 7.5 3.75 3.75 0 0 1 17.5 15zM8 19h.01M12 21h.01M16 19h.01"/>',
   storm: '<path d="M17.5 15H8a5 5 0 1 1 1.2-9.86A6 6 0 0 1 20 7.5 3.75 3.75 0 0 1 17.5 15zM13 15l-3 4h4l-3 4"/>',
   drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
-  wind: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>'
+  wind: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
+  play: '<path d="M7 4.5v15l12.5-7.5z"/>'
 };
 const svg = (name, stroke = "currentColor", w = 1.6) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
@@ -831,6 +972,16 @@ async function build() {
   sy.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 3);
   sy.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(sy); rows[1].push(sy);
+  // Watchlist: the films to watch, in a few lists, each ticked off once watched
+  const wb = document.createElement("button");
+  wb.className = "action";
+  wb.setAttribute("aria-label", "Watchlist");
+  wb.title = "Watchlist";
+  wb.innerHTML = `${svg("bookmark", "currentColor", 1.8)}Watchlist`;
+  wb.onclick = () => { setFocus(1, 4); openWatch(); };
+  wb.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 4);
+  wb.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
+  actEl.appendChild(wb); rows[1].push(wb);
   refreshStatus();
   setInterval(refreshStatus, 30 * 1000);
 
@@ -1697,6 +1848,438 @@ function openGroup(t, b) {
   }), start);
 }
 
+/* ---------- watchlist: a few lists of films (Liam and Laura, Top 100, Kids), each ticked off once watched ----------
+   Saved on the Deck (~/.config/deck-tv/watchlist.json), the whole of it each time something changes.
+   Focus moves on a grid: the lists, the bar (To watch / Watched / All, Sort, Add, Edit list), a row
+   per film (its tick, Watch, then Edit), then Close. Moving along the lists or the filter picks as it goes. */
+let watchOpen = false, wl = { lists: [] }, wlAt = { r: 0, c: 0 };
+let wlListId = store.get("deckTvWatchList"), wlFilter = store.get("deckTvWatchFilter") || "todo";
+const WL_FILTERS = [["todo", "To watch"], ["done", "Watched"], ["all", "All"]];
+let wlSort = store.get("deckTvWatchSort") || "list";
+/* Sort by: the list's own order (still to watch as added; watched, the latest first), or one of these.
+   Films without a year or running time go last; ties keep the list's order. */
+const WL_SORTS = [["list", "List order"], ["title", "Title A–Z"], ["newest", "Newest first"], ["oldest", "Oldest first"],
+                  ["shortest", "Shortest first"], ["longest", "Longest first"]];
+const wlSortKey = t => t.replace(/^(the|a|an) /i, "");
+const WL_BY = {
+  title: (a, b) => wlSortKey(a.title).localeCompare(wlSortKey(b.title)),
+  newest: (a, b) => (b.year || 0) - (a.year || 0),
+  oldest: (a, b) => (a.year || 9999) - (b.year || 9999),
+  shortest: (a, b) => (a.runtime || 9999) - (b.runtime || 9999),
+  longest: (a, b) => (b.runtime || 0) - (a.runtime || 0),
+};
+const wlTime = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`;
+/* A running time typed in: minutes ("142"), or hours and minutes ("2h 22m", "2h22", "2h") */
+function wlMinutes(v) {
+  const hm = v.match(/^\s*(\d+)\s*h\s*(?:(\d+)\s*m?)?\s*$/i);
+  const n = hm ? hm[1] * 60 + (+hm[2] || 0) : parseInt(v, 10);
+  return n >= 1 && n <= 999 ? n : null;
+}
+const wlList = () => wl.lists.find(l => l.id === wlListId) || wl.lists[0];
+const wlNewId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+const wlNow = () => Math.floor(Date.now() / 1000);
+const wlRowOf = id => wlGrid().findIndex(row => row[0] && row[0].dataset.id === id);  // the film's row in the focus grid
+let wlOpenId = null;  // the one film opened up to show more, if any
+
+async function openWatch() {
+  const data = await api("/api/watchlist").catch(() => null);
+  if (!data || !data.lists) return toast("Couldn't load the watchlist");
+  wl = data;
+  watchOpen = true;
+  document.getElementById("watch").classList.add("open");
+  renderWatch({ r: 2, c: 0 });  // the first film's tick
+  if (wlAt.r === wlGrid().length - 1) wlFocus({ r: 1, c: WL_FILTERS.length + 1 });  // no films showing: Add
+}
+function closeWatch() {
+  closeWlSort();
+  watchOpen = false;
+  document.getElementById("watch").classList.remove("open");
+}
+/* The films to show: still to watch in the order they were added; watched, the latest first; then
+   sorted as picked (still to watch before watched, under All) */
+function wlShown(list) {
+  const todo = list.items.filter(i => !i.watched);
+  const done = list.items.filter(i => i.watched).sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
+  if (WL_BY[wlSort]) {
+    todo.sort(WL_BY[wlSort]);
+    done.sort(WL_BY[wlSort]);
+  }
+  return wlFilter === "todo" ? todo : wlFilter === "done" ? done : [...todo, ...done];
+}
+function wlChip(html, checked, run, cls = "") {
+  const b = document.createElement("button");
+  b.className = "wl-tab " + cls;
+  b.innerHTML = html;
+  if (checked !== null) {
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", String(checked));
+  }
+  b.onclick = run;
+  return b;
+}
+function renderWatch(at = wlAt) {
+  const list = wlList();
+  wlListId = list && list.id;
+  // The lists, each with how many are left to watch, then a new one
+  document.getElementById("wl-tabs").replaceChildren(
+    ...wl.lists.map((l, n) => wlChip(`${esc(l.name)}<small>${l.items.filter(i => !i.watched).length}</small>`, l === list, () => {
+      wlListId = l.id;
+      store.set("deckTvWatchList", l.id);
+      renderWatch({ r: 0, c: n });
+    })),
+    wlChip(`${svg("plus", "currentColor", 2)}New list`, null, () => openWatchEd("list", null), "ghost"));
+  document.getElementById("wl-filter").replaceChildren(...WL_FILTERS.map(([id, name], n) => wlChip(name, id === wlFilter, () => {
+    wlFilter = id;
+    store.set("deckTvWatchFilter", id);
+    renderWatch({ r: 1, c: n });
+  })));
+  document.getElementById("wl-sort").innerHTML = `Sort: <b>${(WL_SORTS.find(([id]) => id === wlSort) || WL_SORTS[0])[1]}</b>${svg("chev", "currentColor", 2)}`;
+  document.getElementById("wl-add").hidden = document.getElementById("wl-editlist").hidden = !list;
+  const prog = document.getElementById("wl-prog"), seen = list ? list.items.filter(i => i.watched).length : 0;
+  prog.innerHTML = list && list.items.length
+    ? `<div class="track"><i style="width:${seen / list.items.length * 100}%"></i></div>${seen} of ${list.items.length} watched` : "";
+  const shown = list ? wlShown(list) : [];
+  const items = document.getElementById("wl-items");
+  items.replaceChildren(...shown.map(wlRowFor));
+  const empty = document.getElementById("wl-empty");
+  items.hidden = !shown.length;
+  empty.hidden = !!shown.length;
+  empty.innerHTML = !list ? "No lists yet<small>Make one with New list</small>"
+    : !list.items.length ? `Nothing on ${esc(list.name)} yet<small>Add a film to start it off</small>`
+    : wlFilter === "todo" ? "All watched!<small>Add another, or look back at the ones you've seen</small>"
+    : "Nothing watched yet";
+  wlGrid().forEach((row, r) => row.forEach((el, c) => { el.onmouseenter = () => wlFocus({ r, c }); }));
+  wlFocus(at);
+}
+const wlGrid = () => [
+  [...document.querySelectorAll("#wl-tabs .wl-tab")],
+  [...document.querySelectorAll("#wl-bar .wl-tab, #wl-bar .set-wide")].filter(b => !b.hidden),
+  ...[...document.querySelectorAll("#wl-items .wl-item")].flatMap(r => {
+    const acts = [...r.querySelectorAll(".wl-acts .set-wide")];
+    return acts.length ? [[r.querySelector(".wl-row")], acts] : [[r.querySelector(".wl-row")]];
+  }),
+  [document.getElementById("wl-close")],
+];
+/* A film's row: its name and running time (and a tick once watched). Opened, it shows the poster and
+   what it's about (from Wikipedia, fetched the first time), the facts, and Watch / Mark watched / Edit. */
+function wlRowFor(it) {
+  const item = document.createElement("div");
+  const open = it.id === wlOpenId;
+  item.className = "wl-item" + (it.watched ? " done" : "") + (open ? " open" : "");
+  item.setAttribute("role", "listitem");
+  const row = document.createElement("button");
+  row.className = "wl-row";
+  row.dataset.id = it.id;
+  row.setAttribute("aria-expanded", String(open));
+  row.innerHTML = `<b>${esc(it.title)}</b>${it.watched ? `<span class="seen" title="Watched">${svg("check", "currentColor", 2.4)}</span>` : ""}` +
+    `<span>${it.runtime ? wlTime(it.runtime) : ""}</span><span class="more">${svg("chev", "currentColor", 2)}</span>`;
+  row.onclick = () => wlToggleOpen(it);
+  item.append(row);
+  if (!open) return item;
+  const more = document.createElement("div");
+  more.className = "wl-more";
+  const day = t => new Date(t * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const when = [it.added && `Added ${day(it.added)}`, it.watched && it.watchedAt && `Watched ${day(it.watchedAt)}`].filter(Boolean).join(" · ");
+  const facts = [it.year, it.runtime && wlTime(it.runtime), it.note].filter(Boolean).join(" · ");
+  more.innerHTML = `<div class="wl-poster">${svg("film", "currentColor", 1.4)}</div>
+    <div class="wl-detail">
+      ${facts ? `<div class="wl-facts">${esc(facts)}</div>` : ""}
+      <div class="wl-about wait">Looking it up…</div>
+      ${when ? `<div class="wl-when">${esc(when)}</div>` : ""}
+      <div class="wl-acts"></div>
+    </div>`;
+  const act = (cls, html, run) => {
+    const b = document.createElement("button");
+    b.className = "set-wide " + cls;
+    b.innerHTML = html;
+    b.onclick = run;
+    return b;
+  };
+  more.querySelector(".wl-acts").append(
+    act("primary", `${svg("play", "currentColor", 1.8)}Watch on Movy`, () => watchNow(it)),
+    act("", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)),
+    act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)));
+  item.append(more);
+  wlInfo(it).then(info => {
+    if (!more.isConnected) return;
+    const about = more.querySelector(".wl-about");
+    about.classList.remove("wait");
+    about.textContent = info && info.text ? info.text : "No summary found for this one.";
+    if (info && info.img) {
+      const poster = more.querySelector(".wl-poster");
+      poster.style.backgroundImage = `url("${info.img.replace(/"/g, "%22")}")`;
+      poster.innerHTML = "";
+    }
+  });
+  return item;
+}
+function wlToggleOpen(it) {
+  wlOpenId = wlOpenId === it.id ? null : it.id;
+  renderWatch(wlAt);
+  const r = wlRowOf(it.id);
+  if (r >= 0) wlFocus({ r, c: 0 });
+  // Opened: bring all of it into view (poster, buttons and all)
+  if (wlOpenId) document.querySelector(`#wl-items .wl-item.open`)?.scrollIntoView({ block: "nearest" });
+}
+/* What a film is about, and its poster: Wikipedia's summary of the best match for "<title> <year> film".
+   Asked once per film for the visit; nothing found (or offline) leaves the poster as a plain icon. */
+const wlInfoCache = new Map();
+function wlInfo(it) {
+  const key = `${it.title}|${it.year || ""}`;
+  if (!wlInfoCache.has(key)) wlInfoCache.set(key, (async () => {
+    const q = `${it.title.replace(/\s*\([^)]*\)/g, "")} ${it.year || ""} film`;
+    const found = await fetch(`https://en.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=5`).then(r => r.json());
+    const pages = found.pages || [];
+    const page = pages.find(p => /\b(film|movie|series|miniseries)\b/i.test(p.description || "")) || pages[0];
+    if (!page) return null;
+    const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`).then(r => r.json());
+    return { text: sum.extract, img: sum.thumbnail && sum.thumbnail.source };
+  })().catch(() => { wlInfoCache.delete(key); return null; }));  // offline: try again next time
+  return wlInfoCache.get(key);
+}
+function wlFocus(at) { wlAt = gridFocus(wlGrid(), "#watch", at); }
+const wlPicked = row => Math.max(0, row.findIndex(el => el.getAttribute("aria-checked") === "true"));
+const wlIsChoice = el => el && el.getAttribute("role") === "radio";
+function watchInput(cmd) {
+  const grid = wlGrid(), { r, c } = wlAt;
+  if (cmd === "up" || cmd === "down") {
+    const nr = r + (cmd === "up" ? -1 : 1);
+    // Onto the lists or the bar from elsewhere: start on the one picked
+    // Into a film's buttons: start on the first (Watch on Movy)
+    if (grid[nr]) wlFocus({ r: nr, c: nr === 0 || (nr === 1 && r === 0) ? wlPicked(grid[nr]) : nr >= 2 ? 0 : sameSide(grid, r, c, nr) });
+  }
+  if (cmd === "left" || cmd === "right") {
+    const nc = c + (cmd === "left" ? -1 : 1);
+    if (wlIsChoice(grid[r][nc])) grid[r][nc].click();  // so the list (or filter) shows at once
+    else if (grid[r][nc]) wlFocus({ r, c: nc });
+  }
+  if (cmd === "ok") grid[r][c].click();
+  if (cmd === "back") closeWatch();
+}
+function saveWatch() {
+  return fetch("/api/watchlist", {
+    method: "POST",
+    headers: { "X-Deck-TV": "1", "Content-Type": "application/json" },
+    body: JSON.stringify(wl),
+  }).then(r => { if (!r.ok) throw r; }).catch(() => toast("Couldn't save the watchlist"));
+}
+function toggleWatched(it) {
+  it.watched = !it.watched;
+  it.watchedAt = it.watched ? wlNow() : null;
+  saveWatch();
+  toast(it.watched ? `Watched ${it.title}` : `${it.title} is back on the list`);
+  // Showing To watch, it drops off and the next film takes its place; otherwise focus goes back to its row
+  if (!wlShown(wlList()).includes(it)) wlOpenId = null;
+  const at = wlRowOf(it.id);
+  renderWatch(wlAt);
+  const r = wlRowOf(it.id);
+  wlFocus(r >= 0 ? { r, c: 0 } : { r: at, c: 0 });
+}
+/* Sort by: drops down a menu under its button; up and down move, OK picks, back (or left/right) closes */
+let wlSortOpen = false, wlSortAt = 0;
+const wlSortOpts = () => [...document.querySelectorAll("#wl-sortmenu button")];
+function openWlSort() {
+  const btn = document.getElementById("wl-sort"), menu = document.getElementById("wl-sortmenu");
+  menu.replaceChildren(...WL_SORTS.map(([id, name], n) => {
+    const b = document.createElement("button");
+    b.setAttribute("role", "menuitemradio");
+    b.setAttribute("aria-checked", String(id === wlSort));
+    b.innerHTML = `${svg("check", "currentColor", 2.4)}${name}`;
+    b.onclick = e => { e.stopPropagation(); pickWlSort(id); };
+    b.onmouseenter = () => wlSortFocus(n);
+    return b;
+  }));
+  menu.style.left = btn.offsetLeft + "px";
+  menu.style.top = btn.offsetTop + btn.offsetHeight + 8 + "px";
+  menu.classList.add("open");
+  btn.setAttribute("aria-expanded", "true");
+  wlSortOpen = true;
+  wlSortFocus(WL_SORTS.findIndex(([id]) => id === wlSort));
+}
+function wlSortFocus(i) {
+  wlSortAt = clamp(i, 0, WL_SORTS.length - 1);
+  wlSortOpts().forEach((b, n) => b.classList.toggle("focus", n === wlSortAt));
+}
+function closeWlSort() {
+  wlSortOpen = false;
+  document.getElementById("wl-sortmenu").classList.remove("open");
+  document.getElementById("wl-sort").setAttribute("aria-expanded", "false");
+}
+function pickWlSort(id) {
+  wlSort = id;
+  store.set("deckTvWatchSort", id);
+  closeWlSort();
+  renderWatch(wlAt);  // still on the Sort button
+}
+function wlSortInput(cmd) {
+  if (cmd === "up") wlSortFocus(wlSortAt - 1);
+  if (cmd === "down") wlSortFocus(wlSortAt + 1);
+  if (cmd === "ok") wlSortOpts()[wlSortAt].click();
+  if (cmd === "back" || cmd === "left" || cmd === "right") closeWlSort();
+}
+document.getElementById("wl-sort").onclick = e => { e.stopPropagation(); wlSortOpen ? closeWlSort() : openWlSort(); };
+document.getElementById("watch").addEventListener("click", e => { if (wlSortOpen && !e.target.closest("#wl-sortmenu")) closeWlSort(); });
+/* Watch: open Movy and search it for the film (Movy comes to the front; its search shows the matches) */
+async function watchNow(it) {
+  toast(`Opening Movy for ${it.title}…`);
+  const res = await fetch("/api/watchnow", {
+    method: "POST",
+    headers: { "X-Deck-TV": "1", "Content-Type": "application/json" },
+    body: JSON.stringify({ title: it.title }),
+  }).then(r => r.json()).catch(() => ({ error: "server" }));
+  if (res.error) toast(`Couldn't search Movy for ${it.title}`);
+  else if (!res.found) toast(`Movy found nothing for ${res.searched}`);
+  refreshOpen();
+}
+document.getElementById("wl-add").innerHTML = `${svg("plus", "currentColor", 2)}Add`;
+document.getElementById("wl-editlist").innerHTML = `${svg("pencil", "currentColor", 1.8)}Edit list`;
+document.getElementById("wl-add").onclick = () => openWatchEd("film", null);
+document.getElementById("wl-editlist").onclick = () => openWatchEd("list", wlList());
+document.getElementById("wl-close").onclick = closeWatch;
+document.getElementById("watch").onclick = e => { if (e.target.id === "watch") closeWatch(); };
+
+/* ---------- the film (or list) editor ----------
+   A film: its name, year and a note, which list it's on (moving it is picking another), and
+   watched or not. A list: just its name. Delete asks twice. Enter in a box saves. */
+let wlEdOpen = false, wleAt = { r: 0, c: 0 }, wle = null;
+const wleName = document.getElementById("wle-name"), wleYear = document.getElementById("wle-year"), wleNote = document.getElementById("wle-note");
+const wleTime = document.getElementById("wle-time");
+function openWatchEd(kind, thing) {
+  const list = wlList();
+  if (kind === "film" && !list) return;
+  wle = { kind, thing, listId: list && list.id, watched: kind === "film" && !!(thing && thing.watched), sure: false };
+  wlEdOpen = true;
+  document.getElementById("watch").classList.remove("open");
+  const ed = document.getElementById("wl-ed");
+  ed.classList.add("open");
+  ed.querySelectorAll(".film-only").forEach(el => { el.hidden = kind !== "film"; });
+  ed.setAttribute("aria-label", kind === "film" ? "Film" : "List");
+  document.getElementById("wle-title").textContent = kind === "film" ? (thing ? "Edit film" : `Add to ${list.name}`)
+    : thing ? `Edit ${thing.name}` : "New list";
+  wleName.placeholder = kind === "film" ? "Film or show" : "Name the list";
+  wleName.maxLength = kind === "film" ? 80 : 28;
+  wleName.value = thing ? (kind === "film" ? thing.title : thing.name) : "";
+  wleYear.value = kind === "film" && thing && thing.year ? thing.year : "";
+  wleNote.value = kind === "film" && thing ? thing.note || "" : "";
+  wleTime.value = kind === "film" && thing && thing.runtime ? thing.runtime : "";
+  document.getElementById("wle-delete").hidden = !thing;
+  document.getElementById("wle-save").textContent = thing ? "Save" : kind === "film" ? "Add" : "Make list";
+  renderWatchEd({ r: 0, c: 0 });
+  if (!thing) wleName.focus();  // something new: ready to type, on a keyboard or the phone remote's
+}
+function closeWatchEd(at = wlAt) {
+  wlEdOpen = false;
+  if (document.activeElement && document.activeElement.matches("#wl-ed input")) document.activeElement.blur();
+  document.getElementById("wl-ed").classList.remove("open");
+  document.getElementById("watch").classList.add("open");
+  renderWatch(at);
+}
+function renderWatchEd(at = wleAt) {
+  document.getElementById("wle-lists").replaceChildren(...wl.lists.map((l, n) => wlChip(esc(l.name), l.id === wle.listId, () => {
+    wle.listId = l.id;
+    renderWatchEd({ r: 2, c: n });
+  })));
+  document.getElementById("wle-watched").setAttribute("aria-checked", String(wle.watched));
+  wleDeleteLabel();
+  wleGrid().forEach((row, r) => row.forEach((el, c) => { el.onmouseenter = () => wleFocus({ r, c }); }));
+  wleFocus(at);
+}
+function wleDeleteLabel() {
+  const del = document.getElementById("wle-delete"), n = wle.kind === "list" && wle.thing ? wle.thing.items.length : 0;
+  del.classList.toggle("sure", wle.sure);
+  del.textContent = !wle.sure ? (wle.kind === "list" ? "Delete list" : "Delete")
+    : n ? `Delete it and its ${n} film${n === 1 ? "" : "s"}?` : "Sure? Press again";
+}
+/* Focus grid: the name, then for a film the year and note, the lists, watched; then Delete / Cancel / Save */
+const wleGrid = () => [
+  [wleName],
+  ...(wle.kind === "film" ? [[wleYear, wleTime, wleNote], [...document.querySelectorAll("#wle-lists .wl-tab")], [document.getElementById("wle-watched")]] : []),
+  [...document.querySelectorAll("#wle-bottom .set-wide")].filter(b => !b.hidden),
+];
+function wleFocus(at) {
+  const grid = wleGrid();
+  wleAt = gridFocus(grid, "#wl-ed", at);
+  const el = grid[wleAt.r][wleAt.c];
+  if (document.activeElement !== el && document.activeElement && document.activeElement.matches("#wl-ed input")) document.activeElement.blur();
+  if (wle.sure && el.id !== "wle-delete") { wle.sure = false; wleDeleteLabel(); }  // moved off Delete: changed their mind
+}
+function wleInput(cmd) {
+  const grid = wleGrid(), { r, c } = wleAt;
+  if (cmd === "up" || cmd === "down") {
+    const nr = r + (cmd === "up" ? -1 : 1);
+    // Onto the lists: start on the one picked. Down to the buttons: start on Save
+    if (grid[nr]) wleFocus({ r: nr, c: wlIsChoice(grid[nr][0]) ? wlPicked(grid[nr]) : nr === grid.length - 1 ? grid[nr].length - 1 : c });
+  }
+  if (cmd === "left" || cmd === "right") {
+    const nc = c + (cmd === "left" ? -1 : 1);
+    if (wlIsChoice(grid[r][nc])) grid[r][nc].click();
+    else if (grid[r][nc]) wleFocus({ r, c: nc });
+  }
+  if (cmd === "ok") grid[r][c].matches("input") ? grid[r][c].focus() : grid[r][c].click();
+  if (cmd === "back") closeWatchEd();
+}
+function saveWatchEd() {
+  const name = wleName.value.trim();
+  if (!name) {
+    toast(wle.kind === "film" ? "Type the film's name first" : "Name the list first");
+    wleFocus({ r: 0, c: 0 });
+    return wleName.focus();
+  }
+  if (wle.kind === "list") {
+    if (wle.thing) wle.thing.name = name;
+    else {
+      wl.lists.push({ id: wlNewId("l-"), name, items: [] });
+      wlListId = wl.lists[wl.lists.length - 1].id;
+      store.set("deckTvWatchList", wlListId);
+    }
+    saveWatch();
+    return closeWatchEd({ r: 0, c: wl.lists.findIndex(l => l.id === wlListId) });
+  }
+  const year = parseInt(wleYear.value, 10), it = wle.thing || { id: wlNewId("i-"), added: wlNow() };
+  Object.assign(it, { title: name, year: year >= 1870 && year <= 2100 ? year : null, runtime: wlMinutes(wleTime.value), note: wleNote.value.trim(),
+                      watchedAt: wle.watched ? (it.watched ? it.watchedAt : wlNow()) : null, watched: wle.watched });
+  // On its list (a new film goes at the end); picking another list moves it there
+  const from = wl.lists.find(l => l.items.includes(it)), dest = wl.lists.find(l => l.id === wle.listId);
+  if (from !== dest) {
+    if (from) from.items = from.items.filter(x => x !== it);
+    dest.items.push(it);
+  }
+  saveWatch();
+  if (!wle.thing) toast(`Added ${name} to ${dest.name}`);
+  else if (from !== dest) toast(`Moved ${name} to ${dest.name}`);
+  // A new film on this list shows straight away, even if it's hidden by the filter
+  if (!wle.thing && dest.id === wlListId && !wlShown(dest).includes(it)) wlFilter = "all";
+  closeWatchEd(wlAt);
+  const r = wlRowOf(it.id);
+  if (r >= 2) wlFocus({ r, c: 0 });
+}
+function deleteWatchEd() {
+  if (!wle.sure) {
+    wle.sure = true;
+    return wleDeleteLabel();
+  }
+  if (wle.kind === "list") {
+    wl.lists = wl.lists.filter(l => l !== wle.thing);
+    toast(`Deleted ${wle.thing.name}`);
+    saveWatch();
+    return closeWatchEd({ r: 0, c: 0 });
+  }
+  wl.lists.forEach(l => { l.items = l.items.filter(x => x !== wle.thing); });
+  toast(`Deleted ${wle.thing.title}`);
+  saveWatch();
+  closeWatchEd(wlAt);
+}
+document.getElementById("wle-watched").onclick = () => {
+  wle.watched = !wle.watched;
+  document.getElementById("wle-watched").setAttribute("aria-checked", String(wle.watched));
+};
+for (const el of [wleName, wleYear, wleTime, wleNote]) el.addEventListener("keydown", e => { if (e.key === "Enter") saveWatchEd(); });
+document.getElementById("wle-save").onclick = saveWatchEd;
+document.getElementById("wle-cancel").onclick = () => closeWatchEd();
+document.getElementById("wle-delete").onclick = deleteWatchEd;
+document.getElementById("wl-ed").onclick = e => { if (e.target.id === "wl-ed") closeWatchEd(); };
+
 /* ---------- rearranging the cards, right on the home screen ----------
    Drag a card with the mouse and the others make room as it passes. With a controller, A picks the
    focused card up, left/right carries it along, A puts it down. Confirm saves; Cancel puts it all back. */
@@ -1980,6 +2563,9 @@ function input(cmd) {
     if (cmd === "back") closeSystem();
     return;
   }
+  if (wlSortOpen) return wlSortInput(cmd);
+  if (wlEdOpen) return wleInput(cmd);
+  if (watchOpen) return watchInput(cmd);
   if (settingsOpen) return settingsInput(cmd);
   if (groupOpen) return groupInput(cmd);
   if (arranging) return arrangeInput(cmd);

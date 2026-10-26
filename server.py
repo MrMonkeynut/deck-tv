@@ -21,6 +21,7 @@ from pathlib import Path
 
 import media
 import search
+import watchlist
 from cdp import Page
 
 ROOT = Path(__file__).resolve().parent
@@ -736,6 +737,37 @@ def launch_item(item_id, choice_id=None):
 closing = {}  # tile id -> when it was closed
 
 
+def watch_now(title):
+    """The watchlist's Watch now: open Movy (or switch to it) and search it for the film. Movy just
+    started takes a few seconds before its page answers, so wait for that first. If the full title
+    finds nothing ("Star Wars: Episodes IV, V, VI"), try the part before the colon. Returns (body, status)."""
+    tile = next((t for t in load_config()["tiles"] if t.get("search") == "movy" and installed(t)), None)
+    if not tile:
+        return {"error": "Movy isn't set up"}, 404
+    body, status = launch_item(tile["id"])
+    if status != 200:
+        return body, status
+    text = re.sub(r"\s*\([^)]*\)", "", title).strip() or title
+    for _ in range(60):  # up to about 15 s
+        try:
+            with Page(tile["devtools_port"]) as page:
+                if page.eval("location.hostname.includes('movy') && document.readyState === 'complete'"):
+                    break
+        except Exception:
+            pass
+        time.sleep(0.25)
+    else:
+        return {"error": "Movy didn't open in time"}, 504
+    try:
+        found = search.run(tile, text)
+        if not found and ":" in text:
+            text = text.split(":")[0].strip()
+            found = search.run(tile, text)
+    except Exception as e:
+        return {"error": str(e)}, 500
+    return {"ok": True, "searched": text, "found": len(found or [])}, 200
+
+
 def close_item(item_id):
     """Close a tile's app windows the polite way, as their own close button would."""
     tile = {t["id"]: t for t in load_config()["tiles"]}.get(item_id)
@@ -989,6 +1021,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(system_info())
             if self.path == "/api/remote":
                 return self._json({"url": remote_url()})
+            if self.path == "/api/watchlist":
+                return self._json(watchlist.load())
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
 
@@ -1032,6 +1066,21 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError:
                 return self._json({"error": "bad request"}, 400)
             return self._json(*save_layout(body if isinstance(body, dict) else {}))
+        if self.path == "/api/watchlist":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            return self._json(*watchlist.save(body))
+        if self.path == "/api/watchnow":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                title = str(body.get("title", "")).strip()[:80]
+            except (ValueError, AttributeError):
+                return self._json({"error": "bad request"}, 400)
+            if not title:
+                return self._json({"error": "no title"}, 400)
+            return self._json(*watch_now(title))
         if len(parts) == 3 and parts[:2] == ["api", "close"]:
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:

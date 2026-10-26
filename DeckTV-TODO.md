@@ -23,6 +23,10 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Watchlist: slim rows that open up**: each film is a single row with its name and running time (a tick once watched); opening it shows the poster and a summary from Wikipedia, the year, director and dates, and Watch on Movy / Mark watched / Edit. Watch on Movy no longer types into Movy's search box while it's still closing (it waited for the box to really be open) _(done 2026-10-27)_
+- [x] **Watchlist: Watch now**: each film has a Watch button that opens Movy (or switches to it) and searches it for the film; a title Movy doesn't know ("Star Wars: Episodes IV, V, VI") is tried again as the part before the colon _(done 2026-10-27)_
+- [x] **Watchlist: running times and Sort**: each film shows its running time (the Top 100 come with theirs; type minutes or "2h 15m" for others), and a Sort menu orders a list by list order, title, newest/oldest or shortest/longest _(done 2026-10-27)_
+- [x] **Watchlist**: a Watchlist button at the end of the bottom row opens lists of films: Liam and Laura, Top 100 (from the scratch poster, the scratched-off ones already watched) and Kids. Add, edit, move between lists, delete, and tick off as watched; To watch / Watched / All; make, rename or delete lists. Saved in `~/.config/deck-tv/watchlist.json` _(done 2026-10-27)_
 - [x] **UFC card: choice menu**: clicking UFC asks which to open
   - **Results** → Google search for "UFC" (`https://www.google.com/search?q=UFC`), which shows latest results/standings
   - **Fights** → the current watchwrestling URL (keep as-is) _(done 2026-10-25)_
