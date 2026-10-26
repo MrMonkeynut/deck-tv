@@ -491,11 +491,27 @@
   .wl-tr-msg small { font-size: 16px; color: var(--muted); }
   .wl-tr-msg .spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid #2E3542; border-top-color: var(--ink); animation: spin .8s linear infinite; }
   .wl-tr-msg[hidden], .wl-tr-key[hidden], #wl-tr [hidden] { display: none; }
-  .wl-tr-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.18); transition: opacity .3s; }
-  .wl-tr-bar i { display: block; height: 100%; width: 0; background: #E50914; transition: width .5s linear; }
-  .wl-tr-ctl { display: flex; align-items: center; gap: 10px; transition: opacity .3s; }
-  .wl-tr-ctl .set-wide { padding: 10px 18px; font-size: 17px; gap: 8px; }
-  .wl-tr-ctl .set-wide svg { width: 20px; height: 20px; }
+  /* Under the video: the scrub bar with the time, then Play, the volume, a button per trailer, Fullscreen, Close */
+  .wl-tr-ctl { width: 896px; display: flex; flex-direction: column; gap: 10px; transition: opacity .3s; }
+  .wl-tr-row { display: flex; align-items: center; gap: 8px; }
+  .wl-tr-row .set-wide { padding: 9px 16px; font-size: 16px; gap: 8px; }
+  .wl-tr-row .set-wide svg { width: 20px; height: 20px; }
+  .wl-tr-row .set-wide.icon { padding: 9px 11px; }
+  .wl-tr-scrub { display: flex; align-items: center; gap: 14px; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-tr-scrub > span { flex: none; min-width: 44px; }
+  .wl-tr-scrub > span:last-child { text-align: right; }
+  .wl-slider { position: relative; flex: 1; height: 26px; cursor: pointer; touch-action: none; border-radius: 13px;
+    outline: 3px solid transparent; outline-offset: 2px; }
+  .wl-slider::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; background: rgba(255,255,255,.2); }
+  .wl-slider i { position: absolute; left: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; background: #E50914; width: 0; }
+  .wl-slider b { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #fff; left: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.5); transform: scale(.75); transition: transform .12s; }
+  .wl-slider:hover b, .wl-slider.focus b, .wl-slider.drag b { transform: scale(1); }
+  .wl-slider.focus { outline-color: var(--ring); }
+  .wl-slider.vol { flex: none; width: 130px; }
+  .wl-slider.vol i { background: var(--ink); }
+  .wl-tr-row .tnum[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .wl-tr-gap { flex: 1; }
   .wl-tr-key { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 40px 70px; background: #0E1116; }
   .wl-tr-key b { font-size: 26px; }
   .wl-tr-key p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
@@ -507,9 +523,9 @@
   #wl-tr.full { background: #000; }
   #wl-tr.full .wl-tr-head { display: none; }
   #wl-tr.full .wl-tr-frame { position: absolute; inset: 0; width: auto; height: auto; border-radius: 0; box-shadow: none; }
-  #wl-tr.full .wl-tr-ctl { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); padding: 8px; border-radius: 30px;
+  #wl-tr.full .wl-tr-ctl { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); width: 1180px; padding: 12px 16px; border-radius: 22px;
     background: rgba(14,17,22,.82); box-shadow: 0 10px 40px rgba(0,0,0,.6); }
-  #wl-tr.full.idle .wl-tr-ctl, #wl-tr.full.idle .wl-tr-bar { opacity: 0; }
+  #wl-tr.full.idle .wl-tr-ctl { opacity: 0; }
   #wl-tr.full.idle { cursor: none; }
   #wl-tr.full.idle .wl-tr-shield { cursor: none; }
 
@@ -758,7 +774,6 @@
         <div class="wl-tr-frame">
           <div id="wl-tr-player"></div>
           <div class="wl-tr-shield" id="wl-tr-shield"></div>
-          <div class="wl-tr-bar"><i id="wl-tr-fill"></i></div>
           <div class="wl-tr-msg" id="wl-tr-msg" hidden></div>
           <div class="wl-tr-key" id="wl-tr-key" hidden>
             <b>Trailers need a free TMDB key</b>
@@ -771,10 +786,20 @@
           </div>
         </div>
         <div class="wl-tr-ctl" id="wl-tr-ctl">
-          <button class="set-wide" id="wl-tr-play"></button>
-          <button class="set-wide" id="wl-tr-next"></button>
-          <button class="set-wide" id="wl-tr-full"></button>
-          <button class="set-wide" id="wl-tr-close"></button>
+          <div class="wl-tr-scrub" id="wl-tr-scrubrow">
+            <span id="wl-tr-cur">0:00</span>
+            <div class="wl-slider" id="wl-tr-scrub" role="slider" aria-label="Position in the trailer"><i></i><b></b></div>
+            <span id="wl-tr-len">0:00</span>
+          </div>
+          <div class="wl-tr-row">
+            <button class="set-wide" id="wl-tr-play"></button>
+            <button class="set-wide icon" id="wl-tr-mute"></button>
+            <div class="wl-slider vol" id="wl-tr-vol" role="slider" aria-label="Volume"><i></i><b></b></div>
+            <span class="wl-tr-gap"></span>
+            <span class="wl-tr-row" id="wl-tr-nums"></span>
+            <button class="set-wide icon" id="wl-tr-full"></button>
+            <button class="set-wide icon" id="wl-tr-close" title="Close" aria-label="Close"></button>
+          </div>
         </div>
       </div>
     </div>
@@ -2263,20 +2288,23 @@ document.getElementById("wl-pv").onclick = e => { e.stopPropagation(); if (e.tar
 
 /* ---------- trailers: played right here, in YouTube's player, from TMDB's list for the film ----------
    The player sits under a see-through layer, so nothing in it (YouTube's logo, title, end screen) can
-   take you off to YouTube; Deck TV's own buttons play and pause, skip to the next trailer, go
-   fullscreen and close. One that won't play here (some studios forbid it) gives way to the next. */
-let wlTrOpen = false, trFilm = null, trList = [], trAt = 0, trFocusAt = 0, trPlaying = false, trIdle = null, trLength = 0;
+   take you off to YouTube; Deck TV's own controls do the rest: a scrub bar, play and pause, sound and
+   volume, a button per trailer, fullscreen and close. One that won't play here (some studios forbid
+   it) gives way to the next. */
+let wlTrOpen = false, trFilm = null, trList = [], trAt = 0, trPlaying = false, trIdle = null;
+let trLength = 0, trNow = 0, trMuted = false, trDrag = null, trFocusAt = { r: 1, c: 0 };
+let trVolume = clamp(parseInt(store.get("deckTvTrailerVolume") || "80", 10) || 80, 0, 100);
 const tr = id => document.getElementById(id);
 const YT = "https://www.youtube-nocookie.com";
 async function openTrailer(it) {
   trFilm = it;
   wlTrOpen = true;
+  trList = [];
   tr("wl-tr-name").textContent = it.title;
   tr("wl-tr-time").textContent = [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
   tr("wl-tr-which").textContent = "";
   tr("wl-tr").classList.add("open");
   trMessage(`<span class="spin"></span>Finding the trailer…`);
-  trButtons();
   const found = await api(`/api/trailers?title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).catch(() => ({ error: "server" }));
   if (!wlTrOpen || trFilm !== it) return;
   if (found.needKey) return trAskKey(found.error);
@@ -2295,31 +2323,30 @@ function closeTrailer() {
 function trStop() {
   tr("wl-tr-player").replaceChildren();  // the player goes, and its sound with it
   trPlaying = false;
-  trLength = 0;
-  tr("wl-tr-fill").style.width = "0";
+  trLength = trNow = 0;
+  trShowTime();
 }
 function trMessage(html) {
   trStop();
   tr("wl-tr-key").hidden = true;
   tr("wl-tr-msg").hidden = false;
   tr("wl-tr-msg").innerHTML = html;
-  trButtons();
+  trControls();
 }
 function trPlay(n) {
   trAt = n;
   trStop();
   tr("wl-tr-msg").hidden = tr("wl-tr-key").hidden = true;
-  const v = trList[n];
-  tr("wl-tr-which").textContent = trList.length > 1 ? `${v.name} · ${n + 1} of ${trList.length}` : v.name;
+  tr("wl-tr-which").textContent = trList[n].name;
   const f = document.createElement("iframe");
   f.id = "wl-tr-iframe";
   f.allow = "autoplay; encrypted-media";
   // No popups or page changes from inside the player: it can only play
   f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
-  f.src = `${YT}/embed/${v.id}?enablejsapi=1&autoplay=1&controls=0&disablekb=1&fs=0&rel=0&iv_load_policy=3&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
+  f.src = `${YT}/embed/${trList[n].id}?enablejsapi=1&autoplay=1&controls=0&disablekb=1&fs=0&rel=0&iv_load_policy=3&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
   f.onload = () => f.contentWindow.postMessage(JSON.stringify({ event: "listening", id: f.id }), YT);
   tr("wl-tr-player").append(f);
-  trButtons();
+  trControls();
 }
 function trCommand(func, args = []) {
   const f = tr("wl-tr-iframe");
@@ -2329,48 +2356,128 @@ addEventListener("message", e => {
   if (e.origin !== YT || !wlTrOpen) return;
   let d;
   try { d = JSON.parse(e.data); } catch { return; }
-  // YouTube sometimes switches captions on by itself: a trailer starts without them
-  if (d.event === "onReady" || d.event === "initialDelivery") ["captions", "cc"].forEach(m => trCommand("unloadModule", [m]));
+  if (d.event === "onReady" || d.event === "initialDelivery") {
+    // YouTube sometimes switches captions on by itself: a trailer starts without them, at our volume
+    ["captions", "cc"].forEach(m => trCommand("unloadModule", [m]));
+    trCommand("setVolume", [trVolume]);
+    trCommand(trMuted ? "mute" : "unMute");
+  }
   if (d.event === "onError") {  // 101 / 150: not allowed outside YouTube; 100: gone. Try the next.
     if (trAt + 1 < trList.length) return trPlay(trAt + 1);
     return trMessage(`This film's trailers won't play here<small>The studio only allows them on YouTube itself</small>`);
   }
-  if (d.event === "onStateChange" || (d.event === "infoDelivery" && d.info && "playerState" in d.info)) {
-    const state = d.event === "onStateChange" ? d.info : d.info.playerState;
+  const info = d.event === "infoDelivery" && d.info ? d.info : {};
+  const state = d.event === "onStateChange" ? d.info : info.playerState;
+  if (state !== undefined) {
     const playing = state === 1 || state === 3;
-    if (playing !== trPlaying) { trPlaying = playing; trButtons(); }
+    if (playing !== trPlaying) { trPlaying = playing; trControls(); }
   }
-  // The length comes once, the time every quarter second or so
-  if (d.event === "infoDelivery" && d.info && d.info.duration) trLength = d.info.duration;
-  if (d.event === "infoDelivery" && d.info && d.info.currentTime !== undefined && trLength) {
-    tr("wl-tr-fill").style.width = `${Math.min(100, d.info.currentTime / trLength * 100)}%`;
-  }
+  if (info.duration) trLength = info.duration;  // the length comes once, the time every quarter second or so
+  if (info.currentTime !== undefined && !trDrag) trNow = info.currentTime;
+  if (info.currentTime !== undefined || info.duration) trShowTime();
 });
-/* The buttons below the video (over it, in fullscreen) */
-function trButtons() {
+
+/* ---------- the controls ---------- */
+function trShowTime() {
+  const frac = trLength ? clamp((trDrag ? trDrag.frac : trNow / trLength), 0, 1) : 0;
+  tr("wl-tr-scrub").querySelector("i").style.width = `${frac * 100}%`;
+  tr("wl-tr-scrub").querySelector("b").style.left = `${frac * 100}%`;
+  tr("wl-tr-cur").textContent = clock(trLength ? frac * trLength : 0);
+  tr("wl-tr-len").textContent = clock(trLength);
+}
+function trShowVolume() {
+  const v = trMuted ? 0 : trVolume;
+  tr("wl-tr-vol").querySelector("i").style.width = `${v}%`;
+  tr("wl-tr-vol").querySelector("b").style.left = `${v}%`;
+  tr("wl-tr-mute").innerHTML = svg(trMuted || !trVolume ? "muted" : "volume", "currentColor", 2);
+  tr("wl-tr-mute").title = trMuted ? "Sound on" : "Mute";
+}
+function trSeek(secs) {
+  if (!trLength) return;
+  trNow = clamp(secs, 0, trLength - 0.5);
+  trCommand("seekTo", [trNow, true]);
+  trShowTime();
+}
+function trSetVolume(v) {
+  trVolume = clamp(Math.round(v), 0, 100);
+  store.set("deckTvTrailerVolume", trVolume);
+  if (trMuted && trVolume) { trMuted = false; trCommand("unMute"); }
+  trCommand("setVolume", [trVolume]);
+  trShowVolume();
+}
+function trToggleMute() {
+  trMuted = !trMuted;
+  trCommand(trMuted ? "mute" : "unMute");
+  trShowVolume();
+}
+/* Drag (or click) along a slider: the scrub bar moves the video when let go; the volume as it goes */
+function trSlider(el, onMove, onDone) {
+  const frac = e => { const r = el.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1); };
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.classList.add("drag");
+    onMove(frac(e));
+    const move = ev => onMove(frac(ev));
+    const up = ev => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      el.classList.remove("drag");
+      onDone && onDone(frac(ev));
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+  });
+}
+trSlider(tr("wl-tr-scrub"), f => { trDrag = { frac: f }; trShowTime(); }, f => { trDrag = null; trSeek(f * trLength); });
+trSlider(tr("wl-tr-vol"), f => trSetVolume(f * 100));
+tr("wl-tr-vol").addEventListener("wheel", e => { e.preventDefault(); trSetVolume(trVolume + (e.deltaY < 0 ? 5 : -5)); }, { passive: false });
+
+function trControls() {
   const playing = !!tr("wl-tr-iframe");
-  tr("wl-tr-play").hidden = !playing;
+  tr("wl-tr-scrubrow").hidden = !playing;
+  ["wl-tr-play", "wl-tr-mute", "wl-tr-vol", "wl-tr-full"].forEach(id => { tr(id).hidden = !playing; });
   tr("wl-tr-play").innerHTML = trPlaying ? `${svg("pause", "currentColor", 2.4)}Pause` : `${svg("play", "currentColor", 1.8)}Play`;
-  tr("wl-tr-next").hidden = !playing || trList.length < 2;
-  tr("wl-tr-full").hidden = !playing;
   const full = tr("wl-tr").classList.contains("full");
-  tr("wl-tr-full").innerHTML = full ? `${svg("shrink", "currentColor", 2)}Exit fullscreen` : `${svg("expand", "currentColor", 2)}Fullscreen`;
+  tr("wl-tr-full").innerHTML = svg(full ? "shrink" : "expand", "currentColor", 2);
+  tr("wl-tr-full").title = full ? "Exit fullscreen" : "Fullscreen";
+  tr("wl-tr-full").setAttribute("aria-label", tr("wl-tr-full").title);
+  // A button per trailer: "Trailer 1", "Trailer 2"... (just the numbers when there are lots)
+  const nums = tr("wl-tr-nums");
+  nums.hidden = !playing || trList.length < 2;
+  nums.replaceChildren(...(nums.hidden ? [] : trList.map((v, n) => {
+    const b = document.createElement("button");
+    b.className = "set-wide tnum";
+    b.textContent = trList.length > 4 ? (n ? `${n + 1}` : "Trailer 1") : `Trailer ${n + 1}`;
+    b.title = v.name;
+    b.setAttribute("aria-label", `Trailer ${n + 1}: ${v.name}`);
+    b.setAttribute("aria-pressed", String(n === trAt));
+    b.onclick = () => { if (n !== trAt) trPlay(n); };
+    return b;
+  })));
+  trShowTime();
+  trShowVolume();
+  trGrid().forEach((row, r) => row.forEach((el, c) => { el.onmouseenter = () => trFocus({ r, c }); }));
   trFocus(trFocusAt);
 }
-const trEls = () => [...document.querySelectorAll("#wl-tr-keyin, #wl-tr-keysave, #wl-tr-ctl .set-wide")].filter(el => !el.hidden && el.offsetParent);
-function trFocus(i) {
-  const els = trEls();
-  trFocusAt = clamp(i, 0, els.length - 1);
-  document.querySelectorAll("#wl-tr .focus").forEach(el => el.classList.remove("focus"));
-  els[trFocusAt]?.classList.add("focus");
-}
+/* Focus grid: the scrub bar, then the row of buttons (or, asking for the key, the box, Save and Close) */
+const trGrid = () => {
+  if (!tr("wl-tr-key").hidden) return [[tr("wl-tr-keyin")], [tr("wl-tr-keysave")], [tr("wl-tr-close")]];
+  const row = [...document.querySelectorAll("#wl-tr-ctl .wl-tr-row > .set-wide, #wl-tr-vol, #wl-tr-nums .set-wide")]
+    .filter(el => !el.hidden && el.offsetParent)
+    .sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+  return tr("wl-tr-scrubrow").hidden ? [row] : [[tr("wl-tr-scrub")], row];
+};
+function trFocus(at) { trFocusAt = gridFocus(trGrid(), "#wl-tr", at); }
 function trToggle() { if (tr("wl-tr-iframe")) trCommand(trPlaying ? "pauseVideo" : "playVideo"); }
 function trFull(on = !tr("wl-tr").classList.contains("full")) {
   tr("wl-tr").classList.toggle("full", on);
-  trButtons();
+  trControls();
   trWake();
 }
-/* In fullscreen the buttons fade after a few seconds alone; any press or move brings them back */
+/* In fullscreen the controls fade after a few seconds alone; any press or move brings them back */
 function trWake() {
   tr("wl-tr").classList.remove("idle");
   clearTimeout(trIdle);
@@ -2379,12 +2486,23 @@ function trWake() {
 function trInput(cmd) {
   const wasIdle = tr("wl-tr").classList.contains("idle");
   trWake();
-  if (wasIdle && cmd !== "back") return;  // the first press just shows the buttons again
-  if (cmd === "left" || cmd === "up") trFocus(trFocusAt - 1);
-  if (cmd === "right" || cmd === "down") trFocus(trFocusAt + 1);
+  if (wasIdle && cmd !== "back") return;  // the first press just shows the controls again
+  const grid = trGrid(), { r, c } = trFocusAt, el = grid[r] && grid[r][c];
+  if (cmd === "left" || cmd === "right") {
+    const step = cmd === "left" ? -1 : 1;
+    if (el === tr("wl-tr-scrub")) return trSeek(trNow + step * 10);   // 10 seconds back or on
+    if (el === tr("wl-tr-vol")) return trSetVolume(trVolume + step * 10);
+    trFocus({ r, c: c + step });
+  }
+  if (cmd === "up" || cmd === "down") {
+    const nr = r + (cmd === "up" ? -1 : 1);
+    if (grid[nr]) trFocus({ r: nr, c: grid[nr].length === 1 ? 0 : grid[nr].indexOf(tr("wl-tr-play")) >= 0 ? grid[nr].indexOf(tr("wl-tr-play")) : 0 });
+  }
   if (cmd === "ok") {
-    const el = trEls()[trFocusAt];
-    if (el && el.matches("input")) el.focus(); else el?.click();
+    if (!el) return;
+    if (el.matches("input")) el.focus();
+    else if (el === tr("wl-tr-scrub") || el === tr("wl-tr-vol")) trToggle();  // OK on a slider plays or pauses
+    else el.click();
   }
   if (cmd === "back") tr("wl-tr").classList.contains("full") ? trFull(false) : closeTrailer();
 }
@@ -2395,8 +2513,8 @@ function trAskKey(problem) {
   tr("wl-tr-key").hidden = false;
   tr("wl-tr-keyerr").textContent = problem || "";
   tr("wl-tr-keyin").value = "";
-  trButtons();
-  trFocus(0);
+  trFocusAt = { r: 0, c: 0 };
+  trControls();
 }
 async function trSaveKey() {
   const btn = tr("wl-tr-keysave");
@@ -2409,25 +2527,24 @@ async function trSaveKey() {
   btn.textContent = "Save key";
   if (res.error) {
     tr("wl-tr-keyerr").textContent = res.error;
-    return trFocus(0);
+    return trFocus({ r: 0, c: 0 });
   }
   toast("TMDB key saved");
+  trFocusAt = { r: 1, c: 0 };
   openTrailer(trFilm);
 }
 tr("wl-tr-keysave").onclick = trSaveKey;
 tr("wl-tr-keyin").addEventListener("keydown", e => { if (e.key === "Enter") trSaveKey(); });
 tr("wl-tr-play").onclick = trToggle;
-tr("wl-tr-next").innerHTML = `${svg("skip", "currentColor", 1.8)}Next trailer`;
-tr("wl-tr-next").onclick = () => trPlay((trAt + 1) % trList.length);
+tr("wl-tr-mute").onclick = trToggleMute;
 tr("wl-tr-full").onclick = () => trFull();
-tr("wl-tr-close").innerHTML = `${svg("close", "currentColor", 2.2)}Close`;
+tr("wl-tr-close").innerHTML = svg("close", "currentColor", 2.2);
 tr("wl-tr-close").onclick = closeTrailer;
 // The see-through layer over the video: a click plays or pauses, a double-click goes fullscreen
 tr("wl-tr-shield").onclick = trToggle;
 tr("wl-tr-shield").ondblclick = () => trFull();
 tr("wl-tr").addEventListener("mousemove", trWake);
 tr("wl-tr").onclick = e => { e.stopPropagation(); if (e.target.id === "wl-tr") closeTrailer(); };  // clicking off the video closes it
-document.querySelectorAll("#wl-tr-ctl .set-wide, #wl-tr-keysave").forEach(b => { b.onmouseenter = () => trFocus(trEls().indexOf(b)); });
 
 /* Watch: open Movy and search it for the film (Movy comes to the front; its search shows the matches) */
 async function watchNow(it) {

@@ -23,6 +23,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Trailers: scrubbing, sound, a button per trailer**: a scrub bar with the time (click or drag; left/right on the controller skip 10 s), mute and a volume slider (remembered), and Trailer 1…n buttons in place of Next trailer _(done 2026-10-27)_
 - [x] **Watchlist: trailers**: an opened film has a Trailer button that plays its trailer in the panel (TMDB's list, in YouTube's player under a see-through layer so nothing can take you off to YouTube), with Play/Pause, Next trailer, Fullscreen (buttons fade after 3 s) and Close; a trailer the studio won't allow outside YouTube gives way to the next. Needs a free TMDB key, asked for the first time; no screensaver while one plays _(done 2026-10-27)_
 - [x] **Watchlist: slim rows that open up**: each film is a single row with its name and running time (a tick once watched); opening it shows the poster and a summary from Wikipedia, the year, director and dates, and Watch on Movy / Mark watched / Edit. Watch on Movy no longer types into Movy's search box while it's still closing (it waited for the box to really be open) _(done 2026-10-27)_
 - [x] **Watchlist: Watch now**: each film has a Watch button that opens Movy (or switches to it) and searches it for the film; a title Movy doesn't know ("Star Wars: Episodes IV, V, VI") is tried again as the part before the colon _(done 2026-10-27)_
