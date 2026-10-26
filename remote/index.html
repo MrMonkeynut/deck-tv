@@ -87,6 +87,30 @@
   .results-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 6px 14px; font-size: 13px; color: var(--dim); }
   #results-close { padding: 8px 14px; border-radius: 14px; background: var(--panel-2); color: var(--ink); font-size: 14px; }
 
+  /* The TV's picture, live: tap to click there, hold to right-click, two fingers to scroll */
+  .head-btns { display: flex; gap: 10px; }
+  #screen-btn.on { background: var(--ink); color: var(--bg); }
+  #screen { position: relative; flex: none; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: 16 / 9;
+    touch-action: none; -webkit-touch-callout: none; }
+  #screen[hidden] { display: none; }
+  #screen img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+  #screen .note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 16px; font-size: 14px; color: var(--muted); background: rgba(14,17,22,.82); }
+  #screen .note[hidden] { display: none; }
+  #screen .tip { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); white-space: nowrap; font-size: 12.5px;
+    padding: 6px 12px; border-radius: 12px; background: rgba(14,17,22,.85); color: var(--ink); pointer-events: none; transition: opacity .5s; }
+  #screen .tip.gone { opacity: 0; }
+  #screen .ripple { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 2px solid #fff;
+    pointer-events: none; animation: ripple .35s ease-out forwards; }
+  body.screen #pad { min-height: 110px; }
+  body.screen #pad .hint { font-size: 13px; line-height: 1.5; }
+  /* Sideways, the picture gets the screen (the type box stays for typing) */
+  @media (orientation: landscape) {
+    body.screen header, body.screen #apps, body.screen #pad, body.screen .controls { display: none; }
+    body.screen #screen { flex: 1; min-height: 0; aspect-ratio: auto; }
+    body.screen { padding-top: max(8px, env(safe-area-inset-top)); gap: 8px; }
+  }
+
   #pair {
     position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center;
     justify-content: center; gap: 14px; padding: 32px; text-align: center;
@@ -99,12 +123,23 @@
 <body>
   <header>
     <div class="brand"><span class="status" id="status"></span>Deck TV</div>
-    <button class="round" id="home" aria-label="Home">
-      <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>
-    </button>
+    <div class="head-btns">
+      <button class="round" id="screen-btn" aria-label="Show the TV's screen" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </button>
+      <button class="round" id="home" aria-label="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>
+      </button>
+    </div>
   </header>
 
   <div id="apps" role="list"></div>
+
+  <div id="screen" hidden aria-label="The TV's screen: tap to click there">
+    <img id="screen-img" alt="">
+    <div class="note" id="screen-note" hidden></div>
+    <div class="tip gone" id="screen-tip">Tap to click there · hold to right-click · 2 fingers to scroll</div>
+  </div>
 
   <div id="pad" aria-label="Touchpad">
     <div class="hint">Drag to move<br>Tap to click · two-finger tap to right-click<br>Two fingers to scroll</div>
@@ -438,8 +473,118 @@ document.getElementById("backspace").onclick = () => {
   }
 };
 
+/* ---------- the TV's screen, live ----------
+   A stream of pictures (about ten a second) into an <img>; the TV only captures while one is open here.
+   Tap the picture to click that spot, hold to right-click, two fingers to scroll. */
+const screenEl = document.getElementById("screen"), screenImg = document.getElementById("screen-img");
+const screenNote = document.getElementById("screen-note"), screenBtn = document.getElementById("screen-btn");
+let screenOn = store.get("deckTvScreen") === "1", screenRetry = null;
+
+function screenNoteShow(text) { screenNote.textContent = text; screenNote.hidden = !text; }
+function startScreen() {
+  clearTimeout(screenRetry);
+  if (!screenOn || document.hidden || !token) return;
+  screenNoteShow(screenImg.naturalWidth ? "" : "Connecting to the TV…");
+  screenImg.src = `/api/screen?t=${encodeURIComponent(token)}&n=${Date.now()}`;
+  // The first few times: how to use the picture, for a few seconds
+  const seen = +(store.get("deckTvScreenTips") || 0);
+  if (seen < 3) {
+    store.set("deckTvScreenTips", seen + 1);
+    const tip = document.getElementById("screen-tip");
+    tip.classList.remove("gone");
+    setTimeout(() => tip.classList.add("gone"), 4500);
+  }
+}
+function stopScreen() {
+  clearTimeout(screenRetry);
+  screenImg.removeAttribute("src");  // ends the stream: the TV stops capturing
+}
+function setScreen(on) {
+  screenOn = on;
+  store.set("deckTvScreen", on ? "1" : "0");
+  screenBtn.classList.toggle("on", on);
+  screenBtn.setAttribute("aria-pressed", String(on));
+  screenEl.hidden = !on;
+  document.body.classList.toggle("screen", on);
+  on ? startScreen() : stopScreen();
+}
+screenImg.onload = () => screenNoteShow("");
+screenImg.onerror = () => {
+  if (!screenOn || !screenImg.getAttribute("src")) return;
+  screenNoteShow("Can't see the TV just now: trying again…");
+  screenRetry = setTimeout(startScreen, 3000);
+};
+screenBtn.onclick = () => { buzz(); setScreen(!screenOn); };
+document.addEventListener("visibilitychange", () => (document.hidden ? stopScreen() : startScreen()));
+
+// Taps, holds and two-finger scrolls on the picture
+const spots = new Map();   // pointerId -> {x, y}
+let spot = null;           // {x, y, start, moved, fingers, scrollAcc, held}
+function screenFrac(x, y) {
+  const r = screenImg.getBoundingClientRect();
+  // The picture keeps the TV's shape; letterboxing (sideways) is left out of the sum
+  const k = Math.min(r.width / (screenImg.naturalWidth || 16), r.height / (screenImg.naturalHeight || 9));
+  const w = (screenImg.naturalWidth || 16) * k, h = (screenImg.naturalHeight || 9) * k;
+  const fx = (x - r.left - (r.width - w) / 2) / w, fy = (y - r.top - (r.height - h) / 2) / h;
+  return fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1 ? { fx, fy } : null;
+}
+function screenRipple(x, y) {
+  const r = screenEl.getBoundingClientRect(), el = document.createElement("span");
+  el.className = "ripple";
+  el.style.left = `${x - r.left}px`;
+  el.style.top = `${y - r.top}px`;
+  screenEl.append(el);
+  setTimeout(() => el.remove(), 400);
+}
+function screenTap(x, y, button) {
+  const f = screenFrac(x, y);
+  if (!f) return;
+  buzz();
+  screenRipple(x, y);
+  api("/api/tap", { x: f.fx, y: f.fy, button }).catch(fail);
+}
+screenEl.addEventListener("pointerdown", e => {
+  screenEl.setPointerCapture(e.pointerId);
+  spots.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!spot) {
+    spot = { x: e.clientX, y: e.clientY, start: performance.now(), moved: 0, fingers: 0, scrollAcc: 0, held: false };
+    // Held still: a right-click there
+    spot.timer = setTimeout(() => {
+      if (spot && spot.fingers === 1 && spot.moved < 12) { spot.held = true; screenTap(spot.x, spot.y, 3); }
+    }, 550);
+  }
+  spot.fingers = Math.max(spot.fingers, spots.size);
+});
+screenEl.addEventListener("pointermove", e => {
+  const prev = spots.get(e.pointerId);
+  if (!prev || !spot) return;
+  const dy = e.clientY - prev.y;
+  spot.moved += Math.hypot(e.clientX - prev.x, dy);
+  spots.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (spots.size >= 2 && e.pointerId === spots.keys().next().value) {
+    spot.scrollAcc += dy;
+    const steps = Math.trunc(spot.scrollAcc / 24);
+    if (steps) {
+      spot.scrollAcc -= steps * 24;
+      api("/api/scroll", { steps: -steps }).catch(fail);
+    }
+  }
+});
+function screenUp(e) {
+  if (!spots.has(e.pointerId)) return;
+  spots.delete(e.pointerId);
+  if (spots.size || !spot) return;
+  clearTimeout(spot.timer);
+  if (!spot.held && spot.fingers === 1 && spot.moved < 12 && performance.now() - spot.start < 550) screenTap(spot.x, spot.y, 1);
+  spot = null;
+}
+screenEl.addEventListener("pointerup", screenUp);
+screenEl.addEventListener("pointercancel", screenUp);
+screenEl.addEventListener("contextmenu", e => e.preventDefault());
+
 /* ---------- start ---------- */
 if (token) {
+  setScreen(screenOn);
   loadApps().then(refresh).catch(fail);
   setInterval(refresh, 3000);
   document.addEventListener("visibilitychange", refresh);

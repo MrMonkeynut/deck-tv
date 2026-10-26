@@ -22,6 +22,7 @@ from pathlib import Path
 import media
 import search
 import trailers
+from screen import screen
 import watchlist
 from cdp import Page
 
@@ -937,6 +938,7 @@ class Pointer:
         self.lib = ctypes.CDLL("libxdo.so.3")
         self.lib.xdo_new.restype = ctypes.c_void_p
         self.lib.xdo_move_mouse_relative.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+        self.lib.xdo_move_mouse.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
         self.lib.xdo_click_window.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int]
         self.lib.xdo_enter_text_window.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_char_p, ctypes.c_uint]
         self.lib.xdo_send_keysequence_window.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_char_p, ctypes.c_uint]
@@ -946,6 +948,10 @@ class Pointer:
     def move(self, dx, dy):
         with self.lock:
             self.lib.xdo_move_mouse_relative(self.xdo, int(dx), int(dy))
+
+    def move_to(self, x, y):
+        with self.lock:
+            self.lib.xdo_move_mouse(self.xdo, int(x), int(y), 0)
 
     def click(self, button=1, times=1):
         with self.lock:
@@ -1131,6 +1137,8 @@ class RemoteHandler(Handler):
         SimpleHTTPRequestHandler.__init__(self, *args, directory=str(ROOT / "remote"), **kwargs)
 
     def do_GET(self):
+        if self.path.startswith("/api/screen"):
+            return self._screen()
         if self.path.startswith("/api/") or self.path.startswith("/appicon/"):
             if not secrets.compare_digest(self.headers.get("X-Remote-Token", ""), remote_token()):
                 return self._json({"error": "pair again"}, 401)
@@ -1145,6 +1153,32 @@ class RemoteHandler(Handler):
                 return self._appicon()
             return self._json({"error": "not found"}, 404)
         return SimpleHTTPRequestHandler.do_GET(self)  # the remote page itself; Handler's localhost check doesn't apply
+
+    def _screen(self):
+        """The TV's picture, about ten a second, as one long response the phone's <img> shows as it
+        comes (multipart/x-mixed-replace). The token comes in the URL: an <img> can't send headers.
+        Ends when the phone stops watching; a phone that vanishes is dropped after 10 s of no reading."""
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        if not secrets.compare_digest((query.get("t") or [""])[0], remote_token()):
+            return self._json({"error": "pair again"}, 401)
+        if screen is None:
+            return self._json({"error": "no screen to show"}, 503)
+        self.close_connection = True
+        self.connection.settimeout(10)
+        self.send_response(200)
+        self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        frames = screen.frames()
+        try:
+            for frame in frames:
+                self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(frame) + frame + b"\r\n")
+                self.wfile.flush()
+        except OSError:
+            pass  # the phone stopped watching
+        finally:
+            frames.close()
 
     def do_POST(self):
         if not secrets.compare_digest(self.headers.get("X-Remote-Token", ""), remote_token()):
@@ -1166,6 +1200,18 @@ class RemoteHandler(Handler):
             button = body.get("button", 1)
             if button not in (1, 2, 3):
                 return self._json({"error": "bad button"}, 400)
+            pointer.click(button)
+            return self._json({"ok": True})
+        if self.path == "/api/tap":
+            # A tap on the TV's picture on the phone: the pointer goes there and clicks (or right-clicks)
+            button = body.get("button", 1)
+            if screen is None or button not in (1, 3):
+                return self._json({"error": "can't"}, 400)
+            try:
+                x, y = screen.point(float(body.get("x")), float(body.get("y")))
+            except (TypeError, ValueError):
+                return self._json({"error": "bad spot"}, 400)
+            pointer.move_to(x, y)
             pointer.click(button)
             return self._json({"ok": True})
         if self.path == "/api/scroll":
