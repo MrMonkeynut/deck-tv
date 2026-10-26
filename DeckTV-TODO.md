@@ -23,6 +23,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Trailers: captions**: a CC button beside the volume turns captions on or off (English where there is some), remembered for the next trailer. Also fixed: with the controller, focus couldn't get past the volume slider; it's now A to adjust it, A or B to finish _(done 2026-10-27)_
 - [x] **Watchlist: Move**: a Move button on an opened film drops down the other lists; the film goes to the end of the one picked, with Undo putting it back where it was _(done 2026-10-27)_
 - [x] **Watchlist: films and shows**: a Film / Show switch when adding or editing. Trailers, posters and summaries look up the right one (Fargo the series vs the film); a show gets its seasons, episodes, episode length, years running and status from TMDB, kept with it, and its row shows its seasons. Sorting by running time puts shows after films. A show with no trailer on TMDB plays its opening credits or a clip _(done 2026-10-27)_
 - [x] **Watchlist: Remove**: a small Remove button beside Mark watched takes a film off its list straight away, with Undo on the toast putting it back in the same place (even after closing and reopening the watchlist) _(done 2026-10-27)_

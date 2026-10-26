@@ -514,6 +514,12 @@
   .wl-slider.vol { flex: none; width: 130px; }
   .wl-slider.vol i { background: var(--ink); }
   .wl-tr-row .tnum[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  /* CC: captions on (filled) or off; dimmed when the trailer has none */
+  .wl-tr-row .cc { font-size: 14px; font-weight: 700; letter-spacing: .04em; min-width: 22px; justify-content: center; }
+  /* On (CC, the trailer playing) stays white when highlighted too; the outline shows the highlight */
+  #wl-tr .wl-tr-row .cc[aria-pressed="true"], #wl-tr .wl-tr-row .tnum[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .wl-slider.vol.adjust { outline-color: #7BD3A2; }
+  .wl-slider.vol.adjust b { transform: scale(1.15); }
   .wl-tr-gap { flex: 1; }
   .wl-tr-key { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 40px 70px; background: #0E1116; }
   .wl-tr-key b { font-size: 26px; }
@@ -812,6 +818,7 @@
             <button class="set-wide" id="wl-tr-play"></button>
             <button class="set-wide icon" id="wl-tr-mute"></button>
             <div class="wl-slider vol" id="wl-tr-vol" role="slider" aria-label="Volume"><i></i><b></b></div>
+            <button class="set-wide icon cc" id="wl-tr-cc">CC</button>
             <span class="wl-tr-gap"></span>
             <span class="wl-tr-row" id="wl-tr-nums"></span>
             <button class="set-wide icon" id="wl-tr-full"></button>
@@ -2486,6 +2493,9 @@ document.getElementById("wl-pv").onclick = e => { e.stopPropagation(); if (e.tar
 let wlTrOpen = false, trFilm = null, trList = [], trAt = 0, trPlaying = false, trIdle = null;
 let trLength = 0, trNow = 0, trMuted = false, trDrag = null, trFocusAt = { r: 1, c: 0 };
 let trVolume = clamp(parseInt(store.get("deckTvTrailerVolume") || "80", 10) || 80, 0, 100);
+// Captions: on or off for every trailer (remembered); what this one has, as YouTube says when it starts
+let trCaptions = store.get("deckTvTrailerCaptions") === "1", trCapTracks = null;
+let trVolAdjust = false;  // the controller is changing the volume (A on the slider), not moving along
 const tr = id => document.getElementById(id);
 const YT = "https://www.youtube-nocookie.com";
 async function openTrailer(it) {
@@ -2516,6 +2526,7 @@ function trStop() {
   tr("wl-tr-player").replaceChildren();  // the player goes, and its sound with it
   trPlaying = false;
   trLength = trNow = 0;
+  trCapTracks = null;
   trShowTime();
 }
 function trMessage(html) {
@@ -2549,10 +2560,16 @@ addEventListener("message", e => {
   let d;
   try { d = JSON.parse(e.data); } catch { return; }
   if (d.event === "onReady" || d.event === "initialDelivery") {
-    // YouTube sometimes switches captions on by itself: a trailer starts without them, at our volume
-    ["captions", "cc"].forEach(m => trCommand("unloadModule", [m]));
+    // YouTube decides on captions by itself: a trailer starts with them as CC says, at our volume
+    trApplyCaptions();
     trCommand("setVolume", [trVolume]);
     trCommand(trMuted ? "mute" : "unMute");
+  }
+  // Once it's started, YouTube says whether the trailer has captions, and in which languages
+  if (d.event === "apiInfoDelivery" && d.info) {
+    const caps = d.info.captions;
+    const tracks = caps && (caps.tracklist || (caps.track && caps.track.languageCode ? [caps.track] : null));
+    if (tracks && tracks.length) { trCapTracks = tracks; if (trCaptions) trApplyCaptions(); }
   }
   if (d.event === "onError") {  // 101 / 150: not allowed outside YouTube; 100: gone. Try the next.
     if (trAt + 1 < trList.length) return trPlay(trAt + 1);
@@ -2597,6 +2614,30 @@ function trSetVolume(v) {
   trCommand("setVolume", [trVolume]);
   trShowVolume();
 }
+function trApplyCaptions() {
+  if (!trCaptions) {
+    trCommand("setOption", ["captions", "track", {}]);
+    ["captions", "cc"].forEach(m => trCommand("unloadModule", [m]));
+    return;
+  }
+  // English if there is some (or YouTube's automatic English), otherwise the first language there is
+  const en = (trCapTracks || []).find(t => /^en/.test(t.languageCode || ""));
+  const pick = en || (trCapTracks || [])[0] || { languageCode: "en" };
+  trCommand("loadModule", ["captions"]);
+  trCommand("setOption", ["captions", "track", { languageCode: pick.languageCode }]);
+}
+function trShowCaptions() {
+  const b = tr("wl-tr-cc");
+  b.setAttribute("aria-pressed", String(trCaptions));
+  b.title = trCaptions ? "Captions off" : "Captions on (if the trailer has any)";
+  b.setAttribute("aria-label", trCaptions ? "Captions: on" : "Captions: off");
+}
+function trToggleCaptions() {
+  trCaptions = !trCaptions;
+  store.set("deckTvTrailerCaptions", trCaptions ? "1" : "0");
+  trApplyCaptions();
+  trShowCaptions();
+}
 function trToggleMute() {
   trMuted = !trMuted;
   trCommand(trMuted ? "mute" : "unMute");
@@ -2630,7 +2671,8 @@ tr("wl-tr-vol").addEventListener("wheel", e => { e.preventDefault(); trSetVolume
 function trControls() {
   const playing = !!tr("wl-tr-iframe");
   tr("wl-tr-scrubrow").hidden = !playing;
-  ["wl-tr-play", "wl-tr-mute", "wl-tr-vol", "wl-tr-full"].forEach(id => { tr(id).hidden = !playing; });
+  ["wl-tr-play", "wl-tr-mute", "wl-tr-vol", "wl-tr-cc", "wl-tr-full"].forEach(id => { tr(id).hidden = !playing; });
+  trShowCaptions();
   tr("wl-tr-play").innerHTML = trPlaying ? `${svg("pause", "currentColor", 2.4)}Pause` : `${svg("play", "currentColor", 1.8)}Play`;
   const full = tr("wl-tr").classList.contains("full");
   tr("wl-tr-full").innerHTML = svg(full ? "shrink" : "expand", "currentColor", 2);
@@ -2662,7 +2704,15 @@ const trGrid = () => {
     .sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
   return tr("wl-tr-scrubrow").hidden ? [row] : [[tr("wl-tr-scrub")], row];
 };
-function trFocus(at) { trFocusAt = gridFocus(trGrid(), "#wl-tr", at); }
+function trFocus(at) {
+  trFocusAt = gridFocus(trGrid(), "#wl-tr", at);
+  const g = trGrid(), el = g[trFocusAt.r] && g[trFocusAt.r][trFocusAt.c];
+  if (el !== tr("wl-tr-vol")) trVolAdjusting(false);
+}
+function trVolAdjusting(on) {
+  trVolAdjust = on;
+  tr("wl-tr-vol").classList.toggle("adjust", on);
+}
 function trToggle() { if (tr("wl-tr-iframe")) trCommand(trPlaying ? "pauseVideo" : "playVideo"); }
 function trFull(on = !tr("wl-tr").classList.contains("full")) {
   tr("wl-tr").classList.toggle("full", on);
@@ -2683,7 +2733,7 @@ function trInput(cmd) {
   if (cmd === "left" || cmd === "right") {
     const step = cmd === "left" ? -1 : 1;
     if (el === tr("wl-tr-scrub")) return trSeek(trNow + step * 10);   // 10 seconds back or on
-    if (el === tr("wl-tr-vol")) return trSetVolume(trVolume + step * 10);
+    if (el === tr("wl-tr-vol") && trVolAdjust) return trSetVolume(trVolume + step * 10);
     trFocus({ r, c: c + step });
   }
   if (cmd === "up" || cmd === "down") {
@@ -2693,10 +2743,14 @@ function trInput(cmd) {
   if (cmd === "ok") {
     if (!el) return;
     if (el.matches("input")) el.focus();
-    else if (el === tr("wl-tr-scrub") || el === tr("wl-tr-vol")) trToggle();  // OK on a slider plays or pauses
+    else if (el === tr("wl-tr-vol")) trVolAdjusting(!trVolAdjust);  // A starts (and ends) changing the volume
+    else if (el === tr("wl-tr-scrub")) trToggle();                  // OK on the scrub bar plays or pauses
     else el.click();
   }
-  if (cmd === "back") tr("wl-tr").classList.contains("full") ? trFull(false) : closeTrailer();
+  if (cmd === "back") {
+    if (trVolAdjust) return trVolAdjusting(false);  // B first finishes changing the volume
+    tr("wl-tr").classList.contains("full") ? trFull(false) : closeTrailer();
+  }
 }
 /* No TMDB key yet (or it stopped working): ask for one, right here */
 function trAskKey(problem) {
@@ -2729,6 +2783,7 @@ tr("wl-tr-keysave").onclick = trSaveKey;
 tr("wl-tr-keyin").addEventListener("keydown", e => { if (e.key === "Enter") trSaveKey(); });
 tr("wl-tr-play").onclick = trToggle;
 tr("wl-tr-mute").onclick = trToggleMute;
+tr("wl-tr-cc").onclick = trToggleCaptions;
 tr("wl-tr-full").onclick = () => trFull();
 tr("wl-tr-close").innerHTML = svg("close", "currentColor", 2.2);
 tr("wl-tr-close").onclick = closeTrailer;

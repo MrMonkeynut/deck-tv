@@ -64,7 +64,7 @@ can take a few minutes), then opens Deck TV full screen.
   poster, what it's about (from Wikipedia) and **Watch on Movy** (opens Movy and searches it for
   the film), **Trailer**, **Edit**, **Move** (to another list), and (small, off to the right)
   **Mark watched** and **Remove**, each with Undo on the message that follows. **Trailer** plays it right there, with a scrub bar,
-  sound and volume, a button per trailer and Fullscreen (nothing in the player can take you off to YouTube); click the poster to see it larger. **To watch / Watched / All**
+  sound and volume, captions (CC), a button per trailer and Fullscreen (nothing in the player can take you off to YouTube); click the poster to see it larger. **To watch / Watched / All**
   picks what shows, and **Sort** orders them (list order, title, year or running time). **Add**
   puts a film on the list you're looking at (a keyboard, or the phone
   remote's, is easiest for typing), **Edit** changes it, moves it to another list or deletes it, and
