@@ -41,7 +41,7 @@ can take a few minutes), then opens Deck TV full screen.
     it, or click elsewhere.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
 - **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
-  Alt and press Tab to pick). If Deck TV isn't running, Alt+Tab works as normal.
+  Alt and press Tab to pick, or click an app while it's showing). If Deck TV isn't running, Alt+Tab works as normal.
 - **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power) tucks
   everything away to show the normal desktop. **Alt+F4** on the home screen closes Deck TV
   completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.

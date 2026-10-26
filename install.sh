@@ -82,14 +82,16 @@ DIR="$HOME/.local/share/deck-tv"
 PORT="${DECK_TV_PORT:-8765}"
 # The dock, restarted fresh each time (so Home also recovers a misbehaving dock)
 setsid python3 "$DIR/dock.py" --restart >/dev/null 2>&1 < /dev/null &
-# Already open: bring it to the front (this is what the Home shortcut runs)
-for w in $(xdotool search --class '^deck-tv$' 2>/dev/null); do
-  case "$(xprop -id "$w" WM_NAME 2>/dev/null)" in *'"Deck TV"'*) exec xdotool windowactivate "$w" ;; esac
-done
+# The server first, even with the window already open: an update stops the old server, and the
+# open page picks the new one up by itself
 if ! (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null; then
   setsid python3 "$DIR/server.py" >/dev/null 2>&1 < /dev/null &
   for _ in $(seq 25); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.2; done
 fi
+# Already open: bring it to the front (this is what the Home shortcut runs)
+for w in $(xdotool search --class '^deck-tv$' 2>/dev/null); do
+  case "$(xprop -id "$w" WM_NAME 2>/dev/null)" in *'"Deck TV"'*) exec xdotool windowactivate "$w" ;; esac
+done
 # Own profile + window class, so the taskbar groups it under the Deck TV icon, not Chrome
 exec flatpak run com.google.Chrome \
   --user-data-dir="$HOME/.var/app/com.google.Chrome/deck-tv" --class=deck-tv \

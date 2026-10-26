@@ -39,6 +39,10 @@ STRIP = 3          # height of the invisible hover strip
 HINT_W, HINT_H = 420, 90   # click target around the glowing line
 MARGIN = 14        # gap between the dock and the bottom edge
 SWITCH_ICON = 88   # icon size in the Alt+Tab switcher
+# The switcher fades itself, at half the speed of KWin's own popup fade (150 ms in, 600 ms out),
+# which it opts out of
+SWITCH_FADE_IN = 75
+SWITCH_FADE_OUT = 300
 DOCK_AWAY = 4     # seconds an open dock stays once the pointer leaves it
 SLIDE_IN = 150     # ms for the dock to slide up into place ...
 SLIDE_OUT = 120    # ... and back down out of sight
@@ -474,7 +478,8 @@ class Dock(Gtk.Window):
 
     # ---------- Alt+Tab switcher ----------
     # Home plus every open app, most recently used first, like the usual switcher. Each Alt+Tab
-    # moves along one; letting go of Alt switches to the highlighted one, Escape cancels.
+    # moves along one; letting go of Alt switches to the highlighted one, Escape cancels. Clicking
+    # an app switches to it straight away, and the pointer moves the highlight.
     def switch(self, step):
         if self.switcher is None:
             try:
@@ -491,8 +496,18 @@ class Dock(Gtk.Window):
             GLib.timeout_add(30, self.watch_alt)
         else:
             self.switch_at = (self.switch_at + step) % len(self.switch_order)
+        self.select(self.switch_at)
+
+    def select(self, at):
+        self.switch_at = at
         for n, box in enumerate(self.switch_boxes):
-            (box.get_style_context().add_class if n == self.switch_at else box.get_style_context().remove_class)("sel")
+            (box.get_style_context().add_class if n == at else box.get_style_context().remove_class)("sel")
+
+    def pick(self, at):
+        """Switch to the app at this place in the switcher."""
+        key = self.switch_order[at]
+        self.close_switcher()
+        self.in_background(lambda: api("/api/home" if key == "home" else f"/api/launch/{key}", "POST"))
 
     def show_switcher(self, order):
         win = Gtk.Window(type=Gtk.WindowType.POPUP)
@@ -500,10 +515,11 @@ class Dock(Gtk.Window):
         if visual:
             win.set_visual(visual)
         win.set_app_paintable(True)
+        win.set_type_hint(Gdk.WindowTypeHint.UTILITY)  # KWin doesn't fade these: the switcher fades itself
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         row.get_style_context().add_class("switcher")
         self.switch_boxes = []
-        for key in order:
+        for n, key in enumerate(order):
             name, pix = self.switch_icons[key]
             col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             col.get_style_context().add_class("switch-item")
@@ -512,13 +528,23 @@ class Dock(Gtk.Window):
             label.set_max_width_chars(12)
             label.set_ellipsize(3)  # end
             col.pack_start(label, False, False, 0)
-            row.pack_start(col, False, False, 0)
+            hit = Gtk.EventBox()  # takes the clicks and hovers for the app
+            hit.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.POINTER_MOTION_MASK)
+            hit.connect("button-press-event", lambda _w, e, n=n: e.button == 1 and self.pick(n))
+            # Moving, not just being there: a pointer resting where the switcher opens mustn't
+            # change what a quick Alt+Tab picks
+            hit.connect("motion-notify-event", lambda *_, n=n: n != self.switch_at and self.select(n))
+            hit.add(col)
+            row.pack_start(hit, False, False, 0)
             self.switch_boxes.append(col)
         win.add(row)
-        win.show_all()
+        row.show_all()  # measured with its contents showing, or it comes out 0 wide
         _, nat = row.get_preferred_size()
         a = self.area
         win.move(a.x + (a.width - nat.width) // 2, a.y + (a.height - nat.height) // 2)
+        win.set_opacity(0)
+        win.show_all()
+        self.fade(win, 0, 1, SWITCH_FADE_IN, lambda t: t)
         self.switcher, self.switch_order = win, order
 
     def watch_alt(self):
@@ -529,15 +555,32 @@ class Dock(Gtk.Window):
             return False
         if self.probe.keys_down(self.probe.alt_keys):
             return True  # still choosing
-        key = self.switch_order[self.switch_at]
-        self.close_switcher()
-        self.in_background(lambda: api("/api/home" if key == "home" else f"/api/launch/{key}", "POST"))
+        self.pick(self.switch_at)
         return False
 
     def close_switcher(self):
-        if self.switcher is not None:
-            self.switcher.destroy()
-            self.switcher = None
+        """Gone at once as far as Alt+Tab is concerned; the window fades out, then goes."""
+        win, self.switcher = self.switcher, None
+        if win is not None:
+            self.fade(win, win.get_opacity(), 0, SWITCH_FADE_OUT, lambda t: 1 - (1 - t) ** 4, win.destroy)
+
+    def fade(self, win, o0, o1, ms, ease, done=None):
+        """Take the window's opacity from o0 to o1 over ms, a step per frame."""
+        start = time.monotonic()
+
+        def step():
+            if win.get_window() is None:  # destroyed meanwhile
+                return False
+            if o1 > o0 and win is not self.switcher:  # closing while still fading in: the fade out has it
+                return False
+            t = min(1.0, (time.monotonic() - start) * 1000 / ms)
+            win.set_opacity(o0 + (o1 - o0) * ease(t))
+            if t < 1:
+                return True
+            if done:
+                done()
+            return False
+        GLib.timeout_add(8, step)
 
     # ---------- right-click menu ----------
     # A window of its own rather than a Gtk.Menu: menus grab the mouse, and a grab is exactly what
