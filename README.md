@@ -62,7 +62,8 @@ can take a few minutes), then opens Deck TV full screen.
   **Liam and Laura**, **Top 100** (the scratch poster, with the ones already scratched off marked
   watched) and **Kids**. Each film is one slim row (its name and running time): click it (or press A) to open it up for its
   poster, what it's about (from Wikipedia) and **Watch on Movy** (opens Movy and searches it for
-  the film), **Mark watched** and **Edit**. **To watch / Watched / All**
+  the film), **Trailer**, **Mark watched** and **Edit**. **Trailer** plays it right there (Fullscreen fills the
+  screen; nothing in the player can take you off to YouTube); click the poster to see it larger. **To watch / Watched / All**
   picks what shows, and **Sort** orders them (list order, title, year or running time). **Add**
   puts a film on the list you're looking at (a keyboard, or the phone
   remote's, is easiest for typing), **Edit** changes it, moves it to another list or deletes it, and
@@ -82,6 +83,9 @@ can take a few minutes), then opens Deck TV full screen.
 - **Link WhatsApp**: open the WhatsApp tile, then on your phone go to WhatsApp → Settings →
   Linked devices → Link a device, and scan the code on the TV. After that, unread messages show
   as a badge on the tile. (Messaging only: WhatsApp doesn't do calls in a browser.)
+- **Trailers in the Watchlist** need a free TMDB key: sign up at themoviedb.org, go to Settings → API,
+  copy the API Key, and paste it into the box the first Trailer press shows (the phone remote's
+  keyboard is easiest). It's kept in `~/.config/deck-tv/tmdb.json`.
 - **RTÉ Player and Virgin Media** need a free account for live TV: sign in once in each and it's remembered.
   Plex works without one.
 

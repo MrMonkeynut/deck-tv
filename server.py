@@ -21,6 +21,7 @@ from pathlib import Path
 
 import media
 import search
+import trailers
 import watchlist
 from cdp import Page
 
@@ -1023,6 +1024,13 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json({"url": remote_url()})
             if self.path == "/api/watchlist":
                 return self._json(watchlist.load())
+            if self.path.startswith("/api/trailers?"):
+                q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+                title = (q.get("title") or [""])[0].strip()[:80]
+                year = (q.get("year") or [""])[0]
+                if not title:
+                    return self._json({"error": "no title"}, 400)
+                return self._json(trailers.find(title, int(year) if year.isdigit() else None))
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
 
@@ -1072,6 +1080,12 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError:
                 return self._json({"error": "bad request"}, 400)
             return self._json(*watchlist.save(body))
+        if self.path == "/api/tmdb-key":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            return self._json(*trailers.save_key(body.get("key") if isinstance(body, dict) else None))
         if self.path == "/api/watchnow":
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")

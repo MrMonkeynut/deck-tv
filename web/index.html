@@ -474,6 +474,45 @@
   button.wl-poster.has-img { cursor: zoom-in; }
   button.wl-poster.has-img:hover { transform: scale(1.04); }
   button.wl-poster.focus { outline-color: var(--ring); }
+  /* A trailer, playing in the panel (YouTube's player under a see-through layer, so nothing in it can
+     take you off to YouTube); Fullscreen fills the whole screen */
+  #wl-tr { position: absolute; inset: 0; z-index: 6; display: none; align-items: center; justify-content: center; background: rgba(8,10,14,.9); }
+  #wl-tr.open { display: flex; }
+  .wl-tr-box { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .wl-tr-head { display: flex; align-items: baseline; gap: 14px; width: 896px; }
+  .wl-tr-head b { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-tr-head span { flex: none; font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-tr-head small { margin-left: auto; flex: none; max-width: 40%; font-size: 15px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-tr-frame { position: relative; width: 896px; height: 504px; border-radius: 16px; overflow: hidden; background: #000; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .wl-tr-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .wl-tr-shield { position: absolute; inset: 0; cursor: pointer; }
+  .wl-tr-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    padding: 40px; text-align: center; font-size: 21px; color: var(--pill-ink); background: #0E1116; }
+  .wl-tr-msg small { font-size: 16px; color: var(--muted); }
+  .wl-tr-msg .spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid #2E3542; border-top-color: var(--ink); animation: spin .8s linear infinite; }
+  .wl-tr-msg[hidden], .wl-tr-key[hidden], #wl-tr [hidden] { display: none; }
+  .wl-tr-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.18); transition: opacity .3s; }
+  .wl-tr-bar i { display: block; height: 100%; width: 0; background: #E50914; transition: width .5s linear; }
+  .wl-tr-ctl { display: flex; align-items: center; gap: 10px; transition: opacity .3s; }
+  .wl-tr-ctl .set-wide { padding: 10px 18px; font-size: 17px; gap: 8px; }
+  .wl-tr-ctl .set-wide svg { width: 20px; height: 20px; }
+  .wl-tr-key { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 40px 70px; background: #0E1116; }
+  .wl-tr-key b { font-size: 26px; }
+  .wl-tr-key p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
+  .wl-tr-key p em { font-style: normal; color: var(--ink); }
+  .wl-tr-keyerr { min-height: 22px; font-size: 16px; color: #FF8A8A; }
+  .wl-tr-key .set-wide { align-self: flex-start; }
+  #wl-tr .focus.ge-name, #wl-tr .ge-name:focus { outline-color: var(--ring); }
+  /* Fullscreen: the video fills the screen; the buttons float over it and fade when left alone */
+  #wl-tr.full { background: #000; }
+  #wl-tr.full .wl-tr-head { display: none; }
+  #wl-tr.full .wl-tr-frame { position: absolute; inset: 0; width: auto; height: auto; border-radius: 0; box-shadow: none; }
+  #wl-tr.full .wl-tr-ctl { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); padding: 8px; border-radius: 30px;
+    background: rgba(14,17,22,.82); box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  #wl-tr.full.idle .wl-tr-ctl, #wl-tr.full.idle .wl-tr-bar { opacity: 0; }
+  #wl-tr.full.idle { cursor: none; }
+  #wl-tr.full.idle .wl-tr-shield { cursor: none; }
+
   /* The poster, larger: its name and running time above it, an X in its corner; clicking away closes it */
   #wl-pv { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(8,10,14,.85); }
   #wl-pv.open { display: flex; }
@@ -713,6 +752,32 @@
       <div class="wl-empty" id="wl-empty" hidden></div>
       <button class="power-cancel" id="wl-close">Close</button>
     </div>
+    <div id="wl-tr" role="dialog" aria-label="Trailer">
+      <div class="wl-tr-box">
+        <div class="wl-tr-head"><b id="wl-tr-name"></b><span id="wl-tr-time"></span><small id="wl-tr-which"></small></div>
+        <div class="wl-tr-frame">
+          <div id="wl-tr-player"></div>
+          <div class="wl-tr-shield" id="wl-tr-shield"></div>
+          <div class="wl-tr-bar"><i id="wl-tr-fill"></i></div>
+          <div class="wl-tr-msg" id="wl-tr-msg" hidden></div>
+          <div class="wl-tr-key" id="wl-tr-key" hidden>
+            <b>Trailers need a free TMDB key</b>
+            <p>On your phone or a computer: sign up at <em>themoviedb.org</em>, then go to <em>Settings → API</em> and
+               copy the <em>API Key</em> (or the longer <em>API Read Access Token</em>). Paste it below: the phone
+               remote's keyboard is easiest. It's checked with TMDB and kept on the Deck.</p>
+            <input id="wl-tr-keyin" class="ge-name" type="text" placeholder="Paste your TMDB key" autocomplete="off" spellcheck="false">
+            <div class="wl-tr-keyerr" id="wl-tr-keyerr"></div>
+            <button class="set-wide primary" id="wl-tr-keysave">Save key</button>
+          </div>
+        </div>
+        <div class="wl-tr-ctl" id="wl-tr-ctl">
+          <button class="set-wide" id="wl-tr-play"></button>
+          <button class="set-wide" id="wl-tr-next"></button>
+          <button class="set-wide" id="wl-tr-full"></button>
+          <button class="set-wide" id="wl-tr-close"></button>
+        </div>
+      </div>
+    </div>
     <div id="wl-pv" role="dialog" aria-label="Poster">
       <div class="wl-pv-box">
         <div class="wl-pv-head"><b id="wl-pv-name"></b><span id="wl-pv-time"></span></div>
@@ -819,7 +884,12 @@ const ICONS = {
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
   play: '<path d="M7 4.5v15l12.5-7.5z"/>',
-  close: '<path d="M6 6l12 12M18 6 6 18"/>'
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  skip: '<path d="M6 5v14l9-7zM18 5v14"/>',
+  expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+  clapper: '<path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 9l-.6-3.3a1 1 0 0 1 .8-1.2L17 2.3a1 1 0 0 1 1.2.8L18.5 5 4 9zM8.5 3.5l2 4M13.5 2.6l2 4"/>'
 };
 const svg = (name, stroke = "currentColor", w = 1.6) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
@@ -1928,6 +1998,7 @@ async function openWatch() {
   if (wlAt.r === wlGrid().length - 1) wlFocus({ r: 1, c: WL_FILTERS.length + 1 });  // no films showing: Add
 }
 function closeWatch() {
+  closeTrailer();
   closePoster();
   closeWlSort();
   watchOpen = false;
@@ -2035,6 +2106,7 @@ function wlRowFor(it) {
   };
   more.querySelector(".wl-acts").append(
     act("primary", `${svg("play", "currentColor", 1.8)}Watch on Movy`, () => watchNow(it)),
+    act("", `${svg("clapper", "currentColor", 1.8)}Trailer`, () => openTrailer(it)),
     act("", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)),
     act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)));
   item.append(more);
@@ -2188,6 +2260,174 @@ document.getElementById("wl-pv-x").innerHTML = svg("close", "currentColor", 2.4)
 document.getElementById("wl-pv-x").onclick = e => { e.stopPropagation(); closePoster(); };
 // Anywhere but the poster itself closes it
 document.getElementById("wl-pv").onclick = e => { e.stopPropagation(); if (e.target.id !== "wl-pv-img") closePoster(); };
+
+/* ---------- trailers: played right here, in YouTube's player, from TMDB's list for the film ----------
+   The player sits under a see-through layer, so nothing in it (YouTube's logo, title, end screen) can
+   take you off to YouTube; Deck TV's own buttons play and pause, skip to the next trailer, go
+   fullscreen and close. One that won't play here (some studios forbid it) gives way to the next. */
+let wlTrOpen = false, trFilm = null, trList = [], trAt = 0, trFocusAt = 0, trPlaying = false, trIdle = null, trLength = 0;
+const tr = id => document.getElementById(id);
+const YT = "https://www.youtube-nocookie.com";
+async function openTrailer(it) {
+  trFilm = it;
+  wlTrOpen = true;
+  tr("wl-tr-name").textContent = it.title;
+  tr("wl-tr-time").textContent = [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
+  tr("wl-tr-which").textContent = "";
+  tr("wl-tr").classList.add("open");
+  trMessage(`<span class="spin"></span>Finding the trailer…`);
+  trButtons();
+  const found = await api(`/api/trailers?title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).catch(() => ({ error: "server" }));
+  if (!wlTrOpen || trFilm !== it) return;
+  if (found.needKey) return trAskKey(found.error);
+  if (found.error) return trMessage(`Couldn't look up the trailer<small>${esc(found.error === "server" ? "Deck TV's server didn't answer" : found.error)}</small>`);
+  trList = found.videos || [];
+  if (!trList.length) return trMessage(`No trailer found for ${esc(it.title)}`);
+  trPlay(0);
+}
+function closeTrailer() {
+  if (!wlTrOpen) return;
+  wlTrOpen = false;
+  trStop();
+  tr("wl-tr").classList.remove("open", "full", "idle");
+  tr("wl-tr-keyin").blur();
+}
+function trStop() {
+  tr("wl-tr-player").replaceChildren();  // the player goes, and its sound with it
+  trPlaying = false;
+  trLength = 0;
+  tr("wl-tr-fill").style.width = "0";
+}
+function trMessage(html) {
+  trStop();
+  tr("wl-tr-key").hidden = true;
+  tr("wl-tr-msg").hidden = false;
+  tr("wl-tr-msg").innerHTML = html;
+  trButtons();
+}
+function trPlay(n) {
+  trAt = n;
+  trStop();
+  tr("wl-tr-msg").hidden = tr("wl-tr-key").hidden = true;
+  const v = trList[n];
+  tr("wl-tr-which").textContent = trList.length > 1 ? `${v.name} · ${n + 1} of ${trList.length}` : v.name;
+  const f = document.createElement("iframe");
+  f.id = "wl-tr-iframe";
+  f.allow = "autoplay; encrypted-media";
+  // No popups or page changes from inside the player: it can only play
+  f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+  f.src = `${YT}/embed/${v.id}?enablejsapi=1&autoplay=1&controls=0&disablekb=1&fs=0&rel=0&iv_load_policy=3&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
+  f.onload = () => f.contentWindow.postMessage(JSON.stringify({ event: "listening", id: f.id }), YT);
+  tr("wl-tr-player").append(f);
+  trButtons();
+}
+function trCommand(func, args = []) {
+  const f = tr("wl-tr-iframe");
+  if (f) f.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), YT);
+}
+addEventListener("message", e => {
+  if (e.origin !== YT || !wlTrOpen) return;
+  let d;
+  try { d = JSON.parse(e.data); } catch { return; }
+  // YouTube sometimes switches captions on by itself: a trailer starts without them
+  if (d.event === "onReady" || d.event === "initialDelivery") ["captions", "cc"].forEach(m => trCommand("unloadModule", [m]));
+  if (d.event === "onError") {  // 101 / 150: not allowed outside YouTube; 100: gone. Try the next.
+    if (trAt + 1 < trList.length) return trPlay(trAt + 1);
+    return trMessage(`This film's trailers won't play here<small>The studio only allows them on YouTube itself</small>`);
+  }
+  if (d.event === "onStateChange" || (d.event === "infoDelivery" && d.info && "playerState" in d.info)) {
+    const state = d.event === "onStateChange" ? d.info : d.info.playerState;
+    const playing = state === 1 || state === 3;
+    if (playing !== trPlaying) { trPlaying = playing; trButtons(); }
+  }
+  // The length comes once, the time every quarter second or so
+  if (d.event === "infoDelivery" && d.info && d.info.duration) trLength = d.info.duration;
+  if (d.event === "infoDelivery" && d.info && d.info.currentTime !== undefined && trLength) {
+    tr("wl-tr-fill").style.width = `${Math.min(100, d.info.currentTime / trLength * 100)}%`;
+  }
+});
+/* The buttons below the video (over it, in fullscreen) */
+function trButtons() {
+  const playing = !!tr("wl-tr-iframe");
+  tr("wl-tr-play").hidden = !playing;
+  tr("wl-tr-play").innerHTML = trPlaying ? `${svg("pause", "currentColor", 2.4)}Pause` : `${svg("play", "currentColor", 1.8)}Play`;
+  tr("wl-tr-next").hidden = !playing || trList.length < 2;
+  tr("wl-tr-full").hidden = !playing;
+  const full = tr("wl-tr").classList.contains("full");
+  tr("wl-tr-full").innerHTML = full ? `${svg("shrink", "currentColor", 2)}Exit fullscreen` : `${svg("expand", "currentColor", 2)}Fullscreen`;
+  trFocus(trFocusAt);
+}
+const trEls = () => [...document.querySelectorAll("#wl-tr-keyin, #wl-tr-keysave, #wl-tr-ctl .set-wide")].filter(el => !el.hidden && el.offsetParent);
+function trFocus(i) {
+  const els = trEls();
+  trFocusAt = clamp(i, 0, els.length - 1);
+  document.querySelectorAll("#wl-tr .focus").forEach(el => el.classList.remove("focus"));
+  els[trFocusAt]?.classList.add("focus");
+}
+function trToggle() { if (tr("wl-tr-iframe")) trCommand(trPlaying ? "pauseVideo" : "playVideo"); }
+function trFull(on = !tr("wl-tr").classList.contains("full")) {
+  tr("wl-tr").classList.toggle("full", on);
+  trButtons();
+  trWake();
+}
+/* In fullscreen the buttons fade after a few seconds alone; any press or move brings them back */
+function trWake() {
+  tr("wl-tr").classList.remove("idle");
+  clearTimeout(trIdle);
+  if (tr("wl-tr").classList.contains("full")) trIdle = setTimeout(() => tr("wl-tr").classList.add("idle"), 3000);
+}
+function trInput(cmd) {
+  const wasIdle = tr("wl-tr").classList.contains("idle");
+  trWake();
+  if (wasIdle && cmd !== "back") return;  // the first press just shows the buttons again
+  if (cmd === "left" || cmd === "up") trFocus(trFocusAt - 1);
+  if (cmd === "right" || cmd === "down") trFocus(trFocusAt + 1);
+  if (cmd === "ok") {
+    const el = trEls()[trFocusAt];
+    if (el && el.matches("input")) el.focus(); else el?.click();
+  }
+  if (cmd === "back") tr("wl-tr").classList.contains("full") ? trFull(false) : closeTrailer();
+}
+/* No TMDB key yet (or it stopped working): ask for one, right here */
+function trAskKey(problem) {
+  trStop();
+  tr("wl-tr-msg").hidden = true;
+  tr("wl-tr-key").hidden = false;
+  tr("wl-tr-keyerr").textContent = problem || "";
+  tr("wl-tr-keyin").value = "";
+  trButtons();
+  trFocus(0);
+}
+async function trSaveKey() {
+  const btn = tr("wl-tr-keysave");
+  btn.textContent = "Checking…";
+  const res = await fetch("/api/tmdb-key", {
+    method: "POST",
+    headers: { "X-Deck-TV": "1", "Content-Type": "application/json" },
+    body: JSON.stringify({ key: tr("wl-tr-keyin").value }),
+  }).then(r => r.json()).catch(() => ({ error: "Deck TV's server didn't answer" }));
+  btn.textContent = "Save key";
+  if (res.error) {
+    tr("wl-tr-keyerr").textContent = res.error;
+    return trFocus(0);
+  }
+  toast("TMDB key saved");
+  openTrailer(trFilm);
+}
+tr("wl-tr-keysave").onclick = trSaveKey;
+tr("wl-tr-keyin").addEventListener("keydown", e => { if (e.key === "Enter") trSaveKey(); });
+tr("wl-tr-play").onclick = trToggle;
+tr("wl-tr-next").innerHTML = `${svg("skip", "currentColor", 1.8)}Next trailer`;
+tr("wl-tr-next").onclick = () => trPlay((trAt + 1) % trList.length);
+tr("wl-tr-full").onclick = () => trFull();
+tr("wl-tr-close").innerHTML = `${svg("close", "currentColor", 2.2)}Close`;
+tr("wl-tr-close").onclick = closeTrailer;
+// The see-through layer over the video: a click plays or pauses, a double-click goes fullscreen
+tr("wl-tr-shield").onclick = trToggle;
+tr("wl-tr-shield").ondblclick = () => trFull();
+tr("wl-tr").addEventListener("mousemove", trWake);
+tr("wl-tr").onclick = e => { e.stopPropagation(); if (e.target.id === "wl-tr") closeTrailer(); };  // clicking off the video closes it
+document.querySelectorAll("#wl-tr-ctl .set-wide, #wl-tr-keysave").forEach(b => { b.onmouseenter = () => trFocus(trEls().indexOf(b)); });
 
 /* Watch: open Movy and search it for the film (Movy comes to the front; its search shows the matches) */
 async function watchNow(it) {
@@ -2503,7 +2743,7 @@ showSaverSetting();
 setInterval(() => {
   // Only while Deck TV itself is in front; coming back to it starts the wait again
   if (!document.hasFocus() || document.hidden) return void (idleSince = Date.now());
-  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer;
+  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer || wlTrOpen;
   if (!saverOn && saverMins && !busy && Date.now() - idleSince > saverMins * 60000) startSaver();
 }, 5000);
 
@@ -2632,6 +2872,7 @@ function input(cmd) {
     if (cmd === "back") closeSystem();
     return;
   }
+  if (wlTrOpen) return trInput(cmd);
   if (wlPvOpen) return void (cmd === "ok" || cmd === "back" ? closePoster() : null);  // the X is all there is
   if (wlSortOpen) return wlSortInput(cmd);
   if (wlEdOpen) return wleInput(cmd);
