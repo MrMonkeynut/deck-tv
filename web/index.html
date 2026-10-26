@@ -556,6 +556,12 @@
   .wl-acts { display: flex; gap: 8px; margin-top: 4px; }
   .wl-acts .set-wide { padding: 8px 16px; font-size: 16px; gap: 8px; }
   .wl-acts .set-wide svg { width: 18px; height: 18px; }
+  /* Mark watched: small and off on its own at the far end, away from the buttons pressed most */
+  .wl-acts .wl-gap { flex: 1; }
+  .wl-acts .set-wide.mark { padding: 6px 12px; font-size: 14px; gap: 6px; background: none; color: var(--dim);
+    box-shadow: inset 0 0 0 1px #3A4252; }
+  .wl-acts .set-wide.mark svg { width: 15px; height: 15px; }
+  .wl-acts .set-wide.mark:hover, .wl-acts .set-wide.mark.focus { color: var(--ink); background: #2F3747; }
   .wl-empty { height: 312px; margin: -6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     font-size: 20px; color: var(--muted); text-align: center; }
   .wl-empty small { font-size: 16px; color: var(--dim); }
@@ -618,6 +624,12 @@
     z-index: 20;  /* above the panels, so what a button did there shows too */
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* A toast with Undo can be clicked (or Y on the controller, U or Ctrl+Z on a keyboard) */
+  #toast.undo { display: flex; align-items: center; gap: 18px; padding: 10px 12px 10px 28px; white-space: nowrap; }
+  #toast.undo.show { pointer-events: auto; }
+  #toast button { all: unset; cursor: pointer; padding: 8px 18px; border-radius: 20px; background: #0E1116; color: #F2F4F8; font-size: 19px; }
+  #toast button:hover { background: #2A3140; }
+  #toast button small { margin-left: 8px; font-size: 14px; color: #A3ACBD; }
 
   #sleep {
     position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -1300,10 +1312,28 @@ function clearFocus() {
   rows.flat().forEach(el => el.classList.remove("focus"));
 }
 
-function toast(msg) {
+function toast(msg, undo) {
   const t = document.getElementById("toast");
-  t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2500);
+  t.textContent = msg;
+  t.classList.toggle("undo", !!undo);
+  toast.undo = undo || null;
+  if (undo) {  // with a way back: an Undo button, and longer to reach it
+    const b = document.createElement("button");
+    b.innerHTML = "Undo<small>Y</small>";
+    b.onclick = e => { e.stopPropagation(); undoToast(); };
+    t.append(b);
+  }
+  t.classList.add("show");
+  clearTimeout(toast.h);
+  toast.h = setTimeout(() => { t.classList.remove("show"); toast.undo = null; }, undo ? 6000 : 2500);
+}
+function undoToast() {
+  const undo = toast.undo;
+  if (!undo) return false;
+  toast.undo = null;
+  document.getElementById("toast").classList.remove("show");
+  undo();
+  return true;
 }
 
 async function launch(t, el, choice) {
@@ -2082,7 +2112,8 @@ function renderWatch(at = wlAt) {
     : !list.items.length ? `Nothing on ${esc(list.name)} yet<small>Add a film to start it off</small>`
     : wlFilter === "todo" ? "All watched!<small>Add another, or look back at the ones you've seen</small>"
     : "Nothing watched yet";
-  wlGrid().forEach((row, r) => row.forEach((el, c) => { el.onmouseenter = () => wlFocus({ r, c }); }));
+  // Its place is looked up on hover: a poster that loads later becomes a button and moves the rest along
+  wlGrid().forEach(row => row.forEach(el => { el.onmouseenter = () => wlFocusEl(el); }));
   wlFocus(at);
 }
 const wlGrid = () => [
@@ -2132,8 +2163,9 @@ function wlRowFor(it) {
   more.querySelector(".wl-acts").append(
     act("primary", `${svg("play", "currentColor", 1.8)}Watch on Movy`, () => watchNow(it)),
     act("", `${svg("clapper", "currentColor", 1.8)}Trailer`, () => openTrailer(it)),
-    act("", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)),
-    act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)));
+    act("", `${svg("pencil", "currentColor", 1.8)}Edit`, () => openWatchEd("film", it)),
+    Object.assign(document.createElement("span"), { className: "wl-gap" }),
+    act("mark", it.watched ? `${svg("restart", "currentColor", 1.8)}Not watched` : `${svg("check", "currentColor", 2.2)}Mark watched`, () => toggleWatched(it)));
   item.append(more);
   wlInfo(it).then(info => {
     if (!more.isConnected) return;
@@ -2148,7 +2180,7 @@ function wlRowFor(it) {
       poster.classList.add("has-img");
       poster.setAttribute("aria-label", `Show the poster for ${it.title} larger`);
       poster.onclick = () => openPoster(it, info);
-      poster.onmouseenter = () => wlFocus({ r: wlRowOf(it.id) + 1, c: 0 });
+      poster.onmouseenter = () => wlFocusEl(poster);
     }
   });
   return item;
@@ -2181,6 +2213,10 @@ function wlInfo(it) {
   return wlInfoCache.get(key);
 }
 function wlFocus(at) { wlAt = gridFocus(wlGrid(), "#watch", at); }
+function wlFocusEl(el) {
+  const grid = wlGrid(), r = grid.findIndex(row => row.includes(el));
+  if (r >= 0) wlFocus({ r, c: grid[r].indexOf(el) });
+}
 const wlPicked = row => Math.max(0, row.findIndex(el => el.getAttribute("aria-checked") === "true"));
 const wlIsChoice = el => el && el.getAttribute("role") === "radio";
 function watchInput(cmd) {
@@ -2207,11 +2243,17 @@ function saveWatch() {
     body: JSON.stringify(wl),
   }).then(r => { if (!r.ok) throw r; }).catch(() => toast("Couldn't save the watchlist"));
 }
-function toggleWatched(it) {
+function toggleWatched(it, undoing) {
+  const before = { watched: it.watched, watchedAt: it.watchedAt, open: wlOpenId === it.id };
   it.watched = !it.watched;
-  it.watchedAt = it.watched ? wlNow() : null;
+  it.watchedAt = undoing ? undoing.watchedAt : it.watched ? wlNow() : null;
   saveWatch();
-  toast(it.watched ? `Watched ${it.title}` : `${it.title} is back on the list`);
+  if (undoing) {
+    if (undoing.open) wlOpenId = it.id;  // back as it was, opened up if it was
+    toast(`Undone: ${it.title} ${it.watched ? "is watched" : "is back on the list"}`);
+  } else {
+    toast(it.watched ? `Watched ${it.title}` : `${it.title} is back on the list`, () => toggleWatched(it, before));
+  }
   // Showing To watch, it drops off and the next film takes its place; otherwise focus goes back to its row
   if (!wlShown(wlList()).includes(it)) wlOpenId = null;
   const at = wlRowOf(it.id);
@@ -2967,6 +3009,7 @@ showPairing();
 
 /* ---------- input ---------- */
 function input(cmd) {
+  if (cmd === "undo") return void undoToast();  // only ever the last toast's Undo, whatever's showing
   if (saverOn) return wakeSaver();  // the press that wakes the screen does nothing else
   idleSince = Date.now();
   document.body.classList.remove("mouse");
@@ -3018,7 +3061,7 @@ function input(cmd) {
 }
 
 const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
-               Enter: "ok", " ": "ok", Escape: "back", Backspace: "back" };
+               Enter: "ok", " ": "ok", Escape: "back", Backspace: "back", u: "undo", U: "undo" };
 addEventListener("keydown", e => {
   // Typing a name: the keys are the text box's, apart from these, which leave it
   if (e.target.matches?.("input[type=text]")) {
@@ -3026,7 +3069,7 @@ addEventListener("keydown", e => {
     e.target.blur();
     if (e.key === "Enter" || e.key === "Escape") return void e.preventDefault();
   }
-  const cmd = KEYS[e.key];
+  const cmd = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" ? "undo" : KEYS[e.key];
   if (!cmd) return;
   e.preventDefault();
   input(cmd);
@@ -3038,7 +3081,7 @@ addEventListener("mousemove", e => {
 });
 
 /* Gamepad (when the controller isn't already sending arrow keys) */
-const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back" };
+const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back", 3: "undo" };  // 3: Y
 const held = {};
 let lastStick = 0;
 function poll() {
