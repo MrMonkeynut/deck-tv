@@ -291,7 +291,7 @@
       "devtools_port": 9230,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/netflix.svg"
+        "~/.local/share/deck-tv/icons/netflix.png"
       ]
     },
     {
@@ -318,7 +318,7 @@
       "devtools_port": 9231,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/disney.svg"
+        "~/.local/share/deck-tv/icons/disney.png"
       ]
     },
     {
@@ -345,7 +345,7 @@
       "devtools_port": 9232,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/prime.svg"
+        "~/.local/share/deck-tv/icons/prime.png"
       ]
     },
     {
@@ -426,7 +426,7 @@
       "devtools_port": 9235,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/paramount.svg"
+        "~/.local/share/deck-tv/icons/paramount.png"
       ]
     },
     {
@@ -453,7 +453,7 @@
       "devtools_port": 9236,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/dazn.svg"
+        "~/.local/share/deck-tv/icons/dazn.png"
       ]
     },
     {
@@ -507,8 +507,79 @@
       "devtools_port": 9238,
       "fullscreen": true,
       "app_icon": [
-        "~/.local/share/deck-tv/icons/twitch.svg"
+        "~/.local/share/deck-tv/icons/twitch.png"
       ]
+    },
+    {
+      "id": "piratebay",
+      "name": "Pirate Bay",
+      "sub": "Torrents",
+      "color": "#2A2118",
+      "accent": "#C9A46A",
+      "icon": "arrow",
+      "image": "piratebay.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/piratebay",
+        "--class=piratebay",
+        "--remote-debugging-port=9240",
+        "--remote-debugging-address=127.0.0.1",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=https://piratebayproxy.info/"
+      ],
+      "window_class": "piratebay",
+      "devtools_port": 9240,
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/piratebay.png"
+      ]
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "sub": "Downloads",
+      "color": "#0E2A4A",
+      "accent": "#3D8BFD",
+      "icon": "arrow",
+      "image": "qbittorrent.svg",
+      "command": [
+        "sh",
+        "-c",
+        "a=$(ls ~/Applications/qbittorrent*.AppImage ~/Downloads/qbittorrent*.AppImage 2>/dev/null | head -n1); exec \"$a\""
+      ],
+      "requires": [
+        "~/Applications/qbittorrent*.AppImage",
+        "~/Downloads/qbittorrent*.AppImage"
+      ],
+      "window_class": "qbittorrent",
+      "fullscreen": "launch",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/qbittorrent.svg"
+      ]
+    },
+    {
+      "id": "chrome",
+      "name": "Chrome",
+      "sub": "Web browser",
+      "color": "#12264A",
+      "accent": "#4285F4",
+      "icon": "spark",
+      "image": "chrome.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome"
+      ],
+      "window_class": "google-chrome",
+      "app_icon": [
+        "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.svg",
+        "~/.local/share/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.svg",
+        "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.png"
+      ],
+      "fullscreen": "frameless"
     },
     {
       "id": "claude",

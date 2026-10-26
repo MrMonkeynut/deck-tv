@@ -352,6 +352,25 @@ def make_fullscreen(wid):
     run(f"xdotool windowstate --add FULLSCREEN {int(wid, 16)}")
 
 
+def make_frameless(wid):
+    """Tiles with "fullscreen": "frameless" (Chrome): the whole screen, over the taskbar, but as an
+    ordinary window, so the app keeps its own controls: Chrome its tabs and address bar, which full
+    screen would hide. Only main windows: Chrome's pop-ups (a sign-in, an extension) stay as they are."""
+    w = int(wid, 16)
+    _, role = run(f"xprop -id {w} WM_WINDOW_ROLE")
+    if '"pop-up"' in role:
+        return
+    for change in ("--remove MAXIMIZED_VERT", "--remove MAXIMIZED_HORZ", "--add ABOVE"):  # above the taskbar
+        run(f"xdotool windowstate {change} {w}")
+    run(f"xdotool windowmove {w} 0 0")
+    run(f"xdotool windowsize {w} 100% 100%")
+
+
+def fill_screen(tile, wid):
+    """Full screen, or frameless, as the tile asks."""
+    (make_frameless if tile.get("fullscreen") == "frameless" else make_fullscreen)(wid)
+
+
 # Most recently used first: tile ids, and "home" for Deck TV itself (for the Alt+Tab switcher)
 recent = []
 
@@ -404,9 +423,9 @@ def watch_for_closed_apps():
             for t in tiles:
                 fresh = set(owned[t["id"]]) - seen
                 ours = time.time() - launched.get(t["id"], 0) < 60
-                if fresh and (t.get("fullscreen") is True or (t.get("fullscreen") == "launch" and ours)):
+                if fresh and (t.get("fullscreen") in (True, "frameless") or (t.get("fullscreen") == "launch" and ours)):
                     for wid in fresh:
-                        make_fullscreen(wid)
+                        fill_screen(t, wid)
                     launched.pop(t["id"], None)
             # A site's own full-screen button, when you leave it, takes Chrome out of full screen
             # too: half a window, the taskbar showing, white where it no longer reaches. Put the
@@ -701,7 +720,7 @@ def launch_item(item_id, choice_id=None):
         if choice:
             open_url(item, choice["url"])
         if item.get("fullscreen"):
-            make_fullscreen(found[0])
+            fill_screen(item, found[0])
         activate(found[0])
         return {"ok": True, "switched": True}, 200
     launched[item["id"]] = time.time()
