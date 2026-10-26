@@ -335,10 +335,16 @@ def window_title(wid):
 
 def tile_windows(tile, wins):
     """Windows belonging to a tile: matched by class, and by title too when the class is shared
-    (Steam's library and Big Picture are both class "steam")."""
+    (every Steam window is class "steam": Big Picture and the library count, the friends list and
+    pop-ups don't). With a list of titles, windows come in its order: Big Picture first."""
     cls = tile.get("window_class", "").lower()
-    title = tile.get("window_title")
-    return [wid for wid, c in wins if cls and c == cls and (not title or window_title(wid) == title)]
+    found = [wid for wid, c in wins if cls and c == cls]
+    titles = tile.get("window_title")
+    if not titles:
+        return found
+    titles = [titles] if isinstance(titles, str) else titles
+    named = [(titles.index(t), wid) for wid in found for t in [window_title(wid)] if t in titles]
+    return [wid for _, wid in sorted(named)]
 
 
 def activate(wid):

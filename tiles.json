@@ -50,7 +50,7 @@
         "steam://open/bigpicture"
       ],
       "window_class": "steam",
-      "window_title": "Steam Big Picture Mode",
+      "window_title": ["Steam Big Picture Mode", "Steam"],
       "accent": "#66C0F4"
     },
     {
