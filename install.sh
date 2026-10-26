@@ -208,6 +208,9 @@ systemctl --user restart plasma-kglobalaccel.service 2>/dev/null || true
 RULES=$(kreadconfig6 --file kwinrulesrc --group General --key rules 2>/dev/null || true)
 # (every tile marked "fullscreen": true in tiles.json, so a new tile needs no change here)
 FULL=$(python3 -c 'import json, sys; print(" ".join(t["window_class"] for t in json.load(open(sys.argv[1]))["tiles"] if t.get("fullscreen") is True and t.get("window_class")))' "$DEST/tiles.json")
+# Web apps (Chrome --app windows, role "pop-up"): only the app's own window. A link that opens an
+# ordinary Chrome window, with tabs and an address bar (role "browser"), stays an ordinary window.
+WEBAPPS=$(python3 -c 'import json, sys; print(" ".join(t["window_class"] for t in json.load(open(sys.argv[1]))["tiles"] if any(a.startswith("--app=") for a in t.get("command", [])) and t.get("window_class")))' "$DEST/tiles.json")
 for app in deck-tv $FULL; do
   id="deck-tv-$app"
   W() { kwriteconfig6 --file kwinrulesrc --group "$id" --key "$1" "$2"; }
@@ -215,12 +218,17 @@ for app in deck-tv $FULL; do
   W wmclass "$app"; W wmclassmatch 1; W wmclasscomplete false
   W fullscreen true; W fullscreenrule 3
   W noborder true; W noborderrule 3
+  case " deck-tv $WEBAPPS " in
+    *" $app "*) W windowrole "pop-up"; W windowrolematch 1 ;;
+    *) kwriteconfig6 --file kwinrulesrc --group "$id" --key windowrole --delete
+       kwriteconfig6 --file kwinrulesrc --group "$id" --key windowrolematch --delete ;;
+  esac
   case ",$RULES," in *",$id,"*) ;; *) RULES="${RULES:+$RULES,}$id" ;; esac
 done
 # Rules for apps no longer in Deck TV are removed
 for id in $(echo "$RULES" | tr ',' '\n' | grep '^deck-tv-'); do
   case " deck-tv $FULL " in *" ${id#deck-tv-} "*) continue ;; esac
-  for key in Description wmclass wmclassmatch wmclasscomplete fullscreen fullscreenrule noborder noborderrule; do
+  for key in Description wmclass wmclassmatch wmclasscomplete windowrole windowrolematch fullscreen fullscreenrule noborder noborderrule; do
     kwriteconfig6 --file kwinrulesrc --group "$id" --key "$key" --delete
   done
   RULES=$(echo "$RULES" | tr ',' '\n' | grep -vx "$id" | paste -sd, -)

@@ -578,8 +578,7 @@
         "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.svg",
         "~/.local/share/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.svg",
         "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.google.Chrome.png"
-      ],
-      "fullscreen": "frameless"
+      ]
     },
     {
       "id": "claude",

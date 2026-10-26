@@ -285,6 +285,7 @@ HOME_CLASS = "deck-tv"
 _windows = {"at": 0.0, "list": []}
 _windows_lock = threading.Lock()
 _classes = {}  # window id -> class; a window's class doesn't change, so look it up once
+_roles = {}  # window id -> its WM_WINDOW_ROLE, the same
 
 
 def client_windows():
@@ -306,6 +307,7 @@ def client_windows():
                 wins.append((wid, _classes[wid]))
         for gone in set(_classes) - set(ids):
             _classes.pop(gone, None)
+            _roles.pop(gone, None)
         _windows.update(at=time.time(), list=wins)
         return list(wins)
 
@@ -352,23 +354,15 @@ def make_fullscreen(wid):
     run(f"xdotool windowstate --add FULLSCREEN {int(wid, 16)}")
 
 
-def make_frameless(wid):
-    """Tiles with "fullscreen": "frameless" (Chrome): the whole screen, over the taskbar, but as an
-    ordinary window, so the app keeps its own controls: Chrome its tabs and address bar, which full
-    screen would hide. Only main windows: Chrome's pop-ups (a sign-in, an extension) stay as they are."""
-    w = int(wid, 16)
-    _, role = run(f"xprop -id {w} WM_WINDOW_ROLE")
-    if '"pop-up"' in role:
-        return
-    for change in ("--remove MAXIMIZED_VERT", "--remove MAXIMIZED_HORZ", "--add ABOVE"):  # above the taskbar
-        run(f"xdotool windowstate {change} {w}")
-    run(f"xdotool windowmove {w} 0 0")
-    run(f"xdotool windowsize {w} 100% 100%")
-
-
-def fill_screen(tile, wid):
-    """Full screen, or frameless, as the tile asks."""
-    (make_frameless if tile.get("fullscreen") == "frameless" else make_fullscreen)(wid)
+def tab_window(tile, wid):
+    """A web app's ordinary Chrome window, with tabs and an address bar: what a link from the app
+    opens in. It's left as an ordinary window; only the app's own window goes full screen."""
+    if not any(arg.startswith("--app=") for arg in tile.get("command", [])):
+        return False
+    if wid not in _roles:
+        _, out = run(f"xprop -id {wid} WM_WINDOW_ROLE")
+        _roles[wid] = out
+    return '"browser"' in _roles[wid]
 
 
 # Most recently used first: tile ids, and "home" for Deck TV itself (for the Alt+Tab switcher)
@@ -423,9 +417,10 @@ def watch_for_closed_apps():
             for t in tiles:
                 fresh = set(owned[t["id"]]) - seen
                 ours = time.time() - launched.get(t["id"], 0) < 60
-                if fresh and (t.get("fullscreen") in (True, "frameless") or (t.get("fullscreen") == "launch" and ours)):
+                if fresh and (t.get("fullscreen") is True or (t.get("fullscreen") == "launch" and ours)):
                     for wid in fresh:
-                        fill_screen(t, wid)
+                        if not tab_window(t, wid):
+                            make_fullscreen(wid)
                     launched.pop(t["id"], None)
             # A site's own full-screen button, when you leave it, takes Chrome out of full screen
             # too: half a window, the taskbar showing, white where it no longer reaches. Put the
@@ -439,7 +434,8 @@ def watch_for_closed_apps():
             in_front = next((t["id"] for t in tiles if active in owned[t["id"]]), None) or ("home" if active == home else None)
             if in_front and (not recent or recent[0] != in_front):
                 used(in_front)
-            front = next((t for t in tiles if t.get("fullscreen") is True and active in owned[t["id"]]), None)
+            front = next((t for t in tiles if t.get("fullscreen") is True and active in owned[t["id"]]
+                          and not tab_window(t, active)), None)
             if front and not is_fullscreen(active):
                 if dropped.get(active):
                     make_fullscreen(active)
@@ -714,13 +710,13 @@ def launch_item(item_id, choice_id=None):
     if time.time() - closing.get(item_id, 0) < 4:
         return {"error": "closing"}, 409
     # Already open: switch to it rather than starting a second copy
-    found = tile_windows(item, client_windows())
+    found = sorted(tile_windows(item, client_windows()), key=lambda wid: tab_window(item, wid))  # the app's own window first
     used(item["id"])
     if found:
         if choice:
             open_url(item, choice["url"])
-        if item.get("fullscreen"):
-            fill_screen(item, found[0])
+        if item.get("fullscreen") and not tab_window(item, found[0]):
+            make_fullscreen(found[0])
         activate(found[0])
         return {"ok": True, "switched": True}, 200
     launched[item["id"]] = time.time()
