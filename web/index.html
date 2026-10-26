@@ -468,6 +468,31 @@
   .wl-poster { flex: none; width: 92px; height: 136px; border-radius: 10px; background: #1B2029 center / cover no-repeat;
     display: flex; align-items: center; justify-content: center; color: #4A5366; }
   .wl-poster svg { width: 34px; height: 34px; }
+  button.wl-poster { all: unset; flex: none; box-sizing: border-box; width: 92px; height: 136px; border-radius: 10px;
+    background: #1B2029 center / cover no-repeat; display: flex; align-items: center; justify-content: center; color: #4A5366;
+    outline: 3px solid transparent; outline-offset: 2px; transition: transform .15s, outline-color .15s; }
+  button.wl-poster.has-img { cursor: zoom-in; }
+  button.wl-poster.has-img:hover { transform: scale(1.04); }
+  button.wl-poster.focus { outline-color: var(--ring); }
+  /* The poster, larger: its name and running time above it, an X in its corner; clicking away closes it */
+  #wl-pv { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(8,10,14,.85); }
+  #wl-pv.open { display: flex; }
+  .wl-pv-box { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 900px; }
+  .wl-pv-head { display: flex; align-items: baseline; gap: 14px; max-width: 100%; }
+  .wl-pv-head b { font-size: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-pv-head span { flex: none; font-size: 19px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wl-pv-frame { position: relative; }
+  /* A set height, so a small poster (Wikipedia's are often only 260 px wide) still shows big */
+  .wl-pv-frame img { display: block; height: 560px; width: auto; max-width: 860px; object-fit: contain; border-radius: 14px; background: #1B2029;
+    box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .wl-pv-x {
+    all: unset; position: absolute; top: 10px; right: 10px; width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; background: rgba(8,10,14,.78); color: #fff;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.25); outline: 3px solid transparent; outline-offset: 2px; transition: background .15s;
+  }
+  .wl-pv-x svg { width: 24px; height: 24px; }
+  .wl-pv-x:hover, .wl-pv-x.focus { background: rgba(40,46,58,.95); }
+  .wl-pv-x.focus { outline-color: var(--ring); }
   .wl-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .wl-facts { font-size: 16px; color: var(--pill-ink); }
   .wl-about { font-size: 15px; line-height: 1.4; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -688,6 +713,15 @@
       <div class="wl-empty" id="wl-empty" hidden></div>
       <button class="power-cancel" id="wl-close">Close</button>
     </div>
+    <div id="wl-pv" role="dialog" aria-label="Poster">
+      <div class="wl-pv-box">
+        <div class="wl-pv-head"><b id="wl-pv-name"></b><span id="wl-pv-time"></span></div>
+        <div class="wl-pv-frame">
+          <img id="wl-pv-img" alt="">
+          <button class="wl-pv-x" id="wl-pv-x" aria-label="Close the poster"></button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="wl-ed" role="dialog" aria-label="Film">
@@ -784,7 +818,8 @@ const ICONS = {
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
-  play: '<path d="M7 4.5v15l12.5-7.5z"/>'
+  play: '<path d="M7 4.5v15l12.5-7.5z"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>'
 };
 const svg = (name, stroke = "currentColor", w = 1.6) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
@@ -1893,6 +1928,7 @@ async function openWatch() {
   if (wlAt.r === wlGrid().length - 1) wlFocus({ r: 1, c: WL_FILTERS.length + 1 });  // no films showing: Add
 }
 function closeWatch() {
+  closePoster();
   closeWlSort();
   watchOpen = false;
   document.getElementById("watch").classList.remove("open");
@@ -1957,7 +1993,7 @@ const wlGrid = () => [
   [...document.querySelectorAll("#wl-tabs .wl-tab")],
   [...document.querySelectorAll("#wl-bar .wl-tab, #wl-bar .set-wide")].filter(b => !b.hidden),
   ...[...document.querySelectorAll("#wl-items .wl-item")].flatMap(r => {
-    const acts = [...r.querySelectorAll(".wl-acts .set-wide")];
+    const acts = [...r.querySelectorAll(".wl-poster.has-img, .wl-acts .set-wide")];  // the poster too, once it's there
     return acts.length ? [[r.querySelector(".wl-row")], acts] : [[r.querySelector(".wl-row")]];
   }),
   [document.getElementById("wl-close")],
@@ -1983,7 +2019,7 @@ function wlRowFor(it) {
   const day = t => new Date(t * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   const when = [it.added && `Added ${day(it.added)}`, it.watched && it.watchedAt && `Watched ${day(it.watchedAt)}`].filter(Boolean).join(" · ");
   const facts = [it.year, it.runtime && wlTime(it.runtime), it.note].filter(Boolean).join(" · ");
-  more.innerHTML = `<div class="wl-poster">${svg("film", "currentColor", 1.4)}</div>
+  more.innerHTML = `<button class="wl-poster" disabled aria-label="Poster">${svg("film", "currentColor", 1.4)}</button>
     <div class="wl-detail">
       ${facts ? `<div class="wl-facts">${esc(facts)}</div>` : ""}
       <div class="wl-about wait">Looking it up…</div>
@@ -2011,6 +2047,11 @@ function wlRowFor(it) {
       const poster = more.querySelector(".wl-poster");
       poster.style.backgroundImage = `url("${info.img.replace(/"/g, "%22")}")`;
       poster.innerHTML = "";
+      poster.disabled = false;
+      poster.classList.add("has-img");
+      poster.setAttribute("aria-label", `Show the poster for ${it.title} larger`);
+      poster.onclick = () => openPoster(it, info);
+      poster.onmouseenter = () => wlFocus({ r: wlRowOf(it.id) + 1, c: 0 });
     }
   });
   return item;
@@ -2035,7 +2076,10 @@ function wlInfo(it) {
     const page = pages.find(p => /\b(film|movie|series|miniseries)\b/i.test(p.description || "")) || pages[0];
     if (!page) return null;
     const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`).then(r => r.json());
-    return { text: sum.extract, img: sum.thumbnail && sum.thumbnail.source };
+    // The larger view: the original if it isn't huge, otherwise a 900-pixel copy of it
+    const orig = sum.originalimage, img = sum.thumbnail && sum.thumbnail.source;
+    const big = orig && orig.width <= 1400 ? orig.source : img && img.replace(/\/\d+px-/, "/900px-");
+    return { text: sum.extract, img, big };
   })().catch(() => { wlInfoCache.delete(key); return null; }));  // offline: try again next time
   return wlInfoCache.get(key);
 }
@@ -2047,8 +2091,9 @@ function watchInput(cmd) {
   if (cmd === "up" || cmd === "down") {
     const nr = r + (cmd === "up" ? -1 : 1);
     // Onto the lists or the bar from elsewhere: start on the one picked
-    // Into a film's buttons: start on the first (Watch on Movy)
-    if (grid[nr]) wlFocus({ r: nr, c: nr === 0 || (nr === 1 && r === 0) ? wlPicked(grid[nr]) : nr >= 2 ? 0 : sameSide(grid, r, c, nr) });
+    // Into a film's buttons: start on Watch on Movy (the poster is to its left)
+    const watchAt = row => Math.max(0, row.findIndex(b => b.classList.contains("primary")));
+    if (grid[nr]) wlFocus({ r: nr, c: nr === 0 || (nr === 1 && r === 0) ? wlPicked(grid[nr]) : nr >= 2 ? watchAt(grid[nr]) : sameSide(grid, r, c, nr) });
   }
   if (cmd === "left" || cmd === "right") {
     const nc = c + (cmd === "left" ? -1 : 1);
@@ -2121,6 +2166,29 @@ function wlSortInput(cmd) {
 }
 document.getElementById("wl-sort").onclick = e => { e.stopPropagation(); wlSortOpen ? closeWlSort() : openWlSort(); };
 document.getElementById("watch").addEventListener("click", e => { if (wlSortOpen && !e.target.closest("#wl-sortmenu")) closeWlSort(); });
+/* The poster, larger. The small one shows straight away while the large one loads. */
+let wlPvOpen = false;
+function openPoster(it, info) {
+  document.getElementById("wl-pv-name").textContent = it.title;
+  document.getElementById("wl-pv-time").textContent = [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
+  const img = document.getElementById("wl-pv-img");
+  img.onerror = () => { img.onerror = null; img.src = info.img; };  // no large copy: the small one, stretched a little
+  img.src = info.big || info.img;
+  img.alt = `Poster for ${it.title}`;
+  document.getElementById("wl-pv-x").classList.add("focus");  // the one thing to press: shown as picked
+  document.getElementById("wl-pv").classList.add("open");
+  wlPvOpen = true;
+}
+function closePoster() {
+  if (!wlPvOpen) return;
+  wlPvOpen = false;
+  document.getElementById("wl-pv").classList.remove("open");
+}
+document.getElementById("wl-pv-x").innerHTML = svg("close", "currentColor", 2.4);
+document.getElementById("wl-pv-x").onclick = e => { e.stopPropagation(); closePoster(); };
+// Anywhere but the poster itself closes it
+document.getElementById("wl-pv").onclick = e => { e.stopPropagation(); if (e.target.id !== "wl-pv-img") closePoster(); };
+
 /* Watch: open Movy and search it for the film (Movy comes to the front; its search shows the matches) */
 async function watchNow(it) {
   toast(`Opening Movy for ${it.title}…`);
@@ -2564,6 +2632,7 @@ function input(cmd) {
     if (cmd === "back") closeSystem();
     return;
   }
+  if (wlPvOpen) return void (cmd === "ok" || cmd === "back" ? closePoster() : null);  // the X is all there is
   if (wlSortOpen) return wlSortInput(cmd);
   if (wlEdOpen) return wleInput(cmd);
   if (watchOpen) return watchInput(cmd);
