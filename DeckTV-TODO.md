@@ -7,6 +7,7 @@ _Started 2026-10-25_
 ## Up next
 
 - [ ] **Bug: Sleep button doesn't work**: Power → Sleep doesn't put the Deck to sleep (reported 2026-10-25)
+  - 2026-10-27: the journal shows no Desktop Mode suspend ever reached logind (every successful one came from Game Mode), so the Deck isn't waking up: the suspend request is refused and DeckTV used to hide that. Sleep now shows the reason in a toast and logs it, with the list of apps blocking sleep, to `~/.local/share/deck-tv/power.log`. Next: read that log after a failed Sleep. Separately, `fix-mouse-wake.sh` was never run (the Logitech receiver can still wake the Deck)
 - [ ] **More cards**: add more card types to the home screen
   - Added 2026-10-25: Netflix, Disney+, Prime Video, Apple TV+, NOW, Paramount+, DAZN, Crunchyroll, Twitch (simple lettermark icons for now)
 - [ ] **Profiles**: support multiple user profiles
@@ -49,4 +50,5 @@ _Started 2026-10-25_
 - [x] **Live TV and UFC as groups**: both are now ordinary groups (editable in Settings). UFC is split into two apps, UFC Fights and UFC Results; RTÉ, Virgin Media and Plex are ordinary apps inside Live TV. Existing layouts get the two groups once, in the old cards' places _(done 2026-10-25)_
 - [x] **Groups UX pass**: Settings lists each group with an arrow that opens it to show its apps, each with its own on/off switch (hidden in the group) and Take out (comes out next to the group; taking the last one out removes the group). Editor lists the group's apps first, counts them, and won't save an empty group. On the home screen a group with one app showing opens it straight away; the picker marks open apps and starts on the one used last _(done 2026-10-25)_
 - [x] **Group card icon**: in the group editor, Card icon: a folder of its apps (with a choice of look), or one of its apps, so the card looks exactly like that app's own (art, colours, icon) apart from the app count _(done 2026-10-25)_
+- [x] **Groups on the phone remote**: the remote's Apps sheet follows the TV's home screen: each group is a folder (a little grid of its apps' icons, like a phone) in its place, and tapping it opens the group's apps in a popup. A group with one app showing is just that app; a folder is marked when one of its apps is open or in front _(done 2026-10-27)_
 - [x] **System panel**: a status button beside Power, Desktop and Settings shows Wi-Fi, battery and free space; it opens System: storage for the Deck and any microSD/USB drive (amber when getting full, red when almost out), Wi-Fi network/signal/address, sound (opens Sound, which moved in here from its own button), battery, and the Deck's temperature, uptime and memory _(done 2026-10-26)_

@@ -715,6 +715,8 @@ def launch_item(item_id, choice_id=None):
             return launch_item(choice["tile"])  # a group tile (Live TV): the choice is another app
     if "command" not in item:
         return {"error": "choose"}, 400
+    if item in cfg["actions"]:
+        return power_action(item)
     # Just closed from the dock: a stray click while it shuts down mustn't start it again
     if time.time() - closing.get(item_id, 0) < 4:
         return {"error": "closing"}, 409
@@ -734,6 +736,33 @@ def launch_item(item_id, choice_id=None):
     except OSError as e:
         return {"error": str(e)}, 500
     return {"ok": True}, 200
+
+
+POWER_LOG = Path.home() / ".local/share/deck-tv/power.log"
+
+
+def power_action(item):
+    """Sleep, restart or power off. Run here rather than detached, so a refusal comes back as a
+    message: started detached, a Sleep that logind turns down (an app holding off sleep, usually)
+    just puts the countdown away, which looks like the Deck waking straight up again. Failures go
+    in power.log, with what was holding the Deck awake at the time."""
+    try:
+        out = subprocess.run(item["command"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError) as e:
+        out = subprocess.CompletedProcess(item["command"], 1, "", str(e))
+    if out.returncode == 0:
+        return {"ok": True}, 200
+    why = (out.stderr or out.stdout).strip() or f"exit status {out.returncode}"
+    _, inhibitors = run("systemd-inhibit --list --no-pager")
+    try:
+        with open(POWER_LOG, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {' '.join(item['command'])}\n{why}\n{inhibitors}\n")
+    except OSError:
+        pass
+    m = re.search(r'inhibited by "([^"]+)".*?reason is "([^"]*)"', why, re.S)
+    if m:
+        return {"error": f"{m[1]} is keeping the Deck awake ({m[2]})" if m[2] else f"{m[1]} is keeping the Deck awake"}, 409
+    return {"error": why.splitlines()[0]}, 500
 
 
 closing = {}  # tile id -> when it was closed
@@ -1031,16 +1060,20 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/watchlist":
                 return self._json(watchlist.load())
             if self.path.startswith(("/api/trailers?", "/api/details?")):
-                q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
-                title = (q.get("title") or [""])[0].strip()[:80]
-                year = (q.get("year") or [""])[0]
-                kind = "show" if (q.get("kind") or [""])[0] == "show" else "film"
-                if not title:
-                    return self._json({"error": "no title"}, 400)
-                look = trailers.find if self.path.startswith("/api/trailers?") else trailers.details
-                return self._json(look(title, int(year) if year.isdigit() else None, kind))
+                return self._lookup()
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
+
+    def _lookup(self):
+        """A film's trailers, or a show's details, from TMDB (for the watchlist, on the TV or the phone)"""
+        q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        title = (q.get("title") or [""])[0].strip()[:80]
+        year = (q.get("year") or [""])[0]
+        kind = "show" if (q.get("kind") or [""])[0] == "show" else "film"
+        if not title:
+            return self._json({"error": "no title"}, 400)
+        look = trailers.find if self.path.startswith("/api/trailers?") else trailers.details
+        return self._json(look(title, int(year) if year.isdigit() else None, kind))
 
     def _media_art(self):
         file = now_playing.art_file()
@@ -1158,6 +1191,10 @@ class RemoteHandler(Handler):
                 return self._json(search.context(tile) if tile else {"app": None, "mode": "type"})
             if self.path.startswith("/appicon/"):
                 return self._appicon()
+            if self.path == "/api/watchlist":
+                return self._json(watchlist.load())
+            if self.path.startswith(("/api/trailers?", "/api/details?")):
+                return self._lookup()
             return self._json({"error": "not found"}, 404)
         return SimpleHTTPRequestHandler.do_GET(self)  # the remote page itself; Handler's localhost check doesn't apply
 
@@ -1200,6 +1237,14 @@ class RemoteHandler(Handler):
             return self._json(*launch_item(parts[2]))
         if self.path == "/api/home":
             return self._json(go_home())
+        # The watchlist, on the phone: the same lists as the TV's, and Watch on Movy starts it on the TV
+        if self.path == "/api/watchlist":
+            return self._json(*watchlist.save(body))
+        if self.path == "/api/watchnow":
+            title = str(body.get("title", "")).strip()[:80] if isinstance(body, dict) else ""
+            if not title:
+                return self._json({"error": "no title"}, 400)
+            return self._json(*watch_now(title))
         if self.path == "/api/move":
             pointer.move(max(-400, min(400, body.get("dx", 0))), max(-400, min(400, body.get("dy", 0))))
             return self._json({"ok": True})

@@ -7,6 +7,25 @@
   "background_color": "#0E1116",
   "theme_color": "#0E1116",
   "icons": [
-    { "src": "icon.png", "sizes": "256x256", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icon.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Watchlist",
+      "short_name": "Watchlist",
+      "url": "/?open=watchlist",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "256x256",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }
