@@ -3312,7 +3312,9 @@ function startCountdown(a) {
   sleepTimer = setInterval(() => {
     if (--left > 0) return void (num.textContent = left);
     cancelSleep();
-    api(`/api/launch/${a.id}`, "POST").catch(() => toast(`Couldn't run ${a.name}`));
+    api(`/api/launch/${a.id}`, "POST")
+      .then(r => r.error && toast(`Couldn't ${a.name.toLowerCase()}: ${r.error}`))
+      .catch(() => toast(`Couldn't run ${a.name}`));
   }, 1000);
 }
 function cancelSleep() {

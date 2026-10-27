@@ -715,6 +715,8 @@ def launch_item(item_id, choice_id=None):
             return launch_item(choice["tile"])  # a group tile (Live TV): the choice is another app
     if "command" not in item:
         return {"error": "choose"}, 400
+    if item in cfg["actions"]:
+        return power_action(item)
     # Just closed from the dock: a stray click while it shuts down mustn't start it again
     if time.time() - closing.get(item_id, 0) < 4:
         return {"error": "closing"}, 409
@@ -734,6 +736,33 @@ def launch_item(item_id, choice_id=None):
     except OSError as e:
         return {"error": str(e)}, 500
     return {"ok": True}, 200
+
+
+POWER_LOG = Path.home() / ".local/share/deck-tv/power.log"
+
+
+def power_action(item):
+    """Sleep, restart or power off. Run here rather than detached, so a refusal comes back as a
+    message: started detached, a Sleep that logind turns down (an app holding off sleep, usually)
+    just puts the countdown away, which looks like the Deck waking straight up again. Failures go
+    in power.log, with what was holding the Deck awake at the time."""
+    try:
+        out = subprocess.run(item["command"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError) as e:
+        out = subprocess.CompletedProcess(item["command"], 1, "", str(e))
+    if out.returncode == 0:
+        return {"ok": True}, 200
+    why = (out.stderr or out.stdout).strip() or f"exit status {out.returncode}"
+    _, inhibitors = run("systemd-inhibit --list --no-pager")
+    try:
+        with open(POWER_LOG, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {' '.join(item['command'])}\n{why}\n{inhibitors}\n")
+    except OSError:
+        pass
+    m = re.search(r'inhibited by "([^"]+)".*?reason is "([^"]*)"', why, re.S)
+    if m:
+        return {"error": f"{m[1]} is keeping the Deck awake ({m[2]})" if m[2] else f"{m[1]} is keeping the Deck awake"}, 409
+    return {"error": why.splitlines()[0]}, 500
 
 
 closing = {}  # tile id -> when it was closed

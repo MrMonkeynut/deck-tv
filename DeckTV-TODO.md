@@ -7,6 +7,7 @@ _Started 2026-10-25_
 ## Up next
 
 - [ ] **Bug: Sleep button doesn't work**: Power → Sleep doesn't put the Deck to sleep (reported 2026-10-25)
+  - 2026-10-27: the journal shows no Desktop Mode suspend ever reached logind (every successful one came from Game Mode), so the Deck isn't waking up: the suspend request is refused and DeckTV used to hide that. Sleep now shows the reason in a toast and logs it, with the list of apps blocking sleep, to `~/.local/share/deck-tv/power.log`. Next: read that log after a failed Sleep. Separately, `fix-mouse-wake.sh` was never run (the Logitech receiver can still wake the Deck)
 - [ ] **More cards**: add more card types to the home screen
   - Added 2026-10-25: Netflix, Disney+, Prime Video, Apple TV+, NOW, Paramount+, DAZN, Crunchyroll, Twitch (simple lettermark icons for now)
 - [ ] **Profiles**: support multiple user profiles
