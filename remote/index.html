@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
 <meta name="theme-color" content="#0E1116">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -106,7 +106,9 @@
   .sound-row .round.big { width: 68px; height: 68px; background: var(--ink); color: var(--bg); }
   .sound-row + .sound-row { margin-top: 8px; padding-top: 14px; border-top: 1px solid #2B3240; }
 
-  .typebar { display: flex; gap: 8px; align-items: center; }
+  /* The type box floats just above the phone's keyboard (or the bar), so opening it moves nothing else */
+  .typebar { display: flex; gap: 8px; align-items: center; position: fixed; left: 16px; right: 16px; z-index: 10;
+    bottom: var(--typebar-bottom, 90px); padding: 6px; border-radius: 32px; background: var(--bg); }
   .typebar[hidden] { display: none; }
   #type {
     flex: 1; min-width: 0; height: 52px; border-radius: 26px; border: 1px solid #2E3542; background: var(--panel);
@@ -119,7 +121,7 @@
     flex: 1; min-height: 120px; overflow-y: auto; display: none; flex-direction: column; gap: 6px;
     border-radius: 26px; background: var(--panel); padding: 10px;
   }
-  body.searching #results { display: flex; }
+  body.searching #results { display: flex; margin-bottom: calc(var(--typebar-bottom, 90px) + 50px); }
   body.searching #pad, body.searching .bar { display: none; }
   .result-row { display: flex; align-items: center; gap: 6px; }
   .result-row .play { flex: 0 0 auto; width: 44px; height: 44px; background: var(--panel-2); }
@@ -134,10 +136,25 @@
   /* The TV's picture, live: tap to click there, hold to right-click, two fingers to scroll */
   .head-btns { display: flex; gap: 10px; }
   #screen-btn.on { background: var(--ink); color: var(--bg); }
-  #screen { position: relative; flex: none; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: 16 / 9;
+  #screen { position: relative; flex: none; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: var(--screen-ratio, 16 / 10);
     touch-action: none; -webkit-touch-callout: none; }
   #screen[hidden] { display: none; }
-  #screen img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+  #screen img { position: absolute; left: 0; top: 0; display: block; width: 100%; height: 100%; max-width: none;
+    pointer-events: none; -webkit-user-drag: none; }
+  /* Bigger, closer, or the whole phone: drag the bottom edge, pinch, or go full screen */
+  #screen.sized { aspect-ratio: auto; height: min(var(--screen-h), calc(100dvh - 300px)); }
+  .screen-ctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 2; }
+  .screen-ctl button { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(14,17,22,.6); color: #fff; }
+  .screen-ctl button:active { background: rgba(14,17,22,.9); }
+  .screen-ctl button[hidden] { display: none; }
+  .screen-ctl svg { width: 18px; height: 18px; }
+  .screen-map { position: absolute; left: 8px; bottom: 8px; width: 64px; border: 1px solid rgba(255,255,255,.5); border-radius: 3px;
+    background: rgba(14,17,22,.55); pointer-events: none; z-index: 1; }
+  .screen-map span { position: absolute; border: 1.5px solid #fff; border-radius: 2px; background: rgba(255,255,255,.18); }
+  .screen-grip { position: absolute; left: 50%; bottom: 0; width: 96px; height: 24px; margin-left: -48px; display: grid; place-items: center;
+    touch-action: none; cursor: ns-resize; z-index: 2; }
+  .screen-grip::after { content: ""; width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.6); box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
   #screen .note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
     padding: 16px; font-size: 14px; color: var(--muted); background: rgba(14,17,22,.82); }
   #screen .note[hidden] { display: none; }
@@ -153,7 +170,12 @@
     body.screen header, body.screen #pad { display: none; }  /* the bar stays: type, apps and sound are a press away */
     body.screen #screen { flex: 1; min-height: 0; aspect-ratio: auto; }
     body.screen { padding-top: max(8px, env(safe-area-inset-top)); gap: 8px; }
+    .screen-grip { display: none; }
   }
+  /* Full screen: the picture and nothing else */
+  body.full #screen { position: fixed; inset: 0; z-index: 30; border-radius: 0; height: auto; aspect-ratio: auto; }
+  body.full .screen-grip { display: none; }
+  body.full .screen-ctl { top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); }
 
 
   /* ---------- the watchlist: a page of its own, over the remote ---------- */
@@ -346,7 +368,13 @@
   <div id="screen" hidden aria-label="The TV's screen: tap to click there">
     <img id="screen-img" alt="">
     <div class="note" id="screen-note" hidden></div>
-    <div class="tip gone" id="screen-tip">Tap to click there · hold to right-click · 2 fingers to scroll</div>
+    <div class="tip gone" id="screen-tip">Tap to click · hold to right-click · 2 fingers: scroll or pinch to zoom</div>
+    <div class="screen-map" id="screen-map" hidden><span></span></div>
+    <div class="screen-ctl">
+      <button id="screen-fit" hidden><svg viewBox="0 0 24 24"><path id="screen-fit-icon"/></svg></button>
+      <button id="screen-full" aria-label="Full screen"><svg viewBox="0 0 24 24"><path id="screen-full-icon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="screen-grip" id="screen-grip" role="separator" aria-label="Drag to make the picture taller"></div>
   </div>
 
   <div id="pad" aria-label="Touchpad">
@@ -678,8 +706,25 @@ const typebar = document.getElementById("typebar"), typeTab = document.getElemen
 function showTypebar(on) {
   typebar.hidden = !on;
   typeTab.classList.toggle("on", on);
-  if (on) document.getElementById("type").focus();
+  if (on) { placeTypebar(); document.getElementById("type").focus({ preventScroll: true }); }
 }
+// The keyboard covers the page rather than pushing it up; the type box sits on top of the keyboard
+if ("virtualKeyboard" in navigator) navigator.virtualKeyboard.overlaysContent = true;
+function placeTypebar() {
+  const vv = window.visualViewport;
+  const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+  const kbRect = navigator.virtualKeyboard?.boundingRect;
+  const keyboard = Math.max(kb, kbRect ? kbRect.height : 0);
+  const bar = document.querySelector(".bar").getBoundingClientRect();
+  const aboveBar = bar.height ? innerHeight - bar.top + 8 : 14;
+  document.body.style.setProperty("--typebar-bottom", (keyboard ? keyboard + 8 : aboveBar) + "px");
+  document.body.style.setProperty("--kb", keyboard + "px");
+  if (scrollY || document.documentElement.scrollTop) scrollTo(0, 0);  // undo any pan the browser makes
+}
+window.visualViewport?.addEventListener("resize", placeTypebar);
+window.visualViewport?.addEventListener("scroll", placeTypebar);
+navigator.virtualKeyboard?.addEventListener("geometrychange", placeTypebar);
+addEventListener("resize", placeTypebar);
 typeTab.onclick = () => { buzz(); showTypebar(typebar.hidden); };
 
 /* ---------- touchpad ---------- */
@@ -821,6 +866,7 @@ function showResults(list) {
 input.addEventListener("focus", async () => {
   if (mode() !== "results") return;
   document.body.classList.add("searching");
+  placeTypebar();
   showNote("Start typing to search");
   // Start from whatever is already in the TV's search box
   try {
@@ -834,6 +880,7 @@ input.addEventListener("focus", async () => {
 
 function endSearch() {
   document.body.classList.remove("searching");
+  placeTypebar();
   input.blur();
 }
 
@@ -932,9 +979,14 @@ function setScreen(on) {
   screenBtn.setAttribute("aria-pressed", String(on));
   screenEl.hidden = !on;
   document.body.classList.toggle("screen", on);
+  if (!on && document.body.classList.contains("full")) setFull(false);
   on ? startScreen() : stopScreen();
 }
-screenImg.onload = () => screenNoteShow("");
+screenImg.onload = () => {
+  screenNoteShow("");
+  screenEl.style.setProperty("--screen-ratio", picSize().join(" / "));  // the panel takes the TV's shape
+  layoutScreen();
+};
 screenImg.onerror = () => {
   if (!screenOn || !screenImg.getAttribute("src")) return;
   screenNoteShow("Can't see the TV just now: trying again…");
@@ -943,15 +995,150 @@ screenImg.onerror = () => {
 screenBtn.onclick = () => { buzz(); setScreen(!screenOn); };
 document.addEventListener("visibilitychange", () => (document.hidden ? stopScreen() : startScreen()));
 
-// Taps, holds and two-finger scrolls on the picture
+/* The picture's size and place in the panel.
+   Zoom 1 shows all of it; "fill" zooms just enough to leave no gaps (so on a taller panel the sides go
+   off the edge), and pinching zooms further. When it's bigger than the panel, one finger drags it about
+   and a little map in the corner shows which part is in view. */
+const screenMap = document.getElementById("screen-map"), screenMapView = screenMap.firstElementChild;
+const fitBtn = document.getElementById("screen-fit"), fullBtn = document.getElementById("screen-full");
+const ZOOM_MAX = 6;
+let fit = store.get("deckTvScreenFit") === "fill" ? "fill" : "fit";  // "fit", "fill" or "zoom" (pinched)
+let zoom = 1;
+let view = { cx: .5, cy: .5 };          // the spot on the picture (0-1) at the panel's centre
+let pic = { x: 0, y: 0, w: 1, h: 1 };   // where the picture is drawn, in the panel's pixels
+
+const picSize = () => [screenImg.naturalWidth || 16, screenImg.naturalHeight || 9];
+function fillZoom() {
+  const [nw, nh] = picSize(), a = screenEl.clientWidth / nw, b = screenEl.clientHeight / nh;
+  return Math.max(a, b) / Math.min(a, b);
+}
+function layoutScreen() {
+  const W = screenEl.clientWidth, H = screenEl.clientHeight, [nw, nh] = picSize();
+  if (!W || !H) return;
+  if (fit === "fit") zoom = 1;
+  else if (fit === "fill") zoom = fillZoom();
+  const s = Math.min(W / nw, H / nh) * zoom, w = nw * s, h = nh * s;
+  // Centred while it fits; otherwise kept against the edges, so there are never gaps
+  const x = w <= W ? (W - w) / 2 : Math.min(0, Math.max(W - w, W / 2 - view.cx * w));
+  const y = h <= H ? (H - h) / 2 : Math.min(0, Math.max(H - h, H / 2 - view.cy * h));
+  view = { cx: (W / 2 - x) / w, cy: (H / 2 - y) / h };
+  pic = { x, y, w, h };
+  Object.assign(screenImg.style, { width: `${w}px`, height: `${h}px`, transform: `translate(${x}px, ${y}px)` });
+
+  const cropped = w > W + 1 || h > H + 1;
+  screenMap.hidden = !cropped;
+  if (cropped) {
+    screenMap.style.aspectRatio = `${nw} / ${nh}`;
+    Object.assign(screenMapView.style, {
+      left: `${-x / w * 100}%`, top: `${-y / h * 100}%`, width: `${W / w * 100}%`, height: `${H / h * 100}%`
+    });
+  }
+  // One button: back to all of it when cropped, or fill the panel when there are gaps to fill
+  const canFill = !cropped && fillZoom() > 1.02;
+  fitBtn.hidden = !cropped && !canFill;
+  fitBtn.setAttribute("aria-label", cropped ? "Show all of the picture" : "Fill the panel");
+  document.getElementById("screen-fit-icon").setAttribute("d", cropped
+    ? "M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"
+    : "M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7");
+}
+function setFit(m) {
+  fit = m;
+  store.set("deckTvScreenFit", m);
+  view = { cx: .5, cy: .5 };
+  layoutScreen();
+}
+function panBy(dx, dy) {
+  view = { cx: view.cx - dx / pic.w, cy: view.cy - dy / pic.h };
+  layoutScreen();
+}
+function zoomAt(px, py, z) {
+  // px, py: a point in the panel that stays over the same spot on the picture
+  z = Math.max(1, Math.min(ZOOM_MAX, z));
+  const k = z / zoom, fx = (px - pic.x) / pic.w, fy = (py - pic.y) / pic.h, w = pic.w * k, h = pic.h * k;
+  view = { cx: (screenEl.clientWidth / 2 - (px - fx * w)) / w, cy: (screenEl.clientHeight / 2 - (py - fy * h)) / h };
+  zoom = z;
+  fit = z <= 1.001 ? "fit" : "zoom";
+  layoutScreen();
+}
+new ResizeObserver(layoutScreen).observe(screenEl);
+fitBtn.onclick = () => { buzz(); setFit(fitBtn.getAttribute("aria-label").startsWith("Show") ? "fit" : "fill"); };
+// The buttons and grip have their own presses: not taps on the TV
+for (const el of [document.querySelector(".screen-ctl"), document.getElementById("screen-grip")])
+  el.addEventListener("pointerdown", e => e.stopPropagation());
+
+// Full screen: the whole phone, turned sideways where the phone allows it.
+// Where the browser can't go full screen (iPhone), the picture still covers the page.
+function setFull(on) {
+  document.body.classList.toggle("full", on);
+  fullBtn.setAttribute("aria-label", on ? "Leave full screen" : "Full screen");
+  document.getElementById("screen-full-icon").setAttribute("d", on
+    ? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
+    : "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5");
+  if (on) {
+    document.documentElement.requestFullscreen?.({ navigationUI: "hide" })
+      .then(() => screen.orientation?.lock?.("landscape"))
+      .catch(() => {});
+  } else {
+    try { screen.orientation?.unlock?.(); } catch {}
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+}
+fullBtn.onclick = () => { buzz(); setFull(!document.body.classList.contains("full")); };
+// Left full screen with the phone's back gesture: put the page back too
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && document.body.classList.contains("full")) setFull(false);
+});
+
+// Drag the picture's bottom edge to make it taller. The picture fills the taller panel (the sides go
+// off the edge: drag the picture or watch the map to see them). Double-tap the edge to go back.
+const grip = document.getElementById("screen-grip");
+let gripDrag = null, gripLastTap = 0;
+function screenNaturalH() { const [nw, nh] = picSize(); return screenEl.clientWidth * nh / nw; }
+function setScreenH(h) {
+  if (h) { screenEl.style.setProperty("--screen-h", `${h}px`); screenEl.classList.add("sized"); }
+  else screenEl.classList.remove("sized");
+}
+grip.addEventListener("pointerdown", e => {
+  grip.setPointerCapture(e.pointerId);
+  const now = performance.now();
+  if (now - gripLastTap < 320) {
+    buzz();
+    setScreenH(0);
+    store.set("deckTvScreenH", "");
+    setFit("fit");
+    gripLastTap = 0;
+    return;
+  }
+  gripLastTap = now;
+  const h = screenEl.offsetHeight;
+  gripDrag = { y: e.clientY, h, max: Math.max(h, h + pad.offsetHeight - 110) };  // the touchpad keeps a little room
+});
+grip.addEventListener("pointermove", e => {
+  if (!gripDrag) return;
+  const h = Math.round(Math.max(120, Math.min(gripDrag.max, gripDrag.h + e.clientY - gripDrag.y)));
+  setScreenH(h);
+  if (fit !== "zoom") fit = h > screenNaturalH() + 2 ? "fill" : "fit";
+  layoutScreen();
+});
+function gripUp() {
+  if (!gripDrag) return;
+  gripDrag = null;
+  // Close to the TV's own shape: snap back to it
+  const h = screenEl.offsetHeight;
+  if (Math.abs(h - screenNaturalH()) < 16) { setScreenH(0); store.set("deckTvScreenH", ""); }
+  else store.set("deckTvScreenH", String(h));
+  if (fit !== "zoom") store.set("deckTvScreenFit", fit);
+}
+grip.addEventListener("pointerup", gripUp);
+grip.addEventListener("pointercancel", gripUp);
+setScreenH(+store.get("deckTvScreenH") || 0);
+
+// Taps, holds, drags, two-finger scrolls and pinches on the picture
 const spots = new Map();   // pointerId -> {x, y}
-let spot = null;           // {x, y, start, moved, fingers, scrollAcc, held}
+let spot = null;           // {x, y, start, moved, fingers, scrollAcc, held, two}
 function screenFrac(x, y) {
-  const r = screenImg.getBoundingClientRect();
-  // The picture keeps the TV's shape; letterboxing (sideways) is left out of the sum
-  const k = Math.min(r.width / (screenImg.naturalWidth || 16), r.height / (screenImg.naturalHeight || 9));
-  const w = (screenImg.naturalWidth || 16) * k, h = (screenImg.naturalHeight || 9) * k;
-  const fx = (x - r.left - (r.width - w) / 2) / w, fy = (y - r.top - (r.height - h) / 2) / h;
+  const r = screenEl.getBoundingClientRect();
+  const fx = (x - r.left - pic.x) / pic.w, fy = (y - r.top - pic.y) / pic.h;
   return fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1 ? { fx, fy } : null;
 }
 function screenRipple(x, y) {
@@ -984,21 +1171,41 @@ screenEl.addEventListener("pointerdown", e => {
 screenEl.addEventListener("pointermove", e => {
   const prev = spots.get(e.pointerId);
   if (!prev || !spot) return;
-  const dy = e.clientY - prev.y;
-  spot.moved += Math.hypot(e.clientX - prev.x, dy);
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  spot.moved += Math.hypot(dx, dy);
   spots.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (spots.size >= 2 && e.pointerId === spots.keys().next().value) {
-    spot.scrollAcc += dy;
-    const steps = Math.trunc(spot.scrollAcc / 24);
-    if (steps) {
-      spot.scrollAcc -= steps * 24;
-      api("/api/scroll", { steps: -steps }).catch(fail);
+  if (spots.size >= 2) {
+    // Two fingers: fingers spreading or closing zoom; moving together scrolls the TV
+    const [a, b] = spots.values();
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (!spot.two) spot.two = { d0: d, z0: zoom, mid0: mid, mid, kind: null };
+    const t = spot.two;
+    if (!t.kind) {
+      if (Math.abs(d - t.d0) > 28) t.kind = "pinch";
+      else if (Math.hypot(mid.x - t.mid0.x, mid.y - t.mid0.y) > 16) t.kind = "scroll";
     }
+    if (t.kind === "pinch") {
+      const r = screenEl.getBoundingClientRect();
+      panBy(mid.x - t.mid.x, mid.y - t.mid.y);
+      zoomAt(mid.x - r.left, mid.y - r.top, t.z0 * d / t.d0);
+    } else if (t.kind === "scroll") {
+      spot.scrollAcc += mid.y - t.mid.y;
+      const steps = Math.trunc(spot.scrollAcc / 24);
+      if (steps) {
+        spot.scrollAcc -= steps * 24;
+        api("/api/scroll", { steps: -steps }).catch(fail);
+      }
+    }
+    t.mid = mid;
+    return;
   }
+  // One finger, dragged: look around a picture that's bigger than the panel
+  if (spot.moved > 12 && (pic.w > screenEl.clientWidth + 1 || pic.h > screenEl.clientHeight + 1)) panBy(dx, dy);
 });
 function screenUp(e) {
   if (!spots.has(e.pointerId)) return;
   spots.delete(e.pointerId);
+  if (spot && spots.size < 2) spot.two = null;
   if (spots.size || !spot) return;
   clearTimeout(spot.timer);
   if (!spot.held && spot.fingers === 1 && spot.moved < 12 && performance.now() - spot.start < 550) screenTap(spot.x, spot.y, 1);
