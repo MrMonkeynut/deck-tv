@@ -2164,8 +2164,23 @@ async function openWatch() {
   document.getElementById("watch").classList.add("open");
   renderWatch({ r: 2, c: 0 });  // the first film's tick
   if (wlAt.r === wlGrid().length - 1) wlFocus({ r: 1, c: WL_FILTERS.length + 1 });  // no films showing: Add
+  clearInterval(wlPoll);
+  wlPoll = setInterval(wlCatchUp, 3000);
+}
+/* Changed on the phone remote while it's open here: show the new lists (focus stays where it is), so
+   the next change here doesn't save over the phone's. Not while a menu or the editor is up, or a save
+   from here is on its way (an answer from before it would put the old lists back). */
+let wlPoll = null, wlSaving = 0, wlSaveN = 0;
+async function wlCatchUp() {
+  if (!watchOpen || wlEdOpen || wlMoveOpen || wlSortOpen || wlTrOpen || wlPvOpen || wlSaving) return;
+  const n = wlSaveN, data = await api("/api/watchlist").catch(() => null);
+  if (!data || !data.lists || !watchOpen || wlEdOpen || wlMoveOpen || wlSortOpen || wlSaving || n !== wlSaveN) return;
+  if (JSON.stringify(data) === JSON.stringify(wl)) return;
+  wl = data;
+  renderWatch(wlAt);
 }
 function closeWatch() {
+  clearInterval(wlPoll);
   closeWlMove();
   closeTrailer();
   closePoster();
@@ -2383,11 +2398,13 @@ function watchInput(cmd) {
   if (cmd === "back") closeWatch();
 }
 function saveWatch() {
+  wlSaving++;
+  wlSaveN++;
   return fetch("/api/watchlist", {
     method: "POST",
     headers: { "X-Deck-TV": "1", "Content-Type": "application/json" },
     body: JSON.stringify(wl),
-  }).then(r => { if (!r.ok) throw r; }).catch(() => toast("Couldn't save the watchlist"));
+  }).then(r => { if (!r.ok) throw r; }).catch(() => toast("Couldn't save the watchlist")).finally(() => { wlSaving--; });
 }
 function toggleWatched(it, undoing) {
   const before = { watched: it.watched, watchedAt: it.watchedAt, open: wlOpenId === it.id };

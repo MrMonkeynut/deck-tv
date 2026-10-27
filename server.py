@@ -1031,16 +1031,20 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/watchlist":
                 return self._json(watchlist.load())
             if self.path.startswith(("/api/trailers?", "/api/details?")):
-                q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
-                title = (q.get("title") or [""])[0].strip()[:80]
-                year = (q.get("year") or [""])[0]
-                kind = "show" if (q.get("kind") or [""])[0] == "show" else "film"
-                if not title:
-                    return self._json({"error": "no title"}, 400)
-                look = trailers.find if self.path.startswith("/api/trailers?") else trailers.details
-                return self._json(look(title, int(year) if year.isdigit() else None, kind))
+                return self._lookup()
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
+
+    def _lookup(self):
+        """A film's trailers, or a show's details, from TMDB (for the watchlist, on the TV or the phone)"""
+        q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        title = (q.get("title") or [""])[0].strip()[:80]
+        year = (q.get("year") or [""])[0]
+        kind = "show" if (q.get("kind") or [""])[0] == "show" else "film"
+        if not title:
+            return self._json({"error": "no title"}, 400)
+        look = trailers.find if self.path.startswith("/api/trailers?") else trailers.details
+        return self._json(look(title, int(year) if year.isdigit() else None, kind))
 
     def _media_art(self):
         file = now_playing.art_file()
@@ -1158,6 +1162,10 @@ class RemoteHandler(Handler):
                 return self._json(search.context(tile) if tile else {"app": None, "mode": "type"})
             if self.path.startswith("/appicon/"):
                 return self._appicon()
+            if self.path == "/api/watchlist":
+                return self._json(watchlist.load())
+            if self.path.startswith(("/api/trailers?", "/api/details?")):
+                return self._lookup()
             return self._json({"error": "not found"}, 404)
         return SimpleHTTPRequestHandler.do_GET(self)  # the remote page itself; Handler's localhost check doesn't apply
 
@@ -1200,6 +1208,14 @@ class RemoteHandler(Handler):
             return self._json(*launch_item(parts[2]))
         if self.path == "/api/home":
             return self._json(go_home())
+        # The watchlist, on the phone: the same lists as the TV's, and Watch on Movy starts it on the TV
+        if self.path == "/api/watchlist":
+            return self._json(*watchlist.save(body))
+        if self.path == "/api/watchnow":
+            title = str(body.get("title", "")).strip()[:80] if isinstance(body, dict) else ""
+            if not title:
+                return self._json({"error": "no title"}, 400)
+            return self._json(*watch_now(title))
         if self.path == "/api/move":
             pointer.move(max(-400, min(400, body.get("dx", 0))), max(-400, min(400, body.get("dy", 0))))
             return self._json({"ok": True})

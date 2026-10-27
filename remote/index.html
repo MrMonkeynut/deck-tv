@@ -90,12 +90,12 @@
   .tab.playing { color: var(--ok); }
 
   /* Sheets: rise from the bottom over everything; tap outside (or the X) to close */
-  .sheet { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end;
+  .sheet, .wsheet { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end;
     background: rgba(8,10,14,.55); opacity: 0; pointer-events: none; transition: opacity .18s; }
-  .sheet.open { opacity: 1; pointer-events: auto; }
+  .sheet.open, .wsheet.open { opacity: 1; pointer-events: auto; }
   .sheet-card { background: var(--panel); border-radius: 26px 26px 0 0; padding: 14px 16px max(18px, env(safe-area-inset-bottom));
     transform: translateY(24px); transition: transform .2s ease; max-height: 75vh; overflow-y: auto; }
-  .sheet.open .sheet-card { transform: none; }
+  .sheet.open .sheet-card, .wsheet.open .sheet-card { transform: none; }
   .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 17px; font-weight: 700; }
   .sheet-head .x { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); }
   .sheet-head .x svg { width: 18px; height: 18px; }
@@ -155,8 +155,174 @@
     body.screen { padding-top: max(8px, env(safe-area-inset-top)); gap: 8px; }
   }
 
+
+  /* ---------- the watchlist: a page of its own, over the remote ---------- */
+  .layer { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column;
+    transform: translateY(100%); visibility: hidden; transition: transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s .32s; }
+  .layer.open { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s; }
+  .layer.push { z-index: 41; transform: translateX(100%); }
+  .layer.push.open { transform: none; }
+  .wl-top { display: flex; align-items: center; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 14px 8px; }
+  .wl-top h1 { flex: 1; margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -.01em; }
+  .nav-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--panel); display: grid; place-items: center; flex: none; }
+  .nav-btn:active { background: var(--panel-2); transform: scale(.94); }
+  .nav-btn[hidden] { display: none; }
+  .nav-btn svg { width: 20px; height: 20px; }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  #wl-scroll { padding: 0 16px calc(100px + env(safe-area-inset-bottom)); }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 4px 16px 12px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: 19px; background: var(--panel);
+    font-size: 15px; color: var(--muted); white-space: nowrap; transition: background .12s, color .12s; }
+  .chip:active { transform: scale(.96); }
+  .chip small { font-size: 12px; opacity: .7; }
+  .chip svg { width: 16px; height: 16px; stroke-width: 2.2; }
+  .chip[aria-checked="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+  .chip.ghost { background: none; border: 1px dashed #3A4252; padding: 8px 14px; }
+  .wl-prog { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); margin: 0 2px 12px; }
+  .wl-prog .track { flex: 1; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+  .wl-prog .track i { display: block; height: 100%; border-radius: 3px; background: var(--ok); transition: width .3s; }
+  .wl-tools { display: flex; gap: 8px; margin-bottom: 12px; }
+  .seg { flex: 1; display: flex; padding: 3px; border-radius: 12px; background: var(--panel); }
+  .seg button { flex: 1; text-align: center; padding: 8px 0; border-radius: 9px; font-size: 14px; color: var(--muted); transition: background .15s, color .15s; }
+  .seg button[aria-checked="true"] { background: var(--panel-2); color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .pill { display: flex; align-items: center; gap: 6px; padding: 0 13px; border-radius: 12px; background: var(--panel); font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .pill:active { background: var(--panel-2); }
+  .pill svg { width: 17px; height: 17px; }
+
+  /* A film: its poster, name and facts, and a tick. Swipe right to tick it off, left to remove it */
+  .wl-row { position: relative; margin-bottom: 8px; border-radius: 16px; overflow: hidden; touch-action: pan-y; }
+  .wl-under { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;
+    font-size: 14px; font-weight: 600; color: #fff; }
+  .wl-under span { display: flex; align-items: center; gap: 8px; opacity: 0; transition: transform .15s; }
+  .wl-row.swipe-r .wl-under { background: #2E7D55; }
+  .wl-row.swipe-l .wl-under { background: #B83A46; }
+  .wl-row.swipe-r .wl-under .l, .wl-row.swipe-l .wl-under .r { opacity: 1; }
+  .wl-row.past .wl-under span { transform: scale(1.12); }
+  .wl-front { position: relative; display: flex; align-items: center; gap: 12px; padding: 9px 6px 9px 9px; border-radius: 16px;
+    background: var(--panel); transition: transform .25s cubic-bezier(.2,.8,.2,1), background .12s; cursor: pointer; }
+  .wl-front:active { background: #20262F; }
+  .wl-row.dragging .wl-front { transition: none; }
+  .wl-thumb { flex: none; width: 46px; height: 69px; border-radius: 8px; background: var(--panel-2) center / cover no-repeat;
+    display: grid; place-items: center; color: #5B6475; }
+  .wl-thumb svg { width: 22px; height: 22px; }
+  .wl-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .wl-txt b { font-size: 16px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .wl-txt span { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wl-row.done .wl-txt b { color: var(--muted); }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 2px 6px; border-radius: 6px;
+    background: var(--panel-2); color: var(--muted); margin-left: 6px; vertical-align: 2px; }
+  .wl-tick { flex: none; width: 46px; height: 46px; display: grid; place-items: center; }
+  .wl-tick i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #4A5366; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+  .wl-tick svg { width: 15px; height: 15px; stroke-width: 3; opacity: 0; }
+  .wl-row.done .wl-tick i { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+  .wl-row.done .wl-tick svg { opacity: 1; }
+  .wl-empty { padding: 60px 20px; text-align: center; font-size: 17px; color: var(--muted); line-height: 1.5; }
+  .wl-empty small { display: block; font-size: 14px; color: var(--dim); }
+  .wl-empty[hidden] { display: none; }
+  .fab { position: absolute; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom)); width: 60px; height: 60px; border-radius: 50%;
+    background: #5B63E6; color: #fff; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.45); transition: transform .12s; }
+  .fab:active { transform: scale(.92); }
+  .fab[hidden] { display: none; }
+  .fab svg { width: 26px; height: 26px; stroke-width: 2.4; }
+
+  /* A film, opened: its poster over a blur of itself, what it's about, and what to do with it */
+  #wl-film { overflow: hidden; }
+  .wlf-bg { position: absolute; left: -40px; right: -40px; top: -40px; height: 420px; background: center / cover no-repeat;
+    filter: blur(34px) saturate(1.3); opacity: 0; transition: opacity .4s; }
+  .wlf-bg.on { opacity: .5; }
+  .wlf-fade { position: absolute; left: 0; right: 0; top: 0; height: 380px; background: linear-gradient(transparent 30%, var(--bg)); pointer-events: none; }
+  #wl-film .wl-top { position: relative; z-index: 1; }
+  #wl-film .nav-btn { background: rgba(27,32,41,.75); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  #wlf-scroll { position: relative; padding: 0 16px calc(28px + env(safe-area-inset-bottom)); }
+  .wlf-head { display: flex; gap: 16px; align-items: flex-end; padding: 6px 0 20px; }
+  .wlf-poster { flex: none; width: 118px; aspect-ratio: 2 / 3; border-radius: 12px; background: var(--panel-2) center / cover no-repeat;
+    box-shadow: 0 12px 32px rgba(0,0,0,.55); display: grid; place-items: center; color: #5B6475; }
+  .wlf-poster svg { width: 34px; height: 34px; stroke-width: 1.4; }
+  .wlf-head h2 { margin: 0 0 6px; font-size: 24px; line-height: 1.15; font-weight: 700; }
+  .wlf-facts { font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .wlf-on { margin-top: 8px; font-size: 12.5px; color: var(--dim); }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border-radius: 14px; background: var(--panel);
+    font-size: 16px; font-weight: 600; transition: transform .12s, background .12s; }
+  .btn:active { transform: scale(.97); background: var(--panel-2); }
+  .btn.primary { background: #5B63E6; color: #fff; }
+  .btn.primary:active { background: #4C53D0; }
+  .btn.on { color: var(--ok); }
+  .btn[disabled] { opacity: .6; pointer-events: none; }
+  .btn svg { width: 20px; height: 20px; }
+  .wlf-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+  .wlf-btns .primary { grid-column: 1 / -1; height: 54px; }
+  .wlf-about { margin: 0 0 10px; font-size: 15px; line-height: 1.55; color: #D5DAE3; }
+  .wlf-about.wait { color: var(--dim); }
+  .wlf-when { font-size: 13px; color: var(--dim); margin-bottom: 22px; }
+  .group { border-radius: 16px; background: var(--panel); overflow: hidden; }
+  .group button, .opts button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 15px 16px; font-size: 16px; }
+  .group button:active, .opts button:active { background: var(--panel-2); }
+  .group button + button { border-top: 1px solid #2B3240; }
+  .group button svg, .opts button svg { width: 20px; height: 20px; color: var(--muted); }
+  .group .go { margin-left: auto; color: var(--dim); }
+  .group .danger, .opts .danger, .group .danger svg, .opts .danger svg { color: #FF7A7A; }
+
+  /* The watchlist's sheets (editor, menus) sit over its pages, and above the phone's keyboard */
+  .wsheet { z-index: 45; }
+  .wsheet .sheet-card { margin-bottom: var(--kb, 0px); max-height: calc(100dvh - var(--kb, 0px) - 48px); transition: transform .2s ease, margin .15s; }
+  .sheet-head .txt { padding: 8px 4px; font-size: 16px; font-weight: 500; color: var(--muted); }
+  .sheet-head .txt.go { color: #8C92FF; font-weight: 700; }
+  .sheet-head .mid { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ed-col { display: flex; flex-direction: column; gap: 10px; }
+  .field { width: 100%; height: 50px; border-radius: 14px; border: 1px solid #2E3542; background: var(--bg); color: var(--ink);
+    font: inherit; font-size: 17px; padding: 0 16px; outline: none; -webkit-user-select: text; user-select: text; }
+  .field:focus { border-color: #5B63E6; }
+  .field::placeholder { color: var(--dim); }
+  .ed-pair { display: flex; gap: 10px; }
+  .ed-pair .field { flex: 1; min-width: 0; }
+  .ed-label { margin: 6px 2px -2px; font-size: 13px; color: var(--dim); }
+  .ed-col .chips { padding-bottom: 4px; }
+  .ed-col [hidden] { display: none; }
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 2px; font-size: 16px; }
+  .switch { width: 52px; height: 32px; border-radius: 16px; background: #3A4252; position: relative; transition: background .15s; }
+  .switch i { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch[aria-checked="true"] { background: var(--ok); }
+  .switch[aria-checked="true"] i { transform: translateX(20px); }
+  .ed-delete { margin-top: 6px; padding: 14px; border-radius: 14px; text-align: center; font-size: 16px; color: #FF7A7A; background: var(--panel-2); }
+  .ed-delete.sure { background: #B83A46; color: #fff; font-weight: 600; }
+  .opts { display: flex; flex-direction: column; margin: 0 -6px; }
+  .opts button { border-radius: 14px; }
+  .opts .check { margin-left: auto; color: #8C92FF; }
+
+  /* A trailer, played on the phone */
+  #wl-tv, #wl-pv { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; justify-content: center;
+    background: #000; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #wl-tv.open, #wl-pv.open { opacity: 1; pointer-events: auto; }
+  .tv-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 12px; padding: max(10px, env(safe-area-inset-top)) 14px 10px; }
+  .tv-top div { flex: 1; min-width: 0; }
+  .tv-top b { display: block; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tv-top span { font-size: 13px; color: var(--dim); }
+  .tv-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+  .tv-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .tv-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 20px; text-align: center; font-size: 16px; color: var(--muted); }
+  .tv-msg small { font-size: 13px; color: var(--dim); line-height: 1.5; }
+  .tv-msg[hidden] { display: none; }
+  .tv-name { padding: 14px 16px 0; font-size: 13px; color: var(--dim); min-height: 18px; }
+  #tv-which { padding: 12px 16px; margin: 0; }
+  .spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid #3A4252; border-top-color: var(--ink); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #wl-pv { background: rgba(0,0,0,.94); align-items: center; padding: 20px; }
+  #wl-pv img { max-width: 100%; max-height: 82vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+
+  /* A note at the bottom, with Undo where there's something to undo */
+  #toast { position: fixed; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 60; display: flex; align-items: center; gap: 10px;
+    padding: 10px 10px 10px 18px; min-height: 50px; border-radius: 16px; background: #2B3240; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    font-size: 15px; line-height: 1.35; opacity: 0; transform: translateY(16px); pointer-events: none; transition: opacity .2s, transform .2s; }
+  #toast.show { opacity: 1; transform: none; pointer-events: auto; }
+  #toast span { flex: 1; }
+  #toast button { padding: 8px 12px; border-radius: 10px; color: #8C92FF; font-weight: 700; }
+  #toast button:active { background: rgba(255,255,255,.08); }
+  #toast button[hidden] { display: none; }
+
   #pair {
-    position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center;
+    position: fixed; inset: 0; z-index: 100; background: var(--bg); display: none; flex-direction: column; align-items: center;
     justify-content: center; gap: 14px; padding: 32px; text-align: center;
   }
   #pair.show { display: flex; }
@@ -199,6 +365,9 @@
     <button class="tab" id="tab-apps" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Apps</span>
     </button>
+    <button class="tab" id="tab-wl" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><path d="M6.5 3.5h11v17L12 16.5l-5.5 4z"/></svg><span>Watchlist</span>
+    </button>
     <button class="tab" id="tab-play" data-media="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path id="tab-play-icon" d="M7 5v14l11-7z"/></svg><span id="tab-play-lbl">Play</span></button>
     <button class="tab" id="tab-sound" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span>Sound</span>
@@ -235,6 +404,92 @@
       </div>
     </div>
   </div>
+
+  <!-- The watchlist: the TV's lists, on the phone -->
+  <div class="layer" id="wl" role="dialog" aria-label="Watchlist">
+    <div class="wl-top">
+      <button class="nav-btn" id="wl-close" aria-label="Back to the remote"></button>
+      <h1>Watchlist</h1>
+      <button class="nav-btn" id="wl-more" aria-label="List options"></button>
+    </div>
+    <div class="scroll" id="wl-scroll">
+      <div class="chips" id="wl-lists" role="radiogroup" aria-label="Lists"></div>
+      <div class="wl-prog" id="wl-prog"></div>
+      <div class="wl-tools">
+        <div class="seg" id="wl-filter" role="radiogroup" aria-label="Show"></div>
+        <button class="pill" id="wl-sort" aria-haspopup="menu"></button>
+      </div>
+      <div id="wl-items" role="list"></div>
+      <div class="wl-empty" id="wl-empty" hidden></div>
+    </div>
+    <button class="fab" id="wl-add" aria-label="Add a film or show"></button>
+  </div>
+
+  <div class="layer push" id="wl-film" role="dialog" aria-labelledby="wlf-title">
+    <div class="wlf-bg" id="wlf-bg"></div><div class="wlf-fade"></div>
+    <div class="wl-top">
+      <button class="nav-btn" id="wlf-back" aria-label="Back"></button>
+      <span style="flex:1"></span>
+      <button class="nav-btn" id="wlf-edit" aria-label="Edit"></button>
+    </div>
+    <div class="scroll" id="wlf-scroll">
+      <div class="wlf-head">
+        <button class="wlf-poster" id="wlf-poster" aria-label="Poster"></button>
+        <div><h2 id="wlf-title"></h2><div class="wlf-facts" id="wlf-facts"></div><div class="wlf-on" id="wlf-on"></div></div>
+      </div>
+      <div class="wlf-btns">
+        <button class="btn primary" id="wlf-watch"></button>
+        <button class="btn" id="wlf-trailer"></button>
+        <button class="btn" id="wlf-seen"></button>
+      </div>
+      <p class="wlf-about" id="wlf-about"></p>
+      <div class="wlf-when" id="wlf-when"></div>
+      <div class="group">
+        <button id="wlf-move"></button>
+        <button id="wlf-edit2"></button>
+        <button class="danger" id="wlf-remove"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wsheet" id="wl-ed" role="dialog" aria-labelledby="ed-title">
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <button class="txt" id="ed-cancel">Cancel</button><span class="mid" id="ed-title"></span><button class="txt go" id="ed-save">Save</button>
+      </div>
+      <div class="ed-col">
+        <input class="field" id="ed-name" type="text" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="done">
+        <div class="seg film-only" id="ed-kind" role="radiogroup" aria-label="Film or show"></div>
+        <div class="ed-pair film-only">
+          <input class="field" id="ed-year" type="text" inputmode="numeric" maxlength="4" placeholder="Year" autocomplete="off" enterkeyhint="done">
+          <input class="field" id="ed-time" type="text" maxlength="7" placeholder="Minutes" autocomplete="off" spellcheck="false" enterkeyhint="done">
+        </div>
+        <input class="field film-only" id="ed-note" type="text" maxlength="60" placeholder="Note: who it's by, where to watch it…" autocomplete="off" enterkeyhint="done">
+        <div class="ed-label film-only">On the list</div>
+        <div class="chips film-only" id="ed-lists" role="radiogroup" aria-label="On the list"></div>
+        <div class="switch-row film-only"><span>Watched it</span><button class="switch" id="ed-watched" role="switch" aria-checked="false" aria-label="Watched it"><i></i></button></div>
+        <button class="ed-delete" id="ed-delete"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wsheet" id="wl-pick" role="dialog" aria-labelledby="pick-title">
+    <div class="sheet-card">
+      <div class="sheet-head"><span id="pick-title"></span><button class="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="opts" id="pick-opts" role="menu"></div>
+    </div>
+  </div>
+
+  <div id="wl-tv" role="dialog" aria-label="Trailer">
+    <div class="tv-top"><div><b id="tv-title"></b><span id="tv-sub"></span></div><button class="nav-btn" id="tv-close" aria-label="Close the trailer"></button></div>
+    <div class="tv-frame" id="tv-frame"><div class="tv-msg" id="tv-msg"></div></div>
+    <div class="tv-name" id="tv-name"></div>
+    <div class="chips" id="tv-which" role="radiogroup" aria-label="Trailers"></div>
+  </div>
+
+  <div id="wl-pv" role="dialog" aria-label="Poster"><img id="pv-img" alt=""></div>
+
+  <div id="toast" role="status" aria-live="polite"><span></span><button hidden>Undo</button></div>
 
   <div id="pair">
     <h1>Pair with Deck TV</h1>
@@ -753,6 +1008,734 @@ screenEl.addEventListener("pointerup", screenUp);
 screenEl.addEventListener("pointercancel", screenUp);
 screenEl.addEventListener("contextmenu", e => e.preventDefault());
 
+/* ---------- the watchlist: the TV's lists of films and shows, made for the phone ----------
+   The same lists as on the TV (kept on the Deck). Each change is made to the Deck's latest copy, so a
+   change made on the TV in the meantime isn't lost; while it's open here, the TV's changes show up.
+   Its pages, sheets and menus go in the phone's history, so the back gesture closes them. */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+const IC = {
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  restart: '<path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  back: '<path d="m15 5-7 7 7 7"/>',
+  chev: '<path d="m9 6 6 6-6 6"/>',
+  more: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3.2"/>',
+  play: '<path d="M7 5v14l11-7z"/>',
+  clapper: '<path d="M3.5 10h17v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="m3.5 10-.6-3.8 16-2.5.6 3.8zM8 5.3 9.6 9M13 4.5l1.6 3.7"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  sort: '<path d="M4 7h9M4 12h6M4 17h3M17 5v14M14 16l3 3 3-3"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2"/>',
+};
+const svg = n => `<svg viewBox="0 0 24 24">${IC[n] || LINE_ICONS[n] || ""}</svg>`;
+
+/* Pages and sheets, in the phone's history: back (the gesture, or a button here) closes the top one */
+const layers = [];
+let afterPop = null;
+function pushLayer(close) {
+  layers.push(close);
+  history.pushState({ layer: layers.length }, "");
+}
+function popLayers(n = 1, then = null) {
+  n = Math.min(n, layers.length);
+  if (!n) return then && then();
+  afterPop = then;
+  history.go(-n);
+}
+addEventListener("popstate", e => {
+  const depth = (e.state && e.state.layer) || 0;
+  while (layers.length > depth) layers.pop()();
+  const then = afterPop;
+  afterPop = null;
+  if (then) then();
+});
+
+/* The lists, as the TV shows them: filter, sort and the facts lines are the TV's own */
+let wl = { lists: [] }, wlOpen = false, wlFilmId = null, wlSwiping = false, wlBusy = 0;
+try { const saved = JSON.parse(store.get("deckTvWl")); if (saved && Array.isArray(saved.lists)) wl = saved; } catch {}  // the last copy, until the Deck answers
+let wlListId = store.get("deckTvWatchList"), wlFilter = store.get("deckTvWatchFilter") || "todo";
+let wlSort = store.get("deckTvWatchSort") || "list";
+const WL_FILTERS = [["todo", "To watch"], ["done", "Watched"], ["all", "All"]];
+const WL_SORTS = [["list", "List order"], ["title", "Title A–Z"], ["newest", "Newest first"], ["oldest", "Oldest first"],
+                  ["shortest", "Shortest first"], ["longest", "Longest first"]];
+const wlSortKey = t => t.replace(/^(the|a|an) /i, "");
+const wlFilmMins = it => it.kind === "show" ? null : it.runtime;
+const WL_BY = {
+  title: (a, b) => wlSortKey(a.title).localeCompare(wlSortKey(b.title)),
+  newest: (a, b) => (b.year || 0) - (a.year || 0),
+  oldest: (a, b) => (a.year || 9999) - (b.year || 9999),
+  shortest: (a, b) => (wlFilmMins(a) || 9999) - (wlFilmMins(b) || 9999),
+  longest: (a, b) => (wlFilmMins(b) || 0) - (wlFilmMins(a) || 0),
+};
+const WL_STATUS = { "Returning Series": "Still running", "Canceled": "Cancelled", "In Production": "In production" };
+const wlTime = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`;
+function wlFacts(it) {
+  if (it.kind !== "show") return [it.year, it.runtime && wlTime(it.runtime), it.note].filter(Boolean).join(" · ");
+  return [it.years || it.year, it.seasons && `${it.seasons} season${it.seasons === 1 ? "" : "s"}`,
+          it.episodes && `${it.episodes} episodes`, it.runtime && `${wlTime(it.runtime)} episodes`,
+          it.status && (WL_STATUS[it.status] || it.status), it.note].filter(Boolean).join(" · ");
+}
+const wlShort = it => it.kind === "show"
+  ? [it.years || it.year, it.seasons && `${it.seasons} season${it.seasons === 1 ? "" : "s"}`].filter(Boolean).join(" · ")
+  : [it.year, it.runtime && wlTime(it.runtime)].filter(Boolean).join(" · ");
+function wlMinutes(v) {
+  const hm = v.match(/^\s*(\d+)\s*h\s*(?:(\d+)\s*m?)?\s*$/i);
+  const n = hm ? hm[1] * 60 + (+hm[2] || 0) : parseInt(v, 10);
+  return n >= 1 && n <= 999 ? n : null;
+}
+const wlList = () => wl.lists.find(l => l.id === wlListId) || wl.lists[0];
+const wlNewId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const wlNow = () => Math.floor(Date.now() / 1000);
+function wlFind(data, id) {
+  for (const list of data.lists) {
+    const at = list.items.findIndex(i => i.id === id);
+    if (at >= 0) return { list, at, item: list.items[at] };
+  }
+  return null;
+}
+function wlShown(list) {
+  const todo = list.items.filter(i => !i.watched);
+  const done = list.items.filter(i => i.watched).sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
+  if (WL_BY[wlSort]) {
+    todo.sort(WL_BY[wlSort]);
+    done.sort(WL_BY[wlSort]);
+  }
+  return wlFilter === "todo" ? todo : wlFilter === "done" ? done : [...todo, ...done];
+}
+
+async function wlLoad() {
+  const data = await api("/api/watchlist");
+  if (!data || !Array.isArray(data.lists)) throw new Error("no watchlist");
+  wl = data;
+  store.set("deckTvWl", JSON.stringify(data));
+}
+/* A change: shown here at once, then made again on the Deck's latest copy and saved. Each one says
+   what to do by id (never "toggle"), so it comes out the same on either copy. One at a time. */
+let wlChain = Promise.resolve();
+function wlChange(op) {
+  op(wl);
+  wlRender();
+  wlBusy++;
+  return (wlChain = wlChain.then(async () => {
+    const fresh = await api("/api/watchlist");
+    if (!fresh || !Array.isArray(fresh.lists)) throw new Error("no watchlist");
+    op(fresh);
+    const r = await api("/api/watchlist", fresh);
+    if (!r || r.error) throw new Error("not saved");
+    wl = fresh;
+    store.set("deckTvWl", JSON.stringify(fresh));
+  }).catch(() => {
+    fail();
+    toast("Couldn't save that: is the Deck on?");
+    return wlLoad().catch(() => {});
+  }).finally(() => { wlBusy--; wlRender(); }));
+}
+const opWatched = (id, watched, at) => d => { const f = wlFind(d, id); if (f) Object.assign(f.item, { watched, watchedAt: watched ? at : null }); };
+const opRemove = id => d => { const f = wlFind(d, id); if (f) f.list.items.splice(f.at, 1); };
+const opInsert = (listId, at, item) => d => {
+  const l = d.lists.find(x => x.id === listId);
+  if (l && !wlFind(d, item.id)) l.items.splice(Math.min(at, l.items.length), 0, JSON.parse(JSON.stringify(item)));
+};
+const opMove = (id, listId, at = Infinity) => d => {
+  const f = wlFind(d, id), to = d.lists.find(l => l.id === listId);
+  if (!f || !to || f.list === to) return;
+  f.list.items.splice(f.at, 1);
+  to.items.splice(Math.min(at, to.items.length), 0, f.item);
+};
+// Fields set to undefined are taken off (a show's seasons, once it's a film)
+const opSet = (id, fields) => d => {
+  const f = wlFind(d, id);
+  if (!f) return;
+  for (const [k, v] of Object.entries(fields)) v === undefined ? delete f.item[k] : f.item[k] = v;
+};
+const opNewList = (id, name) => d => { if (!d.lists.some(l => l.id === id)) d.lists.push({ id, name, items: [] }); };
+const opRenameList = (id, name) => d => { const l = d.lists.find(x => x.id === id); if (l) l.name = name; };
+const opDeleteList = id => d => { d.lists = d.lists.filter(l => l.id !== id); };
+
+/* A note at the bottom; Undo on it when there's something to undo. Kept up until replaced if `stay`. */
+let toastTimer = null;
+function toast(text, undo, stay) {
+  const t = $("toast"), b = t.querySelector("button");
+  t.querySelector("span").textContent = text;
+  b.hidden = !undo;
+  b.onclick = () => { buzz(); hideToast(); undo(); };
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  if (!stay) toastTimer = setTimeout(hideToast, undo ? 5000 : 3200);
+}
+function hideToast() { $("toast").classList.remove("show"); }
+
+/* ---------- the list page ---------- */
+function openWl() {
+  closeSheets();
+  closeFolder();
+  endSearch();
+  showTypebar(false);
+  wlOpen = true;
+  $("wl").classList.add("open");
+  pushLayer(closeWl);
+  wlRender();
+  wlLoad().then(wlRender).catch(() => { fail(); if (!wl.lists.length) toast("Couldn't reach the Deck"); });
+}
+function closeWl() {
+  wlOpen = false;
+  $("wl").classList.remove("open");
+}
+function wlChip(html, checked, run, cls = "chip") {
+  const b = document.createElement("button");
+  b.className = cls;
+  b.innerHTML = html;
+  if (checked !== null) {
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", String(checked));
+  }
+  b.onclick = () => { buzz(); run(); };
+  return b;
+}
+function wlRender() {
+  if (!wlOpen) return;
+  if (wlFilmId) wlRenderFilm();
+  if (wlSwiping) return;  // the rows wait for a finger to let go
+  const list = wlList();
+  wlListId = list && list.id;
+  const chips = $("wl-lists");
+  chips.replaceChildren(
+    ...wl.lists.map(l => wlChip(`${esc(l.name)}<small>${l.items.filter(i => !i.watched).length}</small>`, l === list, () => {
+      wlListId = l.id;
+      store.set("deckTvWatchList", l.id);
+      $("wl-scroll").scrollTop = 0;
+      wlRender();
+    })),
+    wlChip(`${svg("plus")}New list`, null, () => openEd("list", null), "chip ghost"));
+  chips.querySelector('[aria-checked="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  $("wl-filter").replaceChildren(...WL_FILTERS.map(([id, name]) => wlChip(name, id === wlFilter, () => {
+    wlFilter = id;
+    store.set("deckTvWatchFilter", id);
+    wlRender();
+  }, "")));
+  $("wl-sort").innerHTML = `${svg("sort")}${(WL_SORTS.find(([id]) => id === wlSort) || WL_SORTS[0])[1]}`;
+  $("wl-more").hidden = $("wl-add").hidden = !list;
+  const seen = list ? list.items.filter(i => i.watched).length : 0;
+  $("wl-prog").innerHTML = list && list.items.length
+    ? `<div class="track"><i style="width:${seen / list.items.length * 100}%"></i></div>${seen} of ${list.items.length} watched` : "";
+  const shown = list ? wlShown(list) : [];
+  $("wl-items").replaceChildren(...shown.map(wlRowFor));
+  const empty = $("wl-empty");
+  empty.hidden = !!shown.length;
+  empty.innerHTML = !list ? "No lists yet<small>Make one with New list</small>"
+    : !list.items.length ? `Nothing on ${esc(list.name)} yet<small>Tap + to add a film or show</small>`
+    : wlFilter === "todo" ? "All watched!<small>Add another, or look back at the ones you've seen</small>"
+    : "Nothing watched yet";
+}
+const WL_SWIPE = 84;  // how far a swipe goes before letting go does it
+function wlRowFor(it) {
+  const row = document.createElement("div");
+  row.className = "wl-row" + (it.watched ? " done" : "");
+  row.setAttribute("role", "listitem");
+  row.innerHTML = `<div class="wl-under"><span class="l">${svg(it.watched ? "restart" : "check")}${it.watched ? "To watch" : "Watched"}</span>` +
+    `<span class="r">Remove${svg("trash")}</span></div>
+    <div class="wl-front">
+      <div class="wl-thumb">${svg("film")}</div>
+      <div class="wl-txt"><b></b><span></span></div>
+      <button class="wl-tick" aria-label="${it.watched ? "Mark not watched" : "Mark watched"}"><i>${svg("check")}</i></button>
+    </div>`;
+  const front = row.querySelector(".wl-front");
+  front.setAttribute("role", "button");
+  front.setAttribute("aria-label", it.title);
+  row.querySelector(".wl-txt b").innerHTML = esc(it.title) + (it.kind === "show" ? `<span class="tag">SHOW</span>` : "");
+  row.querySelector(".wl-txt > span").textContent = [wlShort(it), it.note].filter(Boolean).join(" · ") || " ";
+  wlThumb(row.querySelector(".wl-thumb"), it);
+  row.querySelector(".wl-tick").onclick = e => { e.stopPropagation(); buzz(); wlToggleWatched(it); };
+  front.onclick = () => {
+    if (performance.now() - (row.swiped || 0) < 400) return;
+    buzz();
+    openFilm(it.id);
+  };
+  wlSwipe(row, front, it);
+  return row;
+}
+/* Swipe a row: right ticks it off (or back on), left removes it; Undo on the note either way */
+function wlSwipe(row, front, it) {
+  let s = null;
+  front.addEventListener("pointerdown", e => {
+    if (e.target.closest(".wl-tick")) return;
+    s = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0, on: false, past: false };
+  });
+  front.addEventListener("pointermove", e => {
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y;
+    if (!s.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s = null; return; }  // scrolling the list
+      if (Math.abs(dx) < 10) return;
+      s.on = true;
+      wlSwiping = true;
+      try { front.setPointerCapture(e.pointerId); } catch {}
+      row.classList.add("dragging");
+    }
+    const lim = front.offsetWidth * .75;
+    s.dx = Math.max(-lim, Math.min(lim, dx));
+    front.style.transform = `translateX(${s.dx}px)`;
+    row.classList.toggle("swipe-r", s.dx > 0);
+    row.classList.toggle("swipe-l", s.dx < 0);
+    const past = Math.abs(s.dx) > WL_SWIPE;
+    if (past !== s.past) {
+      s.past = past;
+      row.classList.toggle("past", past);
+      if (past) buzz();
+    }
+  });
+  const end = e => {
+    if (!s || e.pointerId !== s.id) return;
+    const { on, past, dx } = s;
+    s = null;
+    if (!on) return;
+    row.swiped = performance.now();
+    wlSwiping = false;
+    row.classList.remove("dragging");
+    if (past) {
+      front.style.transform = `translateX(${dx > 0 ? 100 : -100}%)`;
+      setTimeout(() => dx > 0 ? wlToggleWatched(it) : wlRemove(it), 200);
+    } else {
+      front.style.transform = "";
+      setTimeout(() => row.classList.remove("swipe-r", "swipe-l", "past"), 250);
+    }
+  };
+  front.addEventListener("pointerup", end);
+  front.addEventListener("pointercancel", end);
+}
+function wlToggleWatched(it) {
+  const now = wlFind(wl, it.id);
+  if (!now) return;
+  const was = { watched: now.item.watched, at: now.item.watchedAt }, watched = !was.watched;
+  wlChange(opWatched(it.id, watched, wlNow()));
+  toast(watched ? `Watched ${it.title}` : `${it.title} is back on the list`, () => wlChange(opWatched(it.id, was.watched, was.at)));
+}
+function wlRemove(it) {
+  const f = wlFind(wl, it.id);
+  if (!f) return;
+  const copy = JSON.parse(JSON.stringify(f.item)), listId = f.list.id, at = f.at;
+  wlChange(opRemove(it.id));
+  toast(`Removed ${it.title}`, () => wlChange(opInsert(listId, at, copy)));
+}
+function wlMove(it) {
+  const f = wlFind(wl, it.id);
+  if (!f) return;
+  const others = wl.lists.filter(l => l !== f.list), fromId = f.list.id, at = f.at;
+  if (!others.length) return toast("Make another list first: New list, at the top");
+  pick("Move to", others.map(l => ({ label: esc(l.name), icon: "arrow", run: () => {
+    wlChange(opMove(it.id, l.id));
+    toast(`Moved ${it.title} to ${l.name}`, () => wlChange(opMove(it.id, fromId, at)));
+  } })));
+}
+$("wl-sort").onclick = () => {
+  buzz();
+  pick("Sort by", WL_SORTS.map(([id, name]) => ({ label: name, checked: id === wlSort, run: () => {
+    wlSort = id;
+    store.set("deckTvWatchSort", id);
+    wlRender();
+  } })));
+};
+$("wl-more").onclick = () => {
+  const list = wlList();
+  if (!list) return;
+  buzz();
+  pick(esc(list.name), [
+    { label: "Rename list", icon: "pencil", run: () => openEd("list", list) },
+    { label: "New list", icon: "plus", run: () => openEd("list", null) },
+    { label: "Delete list", icon: "trash", danger: true, run: () => {
+      const n = list.items.length;
+      pick(`Delete ${esc(list.name)}?`, [{ label: n ? `Delete it and its ${n} film${n === 1 ? "" : "s"}` : "Delete it", icon: "trash", danger: true, run: () => {
+        wlChange(opDeleteList(list.id));
+        toast(`Deleted ${list.name}`);
+      } }]);
+    } },
+  ]);
+};
+$("wl-close").innerHTML = svg("down");
+$("wl-close").onclick = () => { buzz(); popLayers(); };
+$("wl-more").innerHTML = svg("more");
+$("wl-add").innerHTML = svg("plus");
+$("wl-add").onclick = () => { buzz(); openEd("film", null); };
+$("tab-wl").onclick = () => { buzz(); openWl(); };
+
+/* Posters and what it's about: Wikipedia's summary of "<title> <year> film" (TMDB's, for a show).
+   Kept on the phone, so the list's posters are there straight away next time. */
+const wlInfoMem = new Map();
+let wlInfoSaved = {};
+try { wlInfoSaved = JSON.parse(store.get("deckTvWlInfo")) || {}; } catch {}
+const wlInfoKey = it => `${it.kind === "show" ? "show" : "film"}|${it.title}|${it.year || ""}`;
+function wlInfo(it) {
+  const show = it.kind === "show", key = wlInfoKey(it);
+  if (wlInfoSaved[key]) return Promise.resolve(wlInfoSaved[key]);
+  if (!wlInfoMem.has(key)) wlInfoMem.set(key, (async () => {
+    if (show) {
+      const d = await wlFillShow(it);
+      if (d && (d.overview || d.poster)) return { text: d.overview, img: d.poster, big: d.posterBig };
+    }
+    const q = `${it.title.replace(/\s*\([^)]*\)/g, "")} ${it.year || ""} ${show ? "TV series" : "film"}`;
+    const found = await fetch(`https://en.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=5`).then(r => r.json());
+    const pages = found.pages || [];
+    const page = pages.find(p => (show ? /\b(television|tv|series|sitcom|miniseries|anime)\b/i : /\b(film|movie)\b/i).test(p.description || "")) || pages[0];
+    if (!page) return null;
+    const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`).then(r => r.json());
+    const orig = sum.originalimage, img = sum.thumbnail && sum.thumbnail.source;
+    const big = orig && orig.width <= 1400 ? orig.source : img && img.replace(/\/\d+px-/, "/900px-");
+    return { text: sum.extract, img, big };
+  })().then(info => {
+    if (info) {
+      wlInfoSaved[key] = info;
+      const keys = Object.keys(wlInfoSaved);
+      for (const k of keys.slice(0, Math.max(0, keys.length - 400))) delete wlInfoSaved[k];
+      store.set("deckTvWlInfo", JSON.stringify(wlInfoSaved));
+    }
+    return info;
+  }).catch(() => { wlInfoMem.delete(key); return null; }));  // offline: try again next time
+  return wlInfoMem.get(key);
+}
+const cssUrl = u => `url("${u.replace(/"/g, "%22")}")`;
+function setThumb(el, info) {
+  if (!info || !info.img) return;
+  el.style.backgroundImage = cssUrl(info.img);
+  el.innerHTML = "";
+}
+// The rows' posters, looked up as they come into view
+const thumbsSeen = new IntersectionObserver(entries => entries.forEach(e => {
+  if (!e.isIntersecting) return;
+  thumbsSeen.unobserve(e.target);
+  wlInfo(e.target._it).then(info => setThumb(e.target, info));
+}), { root: $("wl-scroll"), rootMargin: "400px 0px" });
+function wlThumb(el, it) {
+  const saved = wlInfoSaved[wlInfoKey(it)];
+  if (saved) return setThumb(el, saved);
+  el._it = it;
+  thumbsSeen.observe(el);
+}
+/* A show's seasons, episodes, years running and status, from TMDB, kept with it in the list */
+const wlFilling = new Map();
+function wlFillShow(it) {
+  if (it.kind !== "show") return Promise.resolve(null);
+  const key = `${it.title}|${it.year || ""}`;
+  if (wlFilling.has(key)) return wlFilling.get(key);
+  const job = api(`/api/details?kind=show&title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`).then(d => {
+    if (!d || d.needKey || d.error || !d.tmdb) return d;
+    const now = (wlFind(wl, it.id) || {}).item || it;
+    const f = { seasons: d.seasons, episodes: d.episodes, years: d.years, status: d.status };
+    if (!now.runtime && d.runtime) f.runtime = d.runtime;
+    if (!now.year && d.year) f.year = d.year;
+    if (Object.entries(f).some(([k, v]) => (now[k] ?? null) !== (v ?? null))) wlChange(opSet(it.id, f));
+    return d;
+  }).catch(() => null).finally(() => setTimeout(() => wlFilling.delete(key), 60000));
+  wlFilling.set(key, job);
+  return job;
+}
+
+/* ---------- a film, opened ---------- */
+let wlfShown = null;  // the film whose poster and summary are up
+function openFilm(id) {
+  wlFilmId = id;
+  wlfShown = null;
+  $("wlf-scroll").scrollTop = 0;
+  $("wl-film").classList.add("open");
+  pushLayer(closeFilm);
+  wlRenderFilm();
+  const f = wlFind(wl, id);
+  if (f) wlFillShow(f.item);
+}
+function closeFilm() {
+  wlFilmId = null;
+  $("wl-film").classList.remove("open");
+}
+const wlFilm = () => (wlFind(wl, wlFilmId) || {}).item;
+function wlRenderFilm() {
+  const f = wlFind(wl, wlFilmId);
+  if (!f) return;  // gone (removed on the TV): what's shown stays until they go back
+  const it = f.item;
+  $("wlf-title").innerHTML = esc(it.title) + (it.kind === "show" ? `<span class="tag">SHOW</span>` : "");
+  $("wlf-facts").textContent = wlFacts(it);
+  $("wlf-on").textContent = `On ${f.list.name}`;
+  const day = t => new Date(t * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  $("wlf-when").textContent = [it.added && `Added ${day(it.added)}`, it.watched && it.watchedAt && `Watched ${day(it.watchedAt)}`].filter(Boolean).join(" · ");
+  const seen = $("wlf-seen");
+  seen.innerHTML = it.watched ? `${svg("check")}Watched` : `${svg("check")}Mark watched`;
+  seen.classList.toggle("on", !!it.watched);
+  seen.setAttribute("aria-pressed", String(!!it.watched));
+  const key = wlInfoKey(it);
+  if (wlfShown === key) return;
+  wlfShown = key;
+  const poster = $("wlf-poster"), about = $("wlf-about"), bg = $("wlf-bg");
+  poster.style.backgroundImage = bg.style.backgroundImage = "";
+  poster.innerHTML = svg("film");
+  poster.disabled = true;
+  bg.classList.remove("on");
+  about.className = "wlf-about wait";
+  about.textContent = "Looking it up…";
+  wlInfo(it).then(info => {
+    if (wlfShown !== key) return;
+    about.className = "wlf-about";
+    about.textContent = info && info.text ? info.text : "No summary found for this one.";
+    if (!info || !info.img) return;
+    poster.style.backgroundImage = bg.style.backgroundImage = cssUrl(info.img);
+    poster.innerHTML = "";
+    poster.disabled = false;
+    poster.onclick = () => { buzz(); openPoster(it, info); };
+    bg.classList.add("on");
+  });
+}
+$("wlf-back").innerHTML = svg("back");
+$("wlf-back").onclick = () => { buzz(); popLayers(); };
+$("wlf-edit").innerHTML = svg("pencil");
+$("wlf-edit").onclick = () => { buzz(); const it = wlFilm(); if (it) openEd("film", it); };
+$("wlf-watch").innerHTML = `${svg("play")}Watch on the TV`;
+$("wlf-watch").onclick = () => { const it = wlFilm(); if (it) wlWatch(it); };
+$("wlf-trailer").innerHTML = `${svg("clapper")}Trailer`;
+$("wlf-trailer").onclick = () => { const it = wlFilm(); if (it) openTrailer(it); };
+$("wlf-seen").onclick = () => { buzz(); const it = wlFilm(); if (it) wlToggleWatched(it); };
+$("wlf-move").innerHTML = `${svg("arrow")}Move to another list<span class="go">${svg("chev")}</span>`;
+$("wlf-move").onclick = () => { buzz(); const it = wlFilm(); if (it) wlMove(it); };
+$("wlf-edit2").innerHTML = `${svg("pencil")}Edit details<span class="go">${svg("chev")}</span>`;
+$("wlf-edit2").onclick = $("wlf-edit").onclick;
+$("wlf-remove").innerHTML = `${svg("trash")}Remove from the list`;
+$("wlf-remove").onclick = () => {
+  buzz();
+  const it = wlFilm();
+  if (it) popLayers(1, () => wlRemove(it));
+};
+
+/* Watch on the TV: Deck TV opens Movy and searches it for the film; back to the remote, to pick one */
+async function wlWatch(it) {
+  buzz();
+  const b = $("wlf-watch");
+  b.disabled = true;
+  toast(`Opening Movy on the TV for ${it.title}…`, null, true);
+  const res = await api("/api/watchnow", { title: it.title }).catch(() => ({ error: "server" }));
+  b.disabled = false;
+  if (res.error) return toast(res.error === "server" ? "Couldn't reach the Deck" : `Couldn't search Movy: ${res.error}`);
+  if (!res.found) return toast(`Movy found nothing for ${res.searched}`);
+  popLayers(layers.length, () => toast(`Movy is showing what it found for ${res.searched}: pick one on the TV`));
+  refresh();
+}
+
+/* ---------- the trailer, on the phone (YouTube's player, from TMDB's list for the film) ---------- */
+let tvFor = null, tvVids = [];
+function tvMsg(html) {
+  $("tv-frame").querySelector("iframe")?.remove();
+  $("tv-msg").hidden = !html;
+  $("tv-msg").innerHTML = html;
+}
+async function openTrailer(it) {
+  buzz();
+  tvFor = it.id;
+  tvVids = [];
+  $("tv-title").textContent = it.title;
+  $("tv-sub").textContent = wlShort(it);
+  $("tv-name").textContent = "";
+  $("tv-which").replaceChildren();
+  tvMsg(`<span class="spin"></span>Finding the trailer…`);
+  $("wl-tv").classList.add("open");
+  pushLayer(closeTrailer);
+  const found = await api(`/api/trailers?kind=${it.kind || "film"}&title=${encodeURIComponent(it.title)}${it.year ? `&year=${it.year}` : ""}`)
+    .catch(() => ({ error: "server" }));
+  if (tvFor !== it.id) return;
+  if (found.needKey) return tvMsg(`Trailers need a free TMDB key<small>Add it once on the TV: open the Watchlist, pick a film, then Trailer</small>`);
+  if (found.error) return tvMsg(`Couldn't look up the trailer<small>${esc(found.error === "server" ? "Deck TV didn't answer" : found.error)}</small>`);
+  tvVids = found.videos || [];
+  if (!tvVids.length) return tvMsg(`No trailer found for ${esc(it.title)}`);
+  tvPlay(0);
+}
+function tvPlay(n) {
+  tvMsg("");
+  const f = document.createElement("iframe");
+  f.allow = "autoplay; encrypted-media; fullscreen; picture-in-picture";
+  f.allowFullscreen = true;
+  // It can only play: nothing in it opens YouTube or another page
+  f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+  f.src = `https://www.youtube-nocookie.com/embed/${tvVids[n].id}?autoplay=1&playsinline=1&rel=0&iv_load_policy=3&fs=1`;
+  $("tv-frame").append(f);
+  $("tv-name").textContent = tvVids[n].name;
+  $("tv-which").replaceChildren(...(tvVids.length > 1 ? tvVids.map((v, i) => wlChip(`Trailer ${i + 1}`, i === n, () => tvPlay(i))) : []));
+}
+function closeTrailer() {
+  tvFor = null;
+  tvMsg("");
+  $("wl-tv").classList.remove("open");
+}
+$("tv-close").innerHTML = svg("close");
+$("tv-close").onclick = () => { buzz(); popLayers(); };
+
+/* The poster, larger (the small one first, while the big one loads); a tap anywhere closes it */
+function openPoster(it, info) {
+  const img = $("pv-img");
+  img.onerror = () => { img.onerror = null; img.src = info.img; };
+  img.src = info.big || info.img;
+  img.alt = `Poster for ${it.title}`;
+  $("wl-pv").classList.add("open");
+  pushLayer(() => $("wl-pv").classList.remove("open"));
+}
+$("wl-pv").onclick = () => popLayers();
+
+/* ---------- a menu, rising from the bottom: Sort by, Move to, the list's options ---------- */
+function pick(title, options) {
+  $("pick-title").innerHTML = title;
+  $("pick-opts").replaceChildren(...options.map(o => {
+    const b = document.createElement("button");
+    b.setAttribute("role", o.checked === undefined ? "menuitem" : "menuitemradio");
+    if (o.checked !== undefined) b.setAttribute("aria-checked", String(o.checked));
+    if (o.danger) b.className = "danger";
+    b.innerHTML = `${o.icon ? svg(o.icon) : ""}<span>${o.label}</span>${o.checked ? `<span class="check">${svg("check")}</span>` : ""}`;
+    b.onclick = () => { buzz(); popLayers(1, o.run); };  // closed first, so what it opens goes on top
+    return b;
+  }));
+  $("wl-pick").classList.add("open");
+  pushLayer(() => $("wl-pick").classList.remove("open"));
+}
+$("wl-pick").addEventListener("click", e => { if (e.target.id === "wl-pick" || e.target.closest(".x")) popLayers(); });
+
+/* ---------- the editor: a film (its name, film or show, year, running time, note, list, watched), or a list's name ---------- */
+let ed = null;
+const edName = $("ed-name"), edYear = $("ed-year"), edTime = $("ed-time"), edNote = $("ed-note");
+function openEd(kind, thing) {
+  const list = wlList();
+  if (kind === "film" && !list) return;
+  const f = kind === "film" && thing && wlFind(wl, thing.id);
+  if (kind === "film" && thing && !f) return;
+  ed = { kind, id: thing && thing.id, listId: f ? f.list.id : list && list.id, watched: !!(f && f.item.watched),
+         show: !!(f && f.item.kind === "show"), sure: false };
+  const it = f && f.item;
+  $("wl-ed").querySelectorAll(".film-only").forEach(el => { el.hidden = kind !== "film"; });
+  $("ed-title").textContent = kind === "film" ? (it ? (ed.show ? "Edit show" : "Edit film") : `Add to ${list.name}`)
+    : thing ? "Rename list" : "New list";
+  edName.placeholder = kind === "film" ? "Film or show" : "Name the list";
+  edName.maxLength = kind === "film" ? 80 : 28;
+  edName.value = kind === "film" ? (it ? it.title : "") : thing ? thing.name : "";
+  edYear.value = it && it.year ? it.year : "";
+  edTime.value = it && it.runtime ? it.runtime : "";
+  edNote.value = it ? it.note || "" : "";
+  $("ed-delete").hidden = !thing;
+  $("ed-save").textContent = thing ? "Save" : kind === "film" ? "Add" : "Make";
+  edRender();
+  $("wl-ed").classList.add("open");
+  pushLayer(closeEd);
+  if (!thing) edName.focus({ preventScroll: true });  // something new: ready to type
+}
+function closeEd() {
+  if (document.activeElement && document.activeElement.matches("#wl-ed input")) document.activeElement.blur();
+  $("wl-ed").classList.remove("open");
+}
+function edRender() {
+  $("ed-kind").replaceChildren(...[["Film", false], ["Show", true]].map(([name, show]) => wlChip(name, ed.show === show, () => {
+    ed.show = show;
+    edRender();
+  }, "")));
+  edTime.placeholder = ed.show ? "Mins per episode" : "Minutes";
+  $("ed-lists").replaceChildren(...wl.lists.map(l => wlChip(esc(l.name), l.id === ed.listId, () => {
+    ed.listId = l.id;
+    edRender();
+  })));
+  $("ed-watched").setAttribute("aria-checked", String(ed.watched));
+  const del = $("ed-delete"), n = ed.kind === "list" && ed.id ? ((wl.lists.find(l => l.id === ed.id) || {}).items || []).length : 0;
+  del.classList.toggle("sure", ed.sure);
+  del.textContent = !ed.sure ? (ed.kind === "list" ? "Delete list" : "Remove from the list")
+    : n ? `Delete it and its ${n} film${n === 1 ? "" : "s"}?` : "Sure? Tap again";
+}
+function saveEd() {
+  const name = edName.value.trim();
+  if (!name) {
+    toast(ed.kind === "film" ? "Type the film's name first" : "Name the list first");
+    return edName.focus();
+  }
+  buzz();
+  const e = ed;
+  if (e.kind === "list") {
+    if (e.id) wlChange(opRenameList(e.id, name));
+    else {
+      const id = wlNewId("l-");
+      wlListId = id;
+      store.set("deckTvWatchList", id);
+      wlChange(opNewList(id, name));
+    }
+    return popLayers();
+  }
+  const year = parseInt(edYear.value, 10);
+  const fields = { kind: e.show ? "show" : "film", title: name, year: year >= 1870 && year <= 2100 ? year : null,
+                   runtime: wlMinutes(edTime.value), note: edNote.value.trim(), watched: e.watched };
+  const dest = wl.lists.find(l => l.id === e.listId);
+  if (!dest) return;
+  let id = e.id;
+  if (id) {
+    const f = wlFind(wl, id);
+    if (!f) return popLayers();
+    const it = f.item, was = it.kind === "show" ? `${it.title}|${it.year}` : null;
+    fields.watchedAt = e.watched ? (it.watched ? it.watchedAt : wlNow()) : null;
+    // A show's details: new ones from TMDB if it's new or renamed; none at all once it's a film
+    if (fields.kind === "show" && was !== `${name}|${fields.year}`) Object.assign(fields, { seasons: null, episodes: null, years: null, status: null });
+    if (fields.kind === "film") Object.assign(fields, { seasons: undefined, episodes: undefined, years: undefined, status: undefined });
+    const moved = f.list.id !== dest.id;
+    wlChange(d => { opSet(id, fields)(d); if (moved) opMove(id, dest.id)(d); });
+    if (moved) toast(`Moved ${name} to ${dest.name}`);
+  } else {
+    id = wlNewId("i-");
+    wlChange(opInsert(dest.id, Infinity, { id, added: wlNow(), ...fields, watchedAt: e.watched ? wlNow() : null }));
+    toast(`Added ${name} to ${dest.name}`);
+    // On this list but hidden by the filter: show them it's there
+    const f = wlFind(wl, id);
+    if (dest.id === wlListId && f && !wlShown(dest).includes(f.item)) {
+      wlFilter = "all";
+      store.set("deckTvWatchFilter", "all");
+    }
+  }
+  popLayers(1, () => {
+    wlRender();
+    const f = wlFind(wl, id);
+    if (f) wlFillShow(f.item);
+  });
+}
+function deleteEd() {
+  buzz();
+  if (!ed.sure) {
+    ed.sure = true;
+    return edRender();
+  }
+  const e = ed;
+  if (e.kind === "list") {
+    const list = wl.lists.find(l => l.id === e.id);
+    if (list) {
+      wlChange(opDeleteList(e.id));
+      toast(`Deleted ${list.name}`);
+    }
+    return popLayers();
+  }
+  const f = wlFind(wl, e.id);
+  // From the film's own page: that goes too
+  popLayers(wlFilmId === e.id ? 2 : 1, () => f && wlRemove(f.item));
+}
+$("ed-save").onclick = saveEd;
+$("ed-cancel").onclick = () => { buzz(); popLayers(); };
+$("ed-delete").onclick = deleteEd;
+$("ed-watched").onclick = () => {
+  buzz();
+  ed.watched = !ed.watched;
+  $("ed-watched").setAttribute("aria-checked", String(ed.watched));
+};
+$("wl-ed").addEventListener("click", e => { if (e.target.id === "wl-ed") popLayers(); });
+// Moving off Delete: changed their mind
+$("wl-ed").addEventListener("pointerdown", e => { if (ed && ed.sure && !e.target.closest("#ed-delete")) { ed.sure = false; edRender(); } });
+for (const el of [edName, edYear, edTime, edNote]) el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveEd(); } });
+
+/* While it's open: changes made on the TV show up here */
+setInterval(async () => {
+  if (!wlOpen || wlBusy || wlSwiping || document.hidden || $("wl-ed").classList.contains("open")) return;
+  const data = await api("/api/watchlist").catch(() => null);
+  if (!data || !Array.isArray(data.lists)) return fail();
+  if (wlBusy || wlSwiping || JSON.stringify(data) === JSON.stringify(wl)) return;  // a change from here is on its way
+  wl = data;
+  store.set("deckTvWl", JSON.stringify(data));
+  wlRender();
+}, 4000);
+
 /* ---------- a new version of this page: load it (unless something's being typed or searched) ---------- */
 let pageStamp = null;
 async function checkForUpdate() {
@@ -762,7 +1745,7 @@ async function checkForUpdate() {
     const stamp = r.headers.get("Last-Modified");
     if (!stamp) return;
     if (pageStamp === null) pageStamp = stamp;
-    else if (stamp !== pageStamp && document.activeElement !== input && !document.body.classList.contains("searching")) location.reload();
+    else if (stamp !== pageStamp && document.activeElement !== input && !document.body.classList.contains("searching") && !layers.length) location.reload();
   } catch {}
 }
 checkForUpdate();
@@ -775,6 +1758,11 @@ if (token) {
   loadApps().then(refresh).catch(fail);
   setInterval(refresh, 3000);
   document.addEventListener("visibilitychange", refresh);
+  // Opened from the home-screen icon's Watchlist shortcut
+  if (new URLSearchParams(location.search).get("open") === "watchlist") {
+    history.replaceState(null, "", location.pathname);
+    openWl();
+  }
 }
 </script>
 </body>
