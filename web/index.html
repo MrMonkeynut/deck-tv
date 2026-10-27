@@ -1349,6 +1349,7 @@ function tourBox(target) {
   return { x: (x - st.left) / k, y: (y - st.top) / k, w: (x2 - x) / k, h: (y2 - y) / k };
 }
 let tourTarget = null, tourPlace = null;
+const TOUR_CAP_H = 150;  // the caption at full size, with a two-line message
 function tourRing() {
   const ring = $("tour-ring"), b = tourBox(tourTarget), pad = 10, cap = $("tour-cap");
   ring.classList.toggle("show", !!b);
@@ -1356,7 +1357,8 @@ function tourRing() {
   // The caption goes wherever there's more room, above the ring or below it; no room either side: small
   const above = b ? b.y - pad : 720, below = b ? 720 - (b.y + b.h + pad) : 720;
   cap.classList.toggle("top", tourPlace ? tourPlace === "top" : !!b && above > below);
-  cap.classList.toggle("small", Math.max(above, below) < cap.offsetHeight + 40);
+  // Measured against the full-size caption, whichever it is now: its own height would flip it back and forth
+  cap.classList.toggle("small", Math.max(above, below) < TOUR_CAP_H + 40);
 }
 // Kept on it while it's up: things move as posters load and lists scroll
 setInterval(() => tourOn && tourRing(), 250);
