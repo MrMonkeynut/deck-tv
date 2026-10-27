@@ -190,14 +190,13 @@
   .pill:active { background: var(--panel-2); }
   .pill svg { width: 17px; height: 17px; }
 
-  /* A film: its poster, name and facts, and a tick. Swipe right to tick it off, left to remove it */
+  /* A film: its poster, name and facts. Swipe it left to remove it */
   .wl-row { position: relative; margin-bottom: 8px; border-radius: 16px; overflow: hidden; touch-action: pan-y; }
-  .wl-under { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;
+  .wl-under { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 22px;
     font-size: 14px; font-weight: 600; color: #fff; }
   .wl-under span { display: flex; align-items: center; gap: 8px; opacity: 0; transition: transform .15s; }
-  .wl-row.swipe-r .wl-under { background: #2E7D55; }
   .wl-row.swipe-l .wl-under { background: #B83A46; }
-  .wl-row.swipe-r .wl-under .l, .wl-row.swipe-l .wl-under .r { opacity: 1; }
+  .wl-row.swipe-l .wl-under span { opacity: 1; }
   .wl-row.past .wl-under span { transform: scale(1.12); }
   .wl-front { position: relative; display: flex; align-items: center; gap: 12px; padding: 9px 6px 9px 9px; border-radius: 16px;
     background: var(--panel); transition: transform .25s cubic-bezier(.2,.8,.2,1), background .12s; cursor: pointer; }
@@ -212,11 +211,12 @@
   .wl-row.done .wl-txt b { color: var(--muted); }
   .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 2px 6px; border-radius: 6px;
     background: var(--panel-2); color: var(--muted); margin-left: 6px; vertical-align: 2px; }
-  .wl-tick { flex: none; width: 46px; height: 46px; display: grid; place-items: center; }
-  .wl-tick i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #4A5366; display: grid; place-items: center; transition: background .15s, border-color .15s; }
-  .wl-tick svg { width: 15px; height: 15px; stroke-width: 3; opacity: 0; }
-  .wl-row.done .wl-tick i { background: var(--ok); border-color: var(--ok); color: var(--bg); }
-  .wl-row.done .wl-tick svg { opacity: 1; }
+  /* On the right: a chevron (it opens), or a small check once watched. Just a sign, not a button:
+     marking watched is on the film's own page, so a stray tap in the list can't do it */
+  .wl-mark { flex: none; width: 36px; display: grid; place-items: center; color: #5B6475; }
+  .wl-mark svg { width: 18px; height: 18px; }
+  .wl-row.done .wl-mark i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ok); color: var(--bg); }
+  .wl-row.done .wl-mark svg { width: 13px; height: 13px; stroke-width: 3; }
   .wl-empty { padding: 60px 20px; text-align: center; font-size: 17px; color: var(--muted); line-height: 1.5; }
   .wl-empty small { display: block; font-size: 14px; color: var(--dim); }
   .wl-empty[hidden] { display: none; }
@@ -1236,20 +1236,18 @@ function wlRowFor(it) {
   const row = document.createElement("div");
   row.className = "wl-row" + (it.watched ? " done" : "");
   row.setAttribute("role", "listitem");
-  row.innerHTML = `<div class="wl-under"><span class="l">${svg(it.watched ? "restart" : "check")}${it.watched ? "To watch" : "Watched"}</span>` +
-    `<span class="r">Remove${svg("trash")}</span></div>
+  row.innerHTML = `<div class="wl-under"><span>Remove${svg("trash")}</span></div>
     <div class="wl-front">
       <div class="wl-thumb">${svg("film")}</div>
       <div class="wl-txt"><b></b><span></span></div>
-      <button class="wl-tick" aria-label="${it.watched ? "Mark not watched" : "Mark watched"}"><i>${svg("check")}</i></button>
+      <span class="wl-mark"${it.watched ? ` title="Watched"` : ""}>${it.watched ? `<i>${svg("check")}</i>` : svg("chev")}</span>
     </div>`;
   const front = row.querySelector(".wl-front");
   front.setAttribute("role", "button");
-  front.setAttribute("aria-label", it.title);
+  front.setAttribute("aria-label", it.watched ? `${it.title}, watched` : it.title);
   row.querySelector(".wl-txt b").innerHTML = esc(it.title) + (it.kind === "show" ? `<span class="tag">SHOW</span>` : "");
   row.querySelector(".wl-txt > span").textContent = [wlShort(it), it.note].filter(Boolean).join(" · ") || " ";
   wlThumb(row.querySelector(".wl-thumb"), it);
-  row.querySelector(".wl-tick").onclick = e => { e.stopPropagation(); buzz(); wlToggleWatched(it); };
   front.onclick = () => {
     if (performance.now() - (row.swiped || 0) < 400) return;
     buzz();
@@ -1258,11 +1256,10 @@ function wlRowFor(it) {
   wlSwipe(row, front, it);
   return row;
 }
-/* Swipe a row: right ticks it off (or back on), left removes it; Undo on the note either way */
+/* Swipe a row left to remove it, with Undo on the note. Only left: marking watched is on the film's page */
 function wlSwipe(row, front, it) {
   let s = null;
   front.addEventListener("pointerdown", e => {
-    if (e.target.closest(".wl-tick")) return;
     s = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0, on: false, past: false };
   });
   front.addEventListener("pointermove", e => {
@@ -1271,15 +1268,15 @@ function wlSwipe(row, front, it) {
     if (!s.on) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s = null; return; }  // scrolling the list
       if (Math.abs(dx) < 10) return;
+      if (dx > 0) { s = null; return; }  // rightwards does nothing
       s.on = true;
       wlSwiping = true;
       try { front.setPointerCapture(e.pointerId); } catch {}
       row.classList.add("dragging");
     }
     const lim = front.offsetWidth * .75;
-    s.dx = Math.max(-lim, Math.min(lim, dx));
+    s.dx = Math.max(-lim, Math.min(0, dx));
     front.style.transform = `translateX(${s.dx}px)`;
-    row.classList.toggle("swipe-r", s.dx > 0);
     row.classList.toggle("swipe-l", s.dx < 0);
     const past = Math.abs(s.dx) > WL_SWIPE;
     if (past !== s.past) {
@@ -1290,18 +1287,18 @@ function wlSwipe(row, front, it) {
   });
   const end = e => {
     if (!s || e.pointerId !== s.id) return;
-    const { on, past, dx } = s;
+    const { on, past } = s;
     s = null;
     if (!on) return;
     row.swiped = performance.now();
     wlSwiping = false;
     row.classList.remove("dragging");
     if (past) {
-      front.style.transform = `translateX(${dx > 0 ? 100 : -100}%)`;
-      setTimeout(() => dx > 0 ? wlToggleWatched(it) : wlRemove(it), 200);
+      front.style.transform = "translateX(-100%)";
+      setTimeout(() => wlRemove(it), 200);
     } else {
       front.style.transform = "";
-      setTimeout(() => row.classList.remove("swipe-r", "swipe-l", "past"), 250);
+      setTimeout(() => row.classList.remove("swipe-l", "past"), 250);
     }
   };
   front.addEventListener("pointerup", end);
