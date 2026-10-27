@@ -52,6 +52,21 @@
   .app.front .lbl { color: var(--ink); font-weight: 700; }
   .app .dot { width: 16px; height: 3px; border-radius: 2px; background: transparent; }
   .app.open .dot { background: var(--ink); }
+  /* A group: a folder of up to four of its apps' icons, like a phone's home screen; tap to open it */
+  .app .ic.folder { background: var(--panel-2); padding: 7px; gap: 4px; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .app .ic.folder > * { width: 100%; height: 100%; min-width: 0; min-height: 0; border-radius: 22%; overflow: hidden;
+    display: grid; place-items: center; }
+  .app .ic.folder img { object-fit: cover; }
+  .app .ic.folder svg { width: 62%; height: 62%; stroke-width: 2; }
+  #folder { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: 24px;
+    background: rgba(8,10,14,.6); opacity: 0; pointer-events: none; transition: opacity .18s; }
+  #folder.open { opacity: 1; pointer-events: auto; }
+  #folder .card { width: min(100%, 340px); background: var(--panel-2); border-radius: 28px; padding: 18px 14px 20px;
+    transform: scale(.9); transition: transform .2s ease; max-height: 75vh; overflow-y: auto; }
+  #folder.open .card { transform: none; }
+  #folder h2 { margin: 0 0 16px; font-size: 18px; font-weight: 700; text-align: center; }
+  #folder-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 8px; }
+  #folder .app .ic { background: var(--panel); }
 
   #pad {
     flex: 1; min-height: 180px; border-radius: 26px; background: var(--panel); position: relative;
@@ -200,6 +215,10 @@
     </div>
   </div>
 
+  <div id="folder" role="dialog" aria-labelledby="folder-name">
+    <div class="card"><h2 id="folder-name"></h2><div id="folder-apps" role="list"></div></div>
+  </div>
+
   <div class="sheet" id="sheet-sound" role="dialog" aria-label="Sound">
     <div class="sheet-card">
       <div class="sheet-head"><span>Sound</span><button class="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
@@ -263,45 +282,93 @@ const LINE_ICONS = {
   octagon: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M9.5 15v-4.5a1.5 1.5 0 0 1 3 0V9.5a1.5 1.5 0 0 1 3 0V14a3 3 0 0 1-3 3h-1.5a1.5 1.5 0 0 1-1.5-1.5z"/>',
   spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>'
 };
-const appEls = {};
+const appEls = {};       // id -> its buttons (an app in a group has one in the group's folder too)
+const groupEls = {};     // group id -> its folder button
 let tiles = {};          // id -> tile config
 let frontApp = null;     // the app in front on the TV
+
+// Icons need the token header, so fetch them (once each) rather than using a plain src
+const iconUrls = {};
+const iconUrl = t => iconUrls[t.id] ||= fetch(`/appicon/${t.id}?v=${t.iconVersion}`, { headers: { "X-Remote-Token": token } })
+  .then(r => r.blob()).then(blob => URL.createObjectURL(blob));
+function fillIcon(el, t) {
+  el.style.background = t.color;
+  if (t.appIcon) iconUrl(t).then(src => { el.innerHTML = `<img alt="" src="${src}">`; });
+  else el.innerHTML = `<svg viewBox="0 0 24 24">${LINE_ICONS[t.icon] || ""}</svg>`;
+}
+// A group's apps, less any switched off in the TV's Settings
+const shownIn = g => g.choices.filter(c => !c.hidden && tiles[c.tile]).map(c => tiles[c.tile]);
+
+function appButton(name, onclick) {
+  const b = document.createElement("button");
+  b.className = "app";
+  b.setAttribute("aria-label", name);
+  const ic = document.createElement("div");
+  ic.className = "ic";
+  b.append(ic);
+  b.insertAdjacentHTML("beforeend", `<span class="lbl"></span><span class="dot"></span>`);
+  b.querySelector(".lbl").textContent = name;
+  b.onclick = () => { buzz(); onclick(); };
+  return b;
+}
+function launchButton(t) {
+  const b = appButton(t.name, () => { endSearch(); closeFolder(); closeSheets(); api(`/api/launch/${t.id}`, {}).then(refresh).catch(fail); });
+  fillIcon(b.querySelector(".ic"), t);
+  (appEls[t.id] ||= []).push(b);
+  return b;
+}
 
 async function loadApps() {
   const cfg = await api("/api/config");
   tiles = Object.fromEntries(cfg.tiles.map(t => [t.id, t]));
   const row = document.getElementById("apps");
-  // Every app, including those grouped under Live TV on the TV; the group tile itself isn't an app
-  // ... less any switched off in the TV's Settings
-  for (const t of cfg.tiles.filter(t => !t.off && !t.userGroup && !(t.choices || []).some(c => c.tile))) {
-    const b = document.createElement("button");
-    b.className = "app";
-    b.setAttribute("aria-label", t.name);
-    const ic = document.createElement("div");
-    ic.className = "ic";
-    ic.style.background = t.color;
-    if (t.appIcon) {
-      // Icons need the token header, so fetch them rather than using a plain src
-      fetch(`/appicon/${t.id}?v=${t.iconVersion}`, { headers: { "X-Remote-Token": token } })
-        .then(r => r.blob()).then(blob => { ic.innerHTML = `<img alt="" src="${URL.createObjectURL(blob)}">`; });
-    } else {
-      ic.innerHTML = `<svg viewBox="0 0 24 24">${LINE_ICONS[t.icon] || ""}</svg>`;
+  // The TV's home screen, in its order: apps, and groups as folders of their apps (theirs are only in the folder),
+  // less any switched off in the TV's Settings
+  for (const t of cfg.tiles.filter(t => !t.off && !t.inGroup)) {
+    if (!(t.choices || []).some(c => c.tile)) { row.append(launchButton(t)); continue; }
+    const apps = shownIn(t);
+    if (!apps.length) continue;
+    // A group with one app showing opens it straight away, as on the TV
+    if (apps.length === 1) { row.append(launchButton(apps[0])); continue; }
+    const b = appButton(t.name, () => openFolder(t));
+    b.setAttribute("aria-haspopup", "dialog");
+    const ic = b.querySelector(".ic");
+    ic.classList.add("folder");
+    for (const a of apps.slice(0, 4)) {
+      const mini = document.createElement("span");
+      fillIcon(mini, a);
+      ic.append(mini);
     }
-    b.append(ic);
-    b.insertAdjacentHTML("beforeend", `<span class="lbl">${t.name}</span><span class="dot"></span>`);
-    b.onclick = () => { buzz(); endSearch(); closeSheets(); api(`/api/launch/${t.id}`, {}).then(refresh).catch(fail); };
     row.append(b);
-    appEls[t.id] = b;
+    groupEls[t.id] = b;
   }
 }
+
+const folderEl = document.getElementById("folder");
+function openFolder(g) {
+  document.getElementById("folder-name").textContent = g.name;
+  const list = document.getElementById("folder-apps");
+  list.replaceChildren(...shownIn(g).map(launchButton));
+  for (const id in appEls) appEls[id] = appEls[id].filter(el => el.isConnected);  // forget the last folder's buttons
+  folderEl.classList.add("open");
+  refresh();
+}
+function closeFolder() { folderEl.classList.remove("open"); }
+folderEl.addEventListener("click", e => { if (e.target === folderEl) closeFolder(); });
 
 async function refresh() {
   if (document.hidden || !token || document.getElementById("pair").classList.contains("show")) return;
   try {
     const s = await api("/api/state");
-    for (const [id, el] of Object.entries(appEls)) {
+    for (const [id, els] of Object.entries(appEls)) for (const el of els) {
       el.classList.toggle("open", s.open.includes(id));
       el.classList.toggle("front", id === s.front);
+    }
+    // A folder is marked open (or in front) when one of its apps is
+    for (const [id, el] of Object.entries(groupEls)) {
+      const apps = shownIn(tiles[id]).map(a => a.id);
+      el.classList.toggle("open", apps.some(a => s.open.includes(a)));
+      el.classList.toggle("front", apps.includes(s.front));
     }
     if (s.front !== frontApp) { frontApp = s.front; updateSearchBox(); }
     showFront(s);
