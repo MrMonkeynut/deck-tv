@@ -1319,10 +1319,11 @@ document.getElementById("ft-tour").onclick = () => startTour();
 
 /* ---------- the tour: Deck TV showing itself off, one feature at a time (for filming it) ----------
    From Features. It works the home screen by itself: opens each panel in turn, rings what it's
-   talking about and dims the rest, with a caption saying what it's for. It only looks: nothing is
-   launched, saved, switched off or ticked, and what it opened is closed again at the end.
+   talking about and dims the rest, with a caption saying what it's for. Nothing is saved, switched
+   off or ticked, and what it opened is closed again at the end. With nothing playing, it opens
+   Spotify and plays it for a moment, to show now playing; that's the one app it launches.
    Esc / B stops it; ▶, Enter or A moves on to the next caption without waiting. */
-let tourOn = false, tourNext = null, tourKept = null;
+let tourOn = false, tourNext = null, tourKept = null, tourStarted = false;
 const TOUR_STOP = new Error("tour stopped");
 const $ = id => document.getElementById(id);
 function tourWait(ms) {
@@ -1381,10 +1382,10 @@ async function tourSay(target, title, text, { extra = 0, place = null } = {}) {
 const tourTile = test => rows[0].find(b => { const t = tileById(b.dataset.id); return t && test(t); });
 const TOUR = [
   ["Deck TV", async () => {
-    await tourSay(null, "This is Deck TV", "A TV-style home screen for the Steam Deck: big cards for your apps, a dock for switching between them, and a remote on your phone. Here's everything it does.");
+    await tourSay(null, "This is Deck TV", "A TV home screen for the Steam Deck. Here's what it does.");
   }],
   ["Home screen", async () => {
-    await tourSay("#tiles", "Cards", "One press opens an app full screen. Press it again later and you go straight back to it: a lit card means the app is already open.", { extra: 800 });
+    await tourSay("#tiles", "Cards", "Choose which app you want to open.", { extra: 800 });
     for (let c = 1; c < Math.min(rows[0].length, 6); c++) { setFocus(0, c); await tourWait(450); }
     setFocus(0, 0);
   }],
@@ -1393,90 +1394,53 @@ const TOUR = [
     if (!b) return;
     const t = tileById(b.dataset.id);
     setFocus(0, rows[0].indexOf(b));
-    await tourSay(b, "Groups", `Some cards are groups, like ${t.name}: they ask which app you want first. Make your own groups, with their own look, in Settings.`);
+    await tourSay(b, "Groups", "Group similar apps together.");
     b.click();
     await tourWait(600);
-    await tourSay("#power .power-card", `${t.name}`, "Pick one and it opens. Apps in a group don't need a card of their own on the home screen.");
+    await tourSay("#power .power-card", `${t.name}`, "Pick one to open it.");
     closePower();
   }],
-  ["Home screen", async () => {
-    const b = rows[0][0], t = tileById(b.dataset.id), r = b.getBoundingClientRect();
-    setFocus(0, 0);
-    showCtx(t, { clientX: r.left + r.width * .6, clientY: r.top + r.height * .5 });
-    await tourWait(300);
-    await tourSay([b, ctx], "Right-click a card", "Shows this app's player in now playing, when you've more than one thing on the go. Cards also show unread WhatsApp messages and an equaliser when they're playing.");
-    hideCtx();
-  }],
-  ["Now playing & sound", async () => {
-    const on = $("np").classList.contains("show");
-    await tourSay("#np", "Now playing", on
-      ? "Whatever's playing, in any app, with play/pause and skip right here. Start something somewhere else and the first one pauses by itself."
-      : "Whatever's playing, in any app, shows up here with play/pause and skip. Start something somewhere else and the first one pauses by itself.");
-  }],
-  ["Home screen", async () => {
-    await tourSay("#weather", "Weather", "The weather in your town, kept up to date. Press it for the five-day forecast.", { extra: -1500 });
-    await openForecast();
-    await tourWait(300);
-    await tourSay("#forecast .fc-card", "Five-day forecast", "Highs and lows, rain and wind for the week ahead. Any button closes it.");
-    closeForecast();
-  }],
-  ["Home screen", async () => {
-    await tourSay("#feat-btn", "Features", "Everything Deck TV can do, in one place, with this tour in it. Up from the cards gets you here on the controller.");
-  }],
-  ["Settings", async () => {
-    setFocus(1, 2);
-    await tourSay(rows[1][2], "Settings", "The gear: choose which cards show, gather apps into groups and put the cards in your own order.", { extra: -1500 });
-    openSettings();
-    await tourWait(400);
-    await tourSay("#settings .set-card", "Cards", "Switch off the cards you don't use. A group opens up to show its apps, each with its own switch.");
-    openGroupEditor(null);
-    await tourWait(400);
-    await tourSay("#group-ed .set-card", "New group", "Name it, pick its icon and colour, and tick the apps that go in it. It becomes one card on the home screen.");
-    closeGroupEditor();
-    await tourWait(300);
-    await tourSay(".set-saver", "Screensaver", "A clock drifts slowly round the screen when Deck TV's been left alone, after 2 to 30 minutes, or never. It never comes on over an app.");
-    closeSettings();
-  }],
-  ["Settings", async () => {
-    startArrange();
-    await tourWait(400);
-    await tourSay(["#tiles", "#arrange"], "Rearrange", "Drag the cards into place with the mouse, or on the controller press A to pick one up and move it with the D-pad.", { extra: -1500 });
-    arrangeInput("ok");
-    for (const cmd of ["right", "right", "left", "left"]) { await tourWait(650); arrangeInput(cmd); }
-    await tourWait(500);
-    arrangeInput("ok");
-    await tourSay(["#tiles", "#arrange"], "Confirm or Cancel", "Confirm keeps the new order; Cancel puts everything back as it was.", { extra: -1500 });
-    cancelArrange();
-  }],
-  ["System", async () => {
-    setFocus(1, 3);
-    await tourSay(rows[1][3], "System at a glance", "Wi-Fi, battery and free space, always in the bottom row. Press it for the details.", { extra: -1500 });
-    await openSystem(0);
-    await tourWait(300);
-    await tourSay("#sys-storage", "Storage", "Space on the Deck, and on any microSD card or USB drive. It turns amber when it's getting full and red when it's almost out.");
-    await tourSay("#sys-grid", "Wi-Fi, battery and temperature", "The network and its signal, the battery, how warm the Deck is and how much memory is in use. All kept live while it's open.");
-  }],
-  ["Now playing & sound", async () => {
-    if (!$("sys-sound")) return;
-    await tourSay("#sys-sound", "Sound", "The volume, and where sound plays.", { extra: -1500 });
-    $("sys-sound").click();
-    await tourWait(900);
-    soundFromSystem = false;
-    await tourSay("#sound .sound-card", "Play sound on", "The TV, the Deck's speakers, headphones or a Bluetooth speaker. Add speaker pairs a new one from the sofa: put it in pairing mode and pick it from the list.");
-    closeSound();
+  ["Now playing", async () => {
+    // Nothing playing: start Spotify, play where it left off, and come back home to show it here
+    const spotify = rows[0].find(el => el.dataset.id === "spotify");
+    if (!np && spotify) {
+      setFocus(0, rows[0].indexOf(spotify));
+      await tourWait(600);
+      tourStarted = true;
+      await api("/api/launch/spotify", "POST").catch(() => {});
+      await tourWait(6000);
+      // Point the card at Spotify's player (the server takes it up on its next look, about a second), then play
+      await api("/api/media/focus/spotify", "POST").catch(() => {});
+      await tourWait(1500);
+      await api("/api/media/play", "POST").catch(() => {});
+      await tourWait(2500);
+      await api("/api/home", "POST").catch(() => {});
+      await tourWait(1500);
+      await refreshOpen();
+    }
+    clearFocus();
+    // While the caption's up: play (if it wasn't), skip on, and pause again if it was the tour that played it
+    const show = tourSay("#np", "Now playing", "What's playing in any app, with its controls.", { extra: np ? 5000 : 0 });
+    if (np) {
+      const pauseAfter = tourStarted || !np.playing;  // Spotify, just started by the tour, counts as the tour's
+      if (!np.playing) { tourStarted = true; mediaAction("play"); }
+      setTimeout(() => tourOn && mediaAction("next"), 2500);
+      if (pauseAfter) setTimeout(() => tourOn && mediaAction("play"), 6500);
+    }
+    await show;
   }],
   ["Watchlist", async () => {
     tourKept = { list: wlListId, filter: wlFilter, sort: wlSort };
     setFocus(1, 4);
-    await tourSay(rows[1][4], "Watchlist", "Lists of films and shows to watch, ticked off as you go.", { extra: -1500 });
+    await tourSay(rows[1][4], "Watchlist", "Personal watchlist of films and shows you want to watch. Can launch the movie or show directly from here.", { extra: -1000 });
     await openWatch();
     await tourWait(400);
     const tabs = [...document.querySelectorAll("#wl-tabs .wl-tab:not(.ghost)")];
-    await tourSay("#wl-tabs", "Lists", "Liam and Laura, Top 100 from the scratch poster, Kids, or make your own with New list. Each shows how many are left to watch.", { extra: -1200 });
+    await tourSay("#wl-tabs", "Lists", "Several lists, or make your own.", { extra: -1200 });
     for (const t of tabs.slice(1)) { t.click(); await tourWait(1100); }
     tabs[0]?.click();
     await tourWait(400);
-    await tourSay(["#wl-filter", "#wl-sort"], "To watch, Watched, All", "Pick what shows, and sort it by list order, title, year or running time.", { extra: -1500 });
+    await tourSay(["#wl-filter", "#wl-sort"], "Custom filters", "Filter and sort the list by name, length or year.", { extra: -1500 });
     openWlSort();
     await tourWait(1800);
     closeWlSort();
@@ -1486,62 +1450,93 @@ const TOUR = [
     if (!row) return;
     row.click();
     await tourWait(2500);  // the poster and summary, from Wikipedia
-    await tourSay("#wl-items .wl-item.open", "A film, opened up", "Its poster, what it's about, and its running time. Shows say how many seasons, the years they ran and whether they're still going.");
-    await tourSay("#wl-items .wl-item.open .wl-acts", "Watch it", "Watch on Movy opens Movy and searches it for you. Edit, Move to another list, Mark watched or Remove: each with Undo, in case.");
+    await tourSay("#wl-items .wl-item.open", "Movie details", "Details on the movie or show.");
+    await tourSay("#wl-items .wl-item.open .wl-acts .primary", "Open in Movy", "Open the movie or show directly from here.");
     const poster = document.querySelector("#wl-items .wl-item.open .wl-poster.has-img");
     if (poster) {
+      await tourSay(poster, "Poster", "Click to expand.", { extra: -2000 });
       poster.click();
-      await tourWait(500);
-      await tourSay(".wl-pv-box", "The poster", "Press the poster to see it big.", { extra: -1500 });
+      await tourWait(2500);
       closePoster();
     }
   }],
   ["Watchlist", async () => {
     const btn = [...document.querySelectorAll("#wl-items .wl-item.open .wl-acts .set-wide")].find(b => b.textContent.includes("Trailer"));
     if (!btn) return;
-    await tourSay(btn, "Trailer", "Plays right here, inside Deck TV.", { extra: -2000 });
     btn.click();
     await tourWait(1500);
-    await tourSay(".wl-tr-box", "Trailers, right here", "Scrub, volume, captions and fullscreen, and a button for each trailer. Nothing in the player can take you off to YouTube.", { extra: 6000, place: "top" });
+    await tourSay(".wl-tr-box", "Trailer", "Plays right here.", { extra: 8000, place: "top" });
     closeTrailer();
     document.querySelector("#wl-items .wl-item.open .wl-row")?.click();  // closed up again
     await tourWait(300);
     closeWatch();
   }],
+  ["Home screen", async () => {
+    setFocus(0, 0);
+    await tourSay("#weather", "Weather", "Local weather forecast.", { extra: -1500 });
+    await openForecast();
+    await tourWait(300);
+    await tourSay("#forecast .fc-card", "Five-day forecast", "The week ahead.");
+    closeForecast();
+  }],
+  ["Settings", async () => {
+    setFocus(1, 2);
+    await tourSay(rows[1][2], "Settings", "Manage your apps, groups and more.", { extra: -1500 });
+    openSettings();
+    await tourWait(400);
+    await tourSay("#settings .set-card", "Cards", "Select which apps are available on the home screen.");
+    openGroupEditor(null);
+    await tourWait(400);
+    await tourSay("#group-ed .set-card", "New group", "Name it, pick a style, add apps.");
+    closeGroupEditor();
+    await tourWait(300);
+    closeSettings();
+  }],
+  ["Settings", async () => {
+    startArrange();
+    await tourWait(400);
+    await tourSay(["#tiles", "#arrange"], "Rearrange", "Drag cards into your own positions.", { extra: -1500 });
+    arrangeInput("ok");
+    for (const cmd of ["right", "right", "left", "left"]) { await tourWait(650); arrangeInput(cmd); }
+    await tourWait(500);
+    arrangeInput("ok");
+    await tourWait(800);
+    cancelArrange();
+  }],
+  ["System", async () => {
+    setFocus(1, 3);
+    await openSystem(0);
+    await tourWait(400);
+    await tourSay("#system .sys-card", "System information", "Wi-Fi, battery, storage and more.");
+    if (!$("sys-sound")) return;
+    $("sys-sound").click();
+    await tourWait(900);
+    soundFromSystem = false;
+    await tourSay("#sound .sound-card", "Audio source", "Choose the audio output device.");
+    closeSound();
+  }],
   ["Phone remote", async () => {
     if ($("pair-card").hidden) return;
-    await tourSay("#pair-card", "Phone remote", "Scan this with your phone, on the same Wi-Fi. No app to install: it's a touchpad, keyboard, media keys and app switcher.");
-    await tourSay("#pair-card", "See the TV on your phone", "The screen button shows the TV live on the phone: tap the picture to click there. Type searches straight into Movy, YouTube or Spotify.");
+    await tourSay("#pair-card", "Phone remote", "Scan it for complete control from your phone.");
+    await tourSay("#pair-card", "See the TV on your phone", "Watch the TV live and tap to click.");
   }],
   ["Switching apps", async () => {
-    await tourSay({ x: 0, y: 704, w: 1280, h: 16 }, "The dock", "Nudge the mouse to the very bottom of the screen, in any app, and the dock pops up: Home, your open apps, and the speaker for what's playing and the volume. Right-click an app there to close it.");
-    await tourSay(null, "Alt+Tab and Super+H", "Alt+Tab flips between Deck TV and your open apps. Super+H, or the TV icon in the dock, brings you home from anywhere.");
+    await tourSay({ x: 0, y: 704, w: 1280, h: 16 }, "The dock", "Mouse to the bottom edge: home, apps and sound.");
+    await tourSay(null, "Alt+Tab and Super+H", "Switch apps, or jump home from anywhere.");
   }],
   ["Switching apps", async () => {
     setFocus(1, 1);
-    await tourSay(rows[1][1], "Desktop", "Tucks everything away to show the normal desktop. Alt+F4 on the home screen closes Deck TV completely.");
+    await tourSay(rows[1][1], "Desktop", "Show the desktop.", { extra: -1500 });
     setFocus(1, 0);
-    await tourSay(rows[1][0], "Power", "Sleep, restart or power off, with a countdown first so you can change your mind, or let go of the mouse.", { extra: -1500 });
+    await tourSay(rows[1][0], "Power", "Sleep, restart or power off.", { extra: -1500 });
     rows[1][0].click();
     await tourWait(400);
-    await tourSay("#power .power-card", "Power", "Nothing happens until you pick one.", { extra: -2000 });
+    await tourSay("#power .power-card", "Power", "With a countdown to cancel.", { extra: -1500 });
     closePower();
   }],
-  ["Controller", async () => {
-    setFocus(0, 0);
-    await tourSay(null, "All from the sofa", "Everything works on the Deck's controls: D-pad or stick to move, A to choose, B to go back, and Y undoes the last watchlist change.");
-  }],
-  ["Screensaver", async () => {
-    await tourSay(null, "And when you walk away…", "Leave it a while and the screensaver comes on.", { extra: -2000 });
-    startSaver();
-    tourTarget = null;
-    tourRing();
-    await tourWait(5000);
-    wakeSaver();
-    await tourWait(400);
-  }],
   ["Deck TV", async () => {
-    await tourSay(null, "That's Deck TV", "Everything here is also listed under Features, top right.");
+    setFocus(0, 0);
+    await tourSay(null, "That's Deck TV", "All of it is under Features, top right.");
   }],
 ];
 async function startTour() {
@@ -1587,6 +1582,10 @@ function tourTidy() {
   if (powerOpen) closePower();
   if (forecastOpen) closeForecast();
   if (saverOn) wakeSaver();
+  if (tourStarted) {  // stopped while what it started was still playing: pause it
+    tourStarted = false;
+    api("/api/state").then(st => st.media && st.media.playing && mediaAction("play")).catch(() => {});
+  }
 }
 // Keys go to the tour while it runs (before anything else sees them, the screensaver included)
 addEventListener("keydown", e => {
