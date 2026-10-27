@@ -61,6 +61,38 @@
   .ft-group ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .ft-group li { font-size: 14px; line-height: 1.32; color: var(--muted); }
   .ft-group li b { font-size: inherit; color: var(--ink); font-weight: 600; margin-right: 6px; }
+  .ft-tour { all: unset; margin-left: auto; align-self: center; display: flex; align-items: center; gap: 8px; padding: 9px 18px 9px 14px;
+    border-radius: 20px; background: #F2F4F8; color: #0E1116; font-size: 17px; font-weight: 600; cursor: pointer; }
+  .ft-tour svg { width: 18px; height: 18px; }
+  .ft-tour:hover { background: #FFFFFF; }
+  .ft-tour small { font-size: 13px; color: #5B6475; margin-left: 2px; }
+  .ft-tour + .ft-close { margin-left: 0; }
+
+  /* The tour: a ring round what's being shown, everything else dimmed, and a caption saying what it is.
+     Its own layer, scaled like the stage, over everything (the screensaver too); it soaks up stray clicks. */
+  #tour { position: fixed; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; z-index: 60; display: none; }
+  #tour.on { display: block; }
+  #tour-ring { position: absolute; border-radius: 22px; border: 3px solid #FFFFFF; opacity: 0;
+    box-shadow: 0 0 0 9999px rgba(8,10,14,.55), 0 0 30px rgba(255,255,255,.35);
+    transition: left .5s ease, top .5s ease, width .5s ease, height .5s ease, opacity .35s; }
+  #tour-ring.show { opacity: 1; }
+  #tour-cap { position: absolute; left: 50%; bottom: 30px; width: 780px; padding: 18px 26px 16px; border-radius: 24px;
+    background: #F2F4F8; color: #0E1116; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    transform: translateX(-50%) translateY(14px); opacity: 0; transition: opacity .3s, transform .3s; }
+  #tour-cap.top { bottom: auto; top: 30px; }
+  /* Over a panel that fills the screen: smaller, to cover as little of it as it can */
+  #tour-cap.small { width: 640px; padding: 12px 20px 11px; bottom: 14px; }
+  #tour-cap.small.top { top: 14px; bottom: auto; }
+  #tour-cap.small #tc-title { font-size: 21px; margin-top: 3px; }
+  #tour-cap.small #tc-text { font-size: 16px; }
+  #tour-cap.small .tc-bar { margin-top: 9px; }
+  #tour-cap.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .tc-step { display: flex; gap: 10px; font-size: 14px; font-weight: 600; color: #5B6475; text-transform: uppercase; letter-spacing: .06em; }
+  .tc-step span:last-child { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  #tc-title { display: block; margin-top: 6px; font-size: 27px; }
+  #tc-text { margin: 4px 0 0; font-size: 19px; line-height: 1.35; color: #2A3140; }
+  .tc-bar { height: 4px; margin-top: 14px; border-radius: 2px; background: #D5DAE3; overflow: hidden; }
+  .tc-bar i { display: block; height: 100%; width: 0; background: #0E1116; }
 
   /* Five-day forecast, from clicking the weather */
   #forecast {
@@ -900,7 +932,7 @@
 
   <div id="features" role="dialog" aria-label="Deck TV features">
     <div class="power-card ft-card">
-      <div class="ft-head"><b>Deck TV</b><span>What it can do</span><button class="ft-close" id="ft-close" aria-label="Close"></button></div>
+      <div class="ft-head"><b>Deck TV</b><span>What it can do</span><button class="ft-tour" id="ft-tour"></button><button class="ft-close" id="ft-close" aria-label="Close"></button></div>
       <div class="ft-cols" id="ft-cols">
         <div class="ft-col">
         <section class="ft-group"><h3><i data-icon="grid"></i>Home screen</h3><ul><li><b>Cards</b><span>one press opens an app full screen; press again to switch back to it</span></li><li><b>Groups</b><span>folders of apps like Live TV and Streaming, each with its own look</span></li><li><b>Your layout</b><span>hide, group and rearrange cards, by mouse or controller</span></li><li><b>Badges</b><span>unread WhatsApp messages and what's playing, right on the card</span></li><li><b>Weather</b><span>the town's weather; press it for the five-day forecast</span></li></ul></section>
@@ -947,6 +979,16 @@
     <div id="saver-date"></div>
     <div id="saver-weather"></div>
     <div id="saver-np"></div>
+  </div>
+</div>
+
+<div id="tour" aria-live="polite">
+  <div id="tour-ring"></div>
+  <div id="tour-cap" role="status">
+    <div class="tc-step"><span id="tc-section"></span><span id="tc-n"></span><span>Esc or B stops · ▶ skips</span></div>
+    <b id="tc-title"></b>
+    <p id="tc-text"></p>
+    <div class="tc-bar"><i id="tc-bar"></i></div>
   </div>
 </div>
 
@@ -1019,7 +1061,7 @@ let pos = { r: 0, c: 0 };
 /* ---------- layout scaling ---------- */
 function fit() {
   const s = Math.min(innerWidth / 1280, innerHeight / 720);
-  document.getElementById("stage").style.transform = `translate(-50%, -50%) scale(${s})`;
+  for (const id of ["stage", "tour"]) document.getElementById(id).style.transform = `translate(-50%, -50%) scale(${s})`;
 }
 addEventListener("resize", fit); fit();
 
@@ -1263,7 +1305,8 @@ function closeFeatures() {
 function featInput(cmd) {
   const cols = document.getElementById("ft-cols");
   if (cmd === "down" || cmd === "up") cols.scrollBy({ top: cmd === "down" ? 160 : -160, behavior: "smooth" });
-  if (cmd === "back" || cmd === "ok") closeFeatures();
+  if (cmd === "ok") startTour();  // A: the button in the corner, Take the tour
+  if (cmd === "back") closeFeatures();
 }
 document.getElementById("feat-btn").innerHTML = `${svg("spark", "currentColor", 1.8)}Features`;
 document.getElementById("feat-btn").onclick = openFeatures;
@@ -1271,6 +1314,287 @@ document.getElementById("ft-close").innerHTML = svg("close", "currentColor", 2.2
 document.getElementById("ft-close").onclick = closeFeatures;
 document.getElementById("features").onclick = e => { if (e.target.id === "features") closeFeatures(); };  // clicking off it closes it
 document.querySelectorAll("#features .ft-group h3 i").forEach(i => { i.innerHTML = svg(i.dataset.icon, "currentColor", 1.8); });
+document.getElementById("ft-tour").innerHTML = `${svg("play", "currentColor", 1.9)}Take the tour<small>A</small>`;
+document.getElementById("ft-tour").onclick = () => startTour();
+
+/* ---------- the tour: Deck TV showing itself off, one feature at a time (for filming it) ----------
+   From Features. It works the home screen by itself: opens each panel in turn, rings what it's
+   talking about and dims the rest, with a caption saying what it's for. It only looks: nothing is
+   launched, saved, switched off or ticked, and what it opened is closed again at the end.
+   Esc / B stops it; ▶, Enter or A moves on to the next caption without waiting. */
+let tourOn = false, tourNext = null, tourKept = null;
+const TOUR_STOP = new Error("tour stopped");
+const $ = id => document.getElementById(id);
+function tourWait(ms) {
+  return new Promise((ok, no) => {
+    if (!tourOn) return no(TOUR_STOP);
+    idleSince = Date.now();  // the screensaver shouldn't come on of its own mid-tour
+    const h = setTimeout(done, ms);
+    function done() { clearTimeout(h); tourNext = null; tourOn ? ok() : no(TOUR_STOP); }
+    tourNext = done;
+  });
+}
+/* Where a thing is, in the stage's own (unscaled) coordinates; several things: the box round them all */
+function tourBox(target) {
+  if (!target) return null;
+  if (target.w) return target;
+  const els = (Array.isArray(target) ? target : [target]).map(t => typeof t === "string" ? document.querySelector(t) : t)
+    .filter(el => el && el.getClientRects().length);
+  if (!els.length) return null;
+  const st = $("tour").getBoundingClientRect(), k = st.width / 1280;
+  const rs = els.map(el => el.getBoundingClientRect());
+  const x = Math.min(...rs.map(r => r.left)), y = Math.min(...rs.map(r => r.top));
+  const x2 = Math.max(...rs.map(r => r.right)), y2 = Math.max(...rs.map(r => r.bottom));
+  return { x: (x - st.left) / k, y: (y - st.top) / k, w: (x2 - x) / k, h: (y2 - y) / k };
+}
+let tourTarget = null, tourPlace = null;
+function tourRing() {
+  const ring = $("tour-ring"), b = tourBox(tourTarget), pad = 10, cap = $("tour-cap");
+  ring.classList.toggle("show", !!b);
+  if (b) Object.assign(ring.style, { left: b.x - pad + "px", top: b.y - pad + "px", width: b.w + pad * 2 + "px", height: b.h + pad * 2 + "px" });
+  // The caption goes wherever there's more room, above the ring or below it; no room either side: small
+  const above = b ? b.y - pad : 720, below = b ? 720 - (b.y + b.h + pad) : 720;
+  cap.classList.toggle("top", tourPlace ? tourPlace === "top" : !!b && above > below);
+  cap.classList.toggle("small", Math.max(above, below) < cap.offsetHeight + 40);
+}
+// Kept on it while it's up: things move as posters load and lists scroll
+setInterval(() => tourOn && tourRing(), 250);
+/* One caption: ring the thing, say what it is, and leave it up long enough to read (or until ▶) */
+let tourAt = 0;
+async function tourSay(target, title, text, { extra = 0, place = null } = {}) {
+  if (!tourOn) throw TOUR_STOP;
+  tourTarget = target;
+  tourPlace = place;
+  tourRing();
+  $("tc-section").textContent = TOUR[tourAt][0];
+  $("tc-n").textContent = `${tourAt + 1} of ${TOUR.length}`;
+  $("tc-title").textContent = title;
+  $("tc-text").textContent = text;
+  $("tour-cap").classList.add("show");
+  const ms = Math.max(4000, 1600 + text.length * 48) + extra;
+  const bar = $("tc-bar");
+  bar.style.transition = "none"; bar.style.width = "0";
+  void bar.offsetWidth;
+  bar.style.transition = `width ${ms}ms linear`; bar.style.width = "100%";
+  await tourWait(ms);
+}
+const tourTile = test => rows[0].find(b => { const t = tileById(b.dataset.id); return t && test(t); });
+const TOUR = [
+  ["Deck TV", async () => {
+    await tourSay(null, "This is Deck TV", "A TV-style home screen for the Steam Deck: big cards for your apps, a dock for switching between them, and a remote on your phone. Here's everything it does.");
+  }],
+  ["Home screen", async () => {
+    await tourSay("#tiles", "Cards", "One press opens an app full screen. Press it again later and you go straight back to it: a lit card means the app is already open.", { extra: 800 });
+    for (let c = 1; c < Math.min(rows[0].length, 6); c++) { setFocus(0, c); await tourWait(450); }
+    setFocus(0, 0);
+  }],
+  ["Home screen", async () => {
+    const b = tourTile(t => t.userGroup ? shownIn(t).length > 1 : !!t.choices);
+    if (!b) return;
+    const t = tileById(b.dataset.id);
+    setFocus(0, rows[0].indexOf(b));
+    await tourSay(b, "Groups", `Some cards are groups, like ${t.name}: they ask which app you want first. Make your own groups, with their own look, in Settings.`);
+    b.click();
+    await tourWait(600);
+    await tourSay("#power .power-card", `${t.name}`, "Pick one and it opens. Apps in a group don't need a card of their own on the home screen.");
+    closePower();
+  }],
+  ["Home screen", async () => {
+    const b = rows[0][0], t = tileById(b.dataset.id), r = b.getBoundingClientRect();
+    setFocus(0, 0);
+    showCtx(t, { clientX: r.left + r.width * .6, clientY: r.top + r.height * .5 });
+    await tourWait(300);
+    await tourSay([b, ctx], "Right-click a card", "Shows this app's player in now playing, when you've more than one thing on the go. Cards also show unread WhatsApp messages and an equaliser when they're playing.");
+    hideCtx();
+  }],
+  ["Now playing & sound", async () => {
+    const on = $("np").classList.contains("show");
+    await tourSay("#np", "Now playing", on
+      ? "Whatever's playing, in any app, with play/pause and skip right here. Start something somewhere else and the first one pauses by itself."
+      : "Whatever's playing, in any app, shows up here with play/pause and skip. Start something somewhere else and the first one pauses by itself.");
+  }],
+  ["Home screen", async () => {
+    await tourSay("#weather", "Weather", "The weather in your town, kept up to date. Press it for the five-day forecast.", { extra: -1500 });
+    await openForecast();
+    await tourWait(300);
+    await tourSay("#forecast .fc-card", "Five-day forecast", "Highs and lows, rain and wind for the week ahead. Any button closes it.");
+    closeForecast();
+  }],
+  ["Home screen", async () => {
+    await tourSay("#feat-btn", "Features", "Everything Deck TV can do, in one place, with this tour in it. Up from the cards gets you here on the controller.");
+  }],
+  ["Settings", async () => {
+    setFocus(1, 2);
+    await tourSay(rows[1][2], "Settings", "The gear: choose which cards show, gather apps into groups and put the cards in your own order.", { extra: -1500 });
+    openSettings();
+    await tourWait(400);
+    await tourSay("#settings .set-card", "Cards", "Switch off the cards you don't use. A group opens up to show its apps, each with its own switch.");
+    openGroupEditor(null);
+    await tourWait(400);
+    await tourSay("#group-ed .set-card", "New group", "Name it, pick its icon and colour, and tick the apps that go in it. It becomes one card on the home screen.");
+    closeGroupEditor();
+    await tourWait(300);
+    await tourSay(".set-saver", "Screensaver", "A clock drifts slowly round the screen when Deck TV's been left alone, after 2 to 30 minutes, or never. It never comes on over an app.");
+    closeSettings();
+  }],
+  ["Settings", async () => {
+    startArrange();
+    await tourWait(400);
+    await tourSay(["#tiles", "#arrange"], "Rearrange", "Drag the cards into place with the mouse, or on the controller press A to pick one up and move it with the D-pad.", { extra: -1500 });
+    arrangeInput("ok");
+    for (const cmd of ["right", "right", "left", "left"]) { await tourWait(650); arrangeInput(cmd); }
+    await tourWait(500);
+    arrangeInput("ok");
+    await tourSay(["#tiles", "#arrange"], "Confirm or Cancel", "Confirm keeps the new order; Cancel puts everything back as it was.", { extra: -1500 });
+    cancelArrange();
+  }],
+  ["System", async () => {
+    setFocus(1, 3);
+    await tourSay(rows[1][3], "System at a glance", "Wi-Fi, battery and free space, always in the bottom row. Press it for the details.", { extra: -1500 });
+    await openSystem(0);
+    await tourWait(300);
+    await tourSay("#sys-storage", "Storage", "Space on the Deck, and on any microSD card or USB drive. It turns amber when it's getting full and red when it's almost out.");
+    await tourSay("#sys-grid", "Wi-Fi, battery and temperature", "The network and its signal, the battery, how warm the Deck is and how much memory is in use. All kept live while it's open.");
+  }],
+  ["Now playing & sound", async () => {
+    if (!$("sys-sound")) return;
+    await tourSay("#sys-sound", "Sound", "The volume, and where sound plays.", { extra: -1500 });
+    $("sys-sound").click();
+    await tourWait(900);
+    soundFromSystem = false;
+    await tourSay("#sound .sound-card", "Play sound on", "The TV, the Deck's speakers, headphones or a Bluetooth speaker. Add speaker pairs a new one from the sofa: put it in pairing mode and pick it from the list.");
+    closeSound();
+  }],
+  ["Watchlist", async () => {
+    tourKept = { list: wlListId, filter: wlFilter, sort: wlSort };
+    setFocus(1, 4);
+    await tourSay(rows[1][4], "Watchlist", "Lists of films and shows to watch, ticked off as you go.", { extra: -1500 });
+    await openWatch();
+    await tourWait(400);
+    const tabs = [...document.querySelectorAll("#wl-tabs .wl-tab:not(.ghost)")];
+    await tourSay("#wl-tabs", "Lists", "Liam and Laura, Top 100 from the scratch poster, Kids, or make your own with New list. Each shows how many are left to watch.", { extra: -1200 });
+    for (const t of tabs.slice(1)) { t.click(); await tourWait(1100); }
+    tabs[0]?.click();
+    await tourWait(400);
+    await tourSay(["#wl-filter", "#wl-sort"], "To watch, Watched, All", "Pick what shows, and sort it by list order, title, year or running time.", { extra: -1500 });
+    openWlSort();
+    await tourWait(1800);
+    closeWlSort();
+  }],
+  ["Watchlist", async () => {
+    const row = document.querySelector("#wl-items .wl-row");
+    if (!row) return;
+    row.click();
+    await tourWait(2500);  // the poster and summary, from Wikipedia
+    await tourSay("#wl-items .wl-item.open", "A film, opened up", "Its poster, what it's about, and its running time. Shows say how many seasons, the years they ran and whether they're still going.");
+    await tourSay("#wl-items .wl-item.open .wl-acts", "Watch it", "Watch on Movy opens Movy and searches it for you. Edit, Move to another list, Mark watched or Remove: each with Undo, in case.");
+    const poster = document.querySelector("#wl-items .wl-item.open .wl-poster.has-img");
+    if (poster) {
+      poster.click();
+      await tourWait(500);
+      await tourSay(".wl-pv-box", "The poster", "Press the poster to see it big.", { extra: -1500 });
+      closePoster();
+    }
+  }],
+  ["Watchlist", async () => {
+    const btn = [...document.querySelectorAll("#wl-items .wl-item.open .wl-acts .set-wide")].find(b => b.textContent.includes("Trailer"));
+    if (!btn) return;
+    await tourSay(btn, "Trailer", "Plays right here, inside Deck TV.", { extra: -2000 });
+    btn.click();
+    await tourWait(1500);
+    await tourSay(".wl-tr-box", "Trailers, right here", "Scrub, volume, captions and fullscreen, and a button for each trailer. Nothing in the player can take you off to YouTube.", { extra: 6000, place: "top" });
+    closeTrailer();
+    document.querySelector("#wl-items .wl-item.open .wl-row")?.click();  // closed up again
+    await tourWait(300);
+    closeWatch();
+  }],
+  ["Phone remote", async () => {
+    if ($("pair-card").hidden) return;
+    await tourSay("#pair-card", "Phone remote", "Scan this with your phone, on the same Wi-Fi. No app to install: it's a touchpad, keyboard, media keys and app switcher.");
+    await tourSay("#pair-card", "See the TV on your phone", "The screen button shows the TV live on the phone: tap the picture to click there. Type searches straight into Movy, YouTube or Spotify.");
+  }],
+  ["Switching apps", async () => {
+    await tourSay({ x: 0, y: 704, w: 1280, h: 16 }, "The dock", "Nudge the mouse to the very bottom of the screen, in any app, and the dock pops up: Home, your open apps, and the speaker for what's playing and the volume. Right-click an app there to close it.");
+    await tourSay(null, "Alt+Tab and Super+H", "Alt+Tab flips between Deck TV and your open apps. Super+H, or the TV icon in the dock, brings you home from anywhere.");
+  }],
+  ["Switching apps", async () => {
+    setFocus(1, 1);
+    await tourSay(rows[1][1], "Desktop", "Tucks everything away to show the normal desktop. Alt+F4 on the home screen closes Deck TV completely.");
+    setFocus(1, 0);
+    await tourSay(rows[1][0], "Power", "Sleep, restart or power off, with a countdown first so you can change your mind, or let go of the mouse.", { extra: -1500 });
+    rows[1][0].click();
+    await tourWait(400);
+    await tourSay("#power .power-card", "Power", "Nothing happens until you pick one.", { extra: -2000 });
+    closePower();
+  }],
+  ["Controller", async () => {
+    setFocus(0, 0);
+    await tourSay(null, "All from the sofa", "Everything works on the Deck's controls: D-pad or stick to move, A to choose, B to go back, and Y undoes the last watchlist change.");
+  }],
+  ["Screensaver", async () => {
+    await tourSay(null, "And when you walk away…", "Leave it a while and the screensaver comes on.", { extra: -2000 });
+    startSaver();
+    tourTarget = null;
+    tourRing();
+    await tourWait(5000);
+    wakeSaver();
+    await tourWait(400);
+  }],
+  ["Deck TV", async () => {
+    await tourSay(null, "That's Deck TV", "Everything here is also listed under Features, top right.");
+  }],
+];
+async function startTour() {
+  if (tourOn) return;
+  closeFeatures();
+  tourOn = true;
+  $("tour").classList.add("on");
+  document.body.classList.remove("mouse");  // no pointer on screen while it runs
+  try {
+    for (tourAt = 0; tourAt < TOUR.length; tourAt++) await TOUR[tourAt][1]();
+  } catch (e) {
+    if (e !== TOUR_STOP) console.error(e);
+  }
+  endTour();
+  tourTidy();  // again: a panel still opening when it was stopped has finished opening by now
+}
+function endTour() {
+  if (!tourOn) return;
+  tourOn = false;
+  if (tourNext) tourNext();  // whatever it's waiting on gives up now
+  $("tour").classList.remove("on");
+  $("tour-cap").classList.remove("show");
+  $("tour-ring").classList.remove("show");
+  tourTarget = null;
+  tourTidy();
+  setFocus(0, 0);
+}
+/* Put back whatever it opened, in the order they sit on each other */
+function tourTidy() {
+  hideCtx(); closePoster(); closeTrailer(); closeWlSort();
+  if (watchOpen) closeWatch();
+  if (tourKept) {
+    wlListId = tourKept.list; wlFilter = tourKept.filter; wlSort = tourKept.sort; wlOpenId = null;
+    store.set("deckTvWatchList", wlListId);
+    tourKept = null;
+  }
+  soundFromSystem = false;
+  if (soundOpen) closeSound();
+  if (systemOpen) closeSystem();
+  if (groupOpen) closeGroupEditor();
+  if (settingsOpen) closeSettings();  // nothing was changed, so it doesn't reload
+  if (arranging) cancelArrange();
+  if (powerOpen) closePower();
+  if (forecastOpen) closeForecast();
+  if (saverOn) wakeSaver();
+}
+// Keys go to the tour while it runs (before anything else sees them, the screensaver included)
+addEventListener("keydown", e => {
+  if (!tourOn) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.key === "Escape" || e.key === "Backspace") endTour();
+  else if (["ArrowRight", "Enter", " "].includes(e.key) && tourNext) tourNext();
+}, true);
 
 /* When Deck TV is updated, pick up the new page by itself (once nothing is open on top of it) */
 let pageVersion = null;
@@ -1278,7 +1602,7 @@ function reloadIfUpdated(v) {
   if (!v) return;
   if (pageVersion === null) pageVersion = v;
   const busy = forecastOpen || powerOpen || soundOpen || settingsOpen || groupOpen || arranging || sleepTimer || ctx.classList.contains("open")
-    || watchOpen || featOpen;
+    || watchOpen || featOpen || tourOn;
   if (v !== pageVersion && !busy) location.reload();
 }
 
@@ -3226,7 +3550,7 @@ showSaverSetting();
 setInterval(() => {
   // Only while Deck TV itself is in front; coming back to it starts the wait again
   if (!document.hasFocus() || document.hidden) return void (idleSince = Date.now());
-  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer || wlTrOpen || featOpen;
+  const busy = settingsOpen || groupOpen || powerOpen || soundOpen || forecastOpen || arranging || sleepTimer || wlTrOpen || featOpen || tourOn;
   if (!saverOn && saverMins && !busy && Date.now() - idleSince > saverMins * 60000) startSaver();
 }, 5000);
 
@@ -3335,6 +3659,7 @@ showPairing();
 
 /* ---------- input ---------- */
 function input(cmd) {
+  if (tourOn) return void (cmd === "back" ? endTour() : (cmd === "ok" || cmd === "right") && tourNext && tourNext());
   if (cmd === "undo") return void undoToast();  // only ever the last toast's Undo, whatever's showing
   if (saverOn) return wakeSaver();  // the press that wakes the screen does nothing else
   idleSince = Date.now();
