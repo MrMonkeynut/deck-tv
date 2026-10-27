@@ -10,22 +10,27 @@ You need: a Steam Deck in **Desktop Mode** and an internet connection. A mouse a
 (or the Deck's trackpads) make setup easier.
 
 1. Switch to Desktop Mode: hold the power button → **Switch to Desktop**.
-2. Copy `deck-tv.zip` to the Deck, into **Downloads**.
-3. Open **Dolphin** (the file manager), go to Downloads, right-click `deck-tv.zip` →
-   **Extract → Extract archive here**. You get a `deck-tv` folder.
-4. Open the `deck-tv` folder, right-click an empty space → **Open Terminal Here**.
+2. Get `deck-tv.zip` into **Downloads** on the Deck: copy it across, or on the GitHub page
+   click **Code → Download ZIP** (that one's called `deck-tv-main.zip`; it works the same).
+3. Open **Dolphin** (the file manager), go to Downloads, right-click the zip →
+   **Extract → Extract archive here**. You get a `deck-tv` (or `deck-tv-main`) folder.
+4. Open that folder, right-click an empty space → **Open Terminal Here**.
 5. Type this and press Enter:
 
    ```
    bash install.sh
    ```
 
-6. Answer the two questions:
+6. Answer the questions:
+   - **Install qBittorrent?** and **Install Claude?**: optional extras, each with its own tile.
+     Type `y` for yes, or press Enter to skip. Claude takes about 10 minutes and 2 GB. Skipped
+     ones are asked again next time you run the installer.
    - **Town for the weather**: type your town (or press Enter for Wexford).
    - **Open Deck TV automatically whenever Desktop Mode starts?**: press Enter for yes.
 
 The installer adds Google Chrome and Spotify if they aren't there yet (no password needed, but it
-can take a few minutes), then opens Deck TV full screen.
+can take a few minutes), then opens Deck TV full screen, with the cards already sorted into
+groups (Streaming, UFC, Torrents). Rearrange them in Settings.
 
 ## Using it
 

@@ -34,6 +34,37 @@ need_app() {
 need_app com.google.Chrome "Google Chrome"
 need_app com.spotify.Client "Spotify"
 
+# ---------- optional apps: asked once each, only if they're not already here ----------
+ask_yes() { [ "$ASK" = 1 ] || return 1; read -r -p "$1 [y/N] " A || A=""; case "$A" in [yY]*) return 0 ;; *) return 1 ;; esac; }
+
+if ! ls ~/Applications/qbittorrent*.AppImage ~/Downloads/qbittorrent*.AppImage >/dev/null 2>&1 \
+   && ! flatpak info org.qbittorrent.qBittorrent >/dev/null 2>&1 \
+   && ask_yes "Install qBittorrent (for downloads)?"; then
+  flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  say "Installing qBittorrent…"
+  flatpak install -y --user flathub org.qbittorrent.qBittorrent || echo "Couldn't install qBittorrent; carrying on without it. It's in Discover too."
+fi
+
+# Claude's desktop app is made for Ubuntu, so it goes in a small Ubuntu box (distrobox, part of
+# SteamOS) named "claude", from Anthropic's own download. Its menu entry is shared out to the Deck.
+if ! ls ~/.local/share/applications/claude-*.desktop >/dev/null 2>&1 \
+   && command -v distrobox >/dev/null \
+   && ask_yes "Install Claude (the AI assistant)? It takes about 10 minutes and 2 GB."; then
+  say "Installing Claude (this takes a while)…"
+  if { distrobox list 2>/dev/null | grep -qw claude || distrobox create -n claude -i ubuntu:24.04 -Y; } \
+     && distrobox enter claude -- sh -c '
+       set -e
+       sudo curl -fsSLo /usr/share/keyrings/claude-desktop-archive-keyring.asc https://downloads.claude.ai/claude-desktop/key.asc
+       echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/claude-desktop-archive-keyring.asc] https://downloads.claude.ai/claude-desktop/apt/stable stable main" \
+         | sudo tee /etc/apt/sources.list.d/claude-desktop.list >/dev/null
+       sudo apt-get update -q && sudo apt-get install -y -q claude-desktop
+       distrobox-export --app claude-desktop'; then
+    echo "Claude installed: sign in the first time you open it."
+  else
+    echo "Couldn't install Claude; carrying on without it. Run this installer again to retry."
+  fi
+fi
+
 # ---------- files ----------
 say "Copying Deck TV…"
 mkdir -p "$DEST/images" "$DEST/icons" "$BIN" "$APPS"
@@ -56,6 +87,12 @@ json.dump(new, open(sys.argv[3], "w"), indent=2)
 PY
 else
   cp "$SRC/tiles.json" "$DEST/"
+fi
+# The starting layout (card order, groups, hidden cards), only where there's none yet: after that
+# it's the person's own, changed in Settings
+if [ ! -f "$HOME/.config/deck-tv/layout.json" ]; then
+  mkdir -p "$HOME/.config/deck-tv"
+  cp "$SRC/layout.json" "$HOME/.config/deck-tv/"
 fi
 
 # ---------- weather town ----------

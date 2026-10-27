@@ -548,11 +548,13 @@
       "command": [
         "sh",
         "-c",
-        "a=$(ls ~/Applications/qbittorrent*.AppImage ~/Downloads/qbittorrent*.AppImage 2>/dev/null | head -n1); exec \"$a\""
+        "a=$(ls ~/Applications/qbittorrent*.AppImage ~/Downloads/qbittorrent*.AppImage 2>/dev/null | head -n1); if [ -n \"$a\" ]; then exec \"$a\"; else exec flatpak run org.qbittorrent.qBittorrent; fi"
       ],
       "requires": [
         "~/Applications/qbittorrent*.AppImage",
-        "~/Downloads/qbittorrent*.AppImage"
+        "~/Downloads/qbittorrent*.AppImage",
+        "~/.local/share/flatpak/app/org.qbittorrent.qBittorrent",
+        "/var/lib/flatpak/app/org.qbittorrent.qBittorrent"
       ],
       "window_class": "qbittorrent",
       "fullscreen": "launch",

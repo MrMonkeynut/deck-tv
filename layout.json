@@ -1,0 +1,83 @@
+{
+  "order": [
+    "youtube",
+    "spotify",
+    "moxy",
+    "whatsapp",
+    "plex",
+    "virginmedia",
+    "rte",
+    "g-mvo2cdg8",
+    "g-ufc",
+    "chrome",
+    "steam",
+    "netflix",
+    "disney",
+    "prime",
+    "appletv",
+    "now",
+    "paramount",
+    "dazn",
+    "crunchyroll",
+    "twitch",
+    "ufc-fights",
+    "ufc-results",
+    "claude",
+    "qbittorrent",
+    "piratebay",
+    "g-mvp86e7l"
+  ],
+  "off": [
+    "appletv",
+    "paramount",
+    "now",
+    "dazn",
+    "crunchyroll"
+  ],
+  "groups": [
+    {
+      "id": "g-ufc",
+      "name": "UFC",
+      "style": "ember",
+      "apps": [
+        "ufc-fights",
+        "ufc-results"
+      ],
+      "icon": "ufc-fights"
+    },
+    {
+      "id": "g-mvo2cdg8",
+      "name": "Streaming",
+      "style": "crimson",
+      "apps": [
+        "netflix",
+        "disney",
+        "prime",
+        "appletv",
+        "paramount",
+        "now",
+        "dazn",
+        "crunchyroll",
+        "twitch",
+        "plex",
+        "virginmedia",
+        "rte"
+      ],
+      "icon": null
+    },
+    {
+      "id": "g-mvp86e7l",
+      "name": "Torrents",
+      "style": "ember",
+      "apps": [
+        "qbittorrent",
+        "piratebay"
+      ],
+      "icon": "piratebay"
+    }
+  ],
+  "seeded": [
+    "g-livetv",
+    "g-ufc"
+  ]
+}
