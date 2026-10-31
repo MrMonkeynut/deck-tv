@@ -31,13 +31,27 @@ You need: a Steam Deck in **Desktop Mode** and an internet connection. A mouse a
 
 The installer adds Google Chrome and Spotify if they aren't there yet (no password needed, but it
 can take a few minutes), then opens Deck TV full screen, with the cards already sorted into
-groups (Streaming, UFC, Torrents). Rearrange them in Settings.
+groups (Streaming, UFC, Torrents). Change them with the pencil button (see below).
 
 ## Using it
 
 - **Tiles**: click one to open that app full screen. Click again later to switch back to it.
   **Live TV** (RTÉ, Virgin Media, Plex) and **UFC** (Fights, Results) are groups: they ask which
-  app you want first. Make your own groups, or change these, in Settings (the gear button).
+  app you want first.
+- **Edit the home screen**: the **pencil** in the bottom row (or right-click a card → Edit the home
+  screen). The cards stay where they are, and hidden ones show up too, dimmed:
+  - **Move**: drag a card to where you want it.
+  - **Group**: drop an app on the middle of a group to put it in, or on the middle of another app to
+    make a new group of the two (name it right there). **New group** in the bar at the bottom makes
+    an empty one at the end.
+  - **Rename**: click a card's name and type. Clear it to go back to the card's own name.
+  - **Hide / show**: the eye in a card's corner.
+  - **Open a group** (click it): rename it, pick its colour, drag its apps into order, hide them, or
+    drag one out of the panel (or press its arrow) to put it back on the home screen. Delete group
+    puts all its apps back.
+  - Everything saves as you go; hiding and taking out have **Undo**. **Done** (or B) finishes.
+  - With a controller, A on a card gives the same choices as a menu (Move, Rename, Hide, Add to group).
+- **Screensaver**: in the System panel (the Wi-Fi / battery button), press it to change the wait.
 - **The dock**: move the mouse to the very bottom edge of the screen and a glowing line appears.
   Click it to open the dock: Home (Deck TV), the apps you have open, and the speaker on the left.
   - Click the speaker for what's playing (previous, play/pause, next), the volume, and
