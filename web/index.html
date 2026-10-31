@@ -1800,9 +1800,13 @@ function toast(msg, undo) {
     t.append(b);
   }
   t.classList.add("show");
-  clearTimeout(toast.h);
-  toast.h = setTimeout(() => { t.classList.remove("show"); toast.undo = null; }, undo ? 6000 : 2500);
+  toast.later(undo ? 6000 : 2500);
 }
+// Put the toast (and its Undo) away after ms; with no ms, keep it up until told again
+toast.later = ms => {
+  clearTimeout(toast.h);
+  if (ms) toast.h = setTimeout(() => { document.getElementById("toast").classList.remove("show"); toast.undo = null; }, ms);
+};
 function undoToast() {
   const undo = toast.undo;
   if (!undo) return false;
@@ -2186,7 +2190,16 @@ function postLayout(layout) {
 }
 /* change(layout) edits a copy of the layout as it is now. With said, a toast says what happened, with
    Undo (which puts the layout from before back). */
-async function saveLayout(change, said) {
+// One save at a time, in the order they were made: an Undo never lands before the change it undoes
+// (nor a rename typed into a new group before the group itself)
+let saving = Promise.resolve();
+function inTurn(fn) {
+  const run = saving.then(fn);
+  saving = run.catch(() => {});
+  return run;
+}
+const saveLayout = (change, said) => inTurn(() => saveNow(change, said));
+async function saveNow(change, said) {
   // Starting from the layout as saved now, not as this page loaded it (the TV, the phone or another
   // window may have changed it since): only this one change goes on top
   const fresh = await api("/api/config").catch(() => null);
@@ -2196,7 +2209,7 @@ async function saveLayout(change, said) {
   const ok = await postLayout(after).then(() => true, () => false);
   if (!ok) toast("Couldn't save that");
   await reloadTiles();
-  if (ok && said) toast(said, () => postLayout(before).then(reloadTiles).catch(() => toast("Couldn't undo that")));
+  if (ok && said) toast(said, () => inTurn(() => postLayout(before).then(reloadTiles)).catch(() => toast("Couldn't undo that")));
   return ok;
 }
 async function reloadTiles() {
@@ -2245,12 +2258,15 @@ function addToGroup(t, g) {
 // A new group where a card stands (with that app in it), or at the end; then name it, there and then
 async function newGroup(withApp) {
   const id = newGroupId();
+  const names = [withApp, ...(newGroup.also || []).map(tileById)].filter(Boolean).map(t => t.name);
+  const said = names.length > 1 ? `${names[0]} and ${names[1]} are in a new group`
+    : names.length ? `${names[0]} is in a new group` : "New group made";
   const ok = await saveLayout(l => {
     l.groups.push({ id, name: "New group", style: Object.keys(groupStyles)[l.groups.length % 8] || "violet", icon: null, apps: [] });
     const at = withApp ? l.order.indexOf(withApp.id) : -1;
     at >= 0 ? l.order.splice(at, 0, id) : l.order.push(id);
     for (const a of [withApp?.id, ...(newGroup.also || [])].filter(Boolean)) putInGroup(l, a, id);
-  });
+  }, said);  // with Undo, which takes the group away again (and any name given it meanwhile)
   newGroup.also = null;
   const b = ok && rows[0].find(x => x.dataset.id === id);
   if (b) { setFocus(0, rows[0].indexOf(b)); startRename(tileById(id), b.querySelector(".name"), true); }
@@ -2287,6 +2303,7 @@ function startRename(t, el, isNew = false) {
   input.onpointerdown = e => e.stopPropagation();
   input.onclick = e => e.stopPropagation();
   input.onblur = () => {
+    if (isNew && toast.undo) toast.later(6000);  // the new group's Undo, kept up while it was being named
     const v = input.value;
     el.textContent = t.name;
     if (cancelled) return;
@@ -2295,6 +2312,7 @@ function startRename(t, el, isNew = false) {
   el.replaceChildren(input);
   input.focus();
   input.select();
+  if (isNew) toast.later();  // naming a new group can take a while: its Undo stays up meanwhile
 }
 // The controller's menus are the right-click ones, less their dividing lines
 const menuItems = items => items.filter(it => it !== "-");
