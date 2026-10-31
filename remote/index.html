@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0E1116">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,6 +50,8 @@
   .app .ic svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.6; }
   .app .lbl { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .app.front .lbl { color: var(--ink); font-weight: 700; }
+  .app.tour-tap .ic, .round.tour-tap { animation: tour-tap .45s ease; }  /* the TV's tour pressing it, in the demo */
+  @keyframes tour-tap { 40% { transform: scale(.84); filter: brightness(1.3); } }
   .app .dot { width: 16px; height: 3px; border-radius: 2px; background: transparent; }
   .app.open .dot { background: var(--ink); }
   /* A group: a folder of up to four of its apps' icons, like a phone's home screen; tap to open it */
@@ -106,9 +108,7 @@
   .sound-row .round.big { width: 68px; height: 68px; background: var(--ink); color: var(--bg); }
   .sound-row + .sound-row { margin-top: 8px; padding-top: 14px; border-top: 1px solid #2B3240; }
 
-  /* The type box floats just above the phone's keyboard (or the bar), so opening it moves nothing else */
-  .typebar { display: flex; gap: 8px; align-items: center; position: fixed; left: 16px; right: 16px; z-index: 10;
-    bottom: var(--typebar-bottom, 90px); padding: 6px; border-radius: 32px; background: var(--bg); }
+  .typebar { display: flex; gap: 8px; align-items: center; }
   .typebar[hidden] { display: none; }
   #type {
     flex: 1; min-width: 0; height: 52px; border-radius: 26px; border: 1px solid #2E3542; background: var(--panel);
@@ -121,7 +121,7 @@
     flex: 1; min-height: 120px; overflow-y: auto; display: none; flex-direction: column; gap: 6px;
     border-radius: 26px; background: var(--panel); padding: 10px;
   }
-  body.searching #results { display: flex; margin-bottom: calc(var(--typebar-bottom, 90px) + 50px); }
+  body.searching #results { display: flex; }
   body.searching #pad, body.searching .bar { display: none; }
   .result-row { display: flex; align-items: center; gap: 6px; }
   .result-row .play { flex: 0 0 auto; width: 44px; height: 44px; background: var(--panel-2); }
@@ -526,9 +526,12 @@
 
 <script>
 /* ---------- pairing ---------- */
+// ?demo: shown on the TV by its tour, in a pretend phone. It shows the TV's apps, what's playing and the
+// watchlist, but sends nothing that changes anything, keeps no settings, and is worked by the TV (tourDemo)
+const demo = new URLSearchParams(location.search).has("demo");
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  set(k, v) { if (demo && k !== "deckTvToken") return; try { localStorage.setItem(k, v); } catch {} }
 };
 if (location.hash.length > 1) {
   store.set("deckTvToken", location.hash.slice(1));
@@ -541,6 +544,7 @@ function needPairing() { document.getElementById("pair").classList.add("show"); 
 if (!token) needPairing();
 
 async function api(path, body) {
+  if (demo && body !== undefined) return {};  // a demo looks, it doesn't touch
   const res = await fetch(path, {
     method: body === undefined ? "GET" : "POST",
     headers: { "X-Remote-Token": token || "", "Content-Type": "application/json" },
@@ -645,7 +649,7 @@ async function refresh() {
     const s = await api("/api/state");
     for (const [id, els] of Object.entries(appEls)) for (const el of els) {
       el.classList.toggle("open", s.open.includes(id));
-      el.classList.toggle("front", id === s.front);
+      el.classList.toggle("front", id === (tourFront || s.front));
     }
     // A folder is marked open (or in front) when one of its apps is
     for (const [id, el] of Object.entries(groupEls)) {
@@ -706,25 +710,8 @@ const typebar = document.getElementById("typebar"), typeTab = document.getElemen
 function showTypebar(on) {
   typebar.hidden = !on;
   typeTab.classList.toggle("on", on);
-  if (on) { placeTypebar(); document.getElementById("type").focus({ preventScroll: true }); }
+  if (on) document.getElementById("type").focus();
 }
-// The keyboard covers the page rather than pushing it up; the type box sits on top of the keyboard
-if ("virtualKeyboard" in navigator) navigator.virtualKeyboard.overlaysContent = true;
-function placeTypebar() {
-  const vv = window.visualViewport;
-  const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
-  const kbRect = navigator.virtualKeyboard?.boundingRect;
-  const keyboard = Math.max(kb, kbRect ? kbRect.height : 0);
-  const bar = document.querySelector(".bar").getBoundingClientRect();
-  const aboveBar = bar.height ? innerHeight - bar.top + 8 : 14;
-  document.body.style.setProperty("--typebar-bottom", (keyboard ? keyboard + 8 : aboveBar) + "px");
-  document.body.style.setProperty("--kb", keyboard + "px");
-  if (scrollY || document.documentElement.scrollTop) scrollTo(0, 0);  // undo any pan the browser makes
-}
-window.visualViewport?.addEventListener("resize", placeTypebar);
-window.visualViewport?.addEventListener("scroll", placeTypebar);
-navigator.virtualKeyboard?.addEventListener("geometrychange", placeTypebar);
-addEventListener("resize", placeTypebar);
 typeTab.onclick = () => { buzz(); showTypebar(typebar.hidden); };
 
 /* ---------- touchpad ---------- */
@@ -866,7 +853,6 @@ function showResults(list) {
 input.addEventListener("focus", async () => {
   if (mode() !== "results") return;
   document.body.classList.add("searching");
-  placeTypebar();
   showNote("Start typing to search");
   // Start from whatever is already in the TV's search box
   try {
@@ -880,7 +866,6 @@ input.addEventListener("focus", async () => {
 
 function endSearch() {
   document.body.classList.remove("searching");
-  placeTypebar();
   input.blur();
 }
 
@@ -951,7 +936,7 @@ document.getElementById("backspace").onclick = () => {
    Tap the picture to click that spot, hold to right-click, two fingers to scroll. */
 const screenEl = document.getElementById("screen"), screenImg = document.getElementById("screen-img");
 const screenNote = document.getElementById("screen-note"), screenBtn = document.getElementById("screen-btn");
-let screenOn = store.get("deckTvScreen") === "1", screenRetry = null;
+let screenOn = !demo && store.get("deckTvScreen") === "1", screenRetry = null;
 
 function screenNoteShow(text) { screenNote.textContent = text; screenNote.hidden = !text; }
 function startScreen() {
@@ -1074,6 +1059,7 @@ function setFull(on) {
   document.getElementById("screen-full-icon").setAttribute("d", on
     ? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
     : "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5");
+  if (demo) return;  // the TV's pretend phone turns itself sideways instead
   if (on) {
     document.documentElement.requestFullscreen?.({ navigationUI: "hide" })
       .then(() => screen.orientation?.lock?.("landscape"))
@@ -1949,12 +1935,94 @@ async function checkForUpdate() {
     const stamp = r.headers.get("Last-Modified");
     if (!stamp) return;
     if (pageStamp === null) pageStamp = stamp;
-    else if (stamp !== pageStamp && document.activeElement !== input && !document.body.classList.contains("searching") && !layers.length) location.reload();
+    else if (stamp !== pageStamp && !demo && document.activeElement !== input && !document.body.classList.contains("searching") && !layers.length) location.reload();
   } catch {}
 }
 checkForUpdate();
 setInterval(checkForUpdate, 30000);
 document.addEventListener("visibilitychange", checkForUpdate);
+
+/* ---------- the TV's tour: it works this page, in its pretend phone, a feature at a time ----------
+   The screen view first and foremost (it's how the phone gets used most), the touchpad under it, then the rest */
+const tourWait = ms => new Promise(r => setTimeout(r, ms));
+const tourEase = f => f < .5 ? 2 * f * f : 1 - (-2 * f + 2) ** 2 / 2;
+let tourRun = 0;  // a newer step stops an older one's finger, typing or resizing
+let tourFront = null;  // the app the tour pressed: shown in front until the next step, whatever the TV says
+async function tourAnim(ms, each) {  // each(f) with f eased from 0 to 1 over ms, until a newer step starts
+  const run = tourRun, t0 = performance.now();
+  for (;;) {
+    const f = Math.min(1, (performance.now() - t0) / ms);
+    each(tourEase(f));
+    if (f >= 1 || run !== tourRun) return;
+    await new Promise(requestAnimationFrame);
+  }
+}
+async function tourDemo(m) {
+  const what = m.tour, run = ++tourRun;
+  if (what !== "appTap") tourFront = null;
+  if (!["drag", "tap", "tapScreen", "taller", "zoom", "full", "appTap"].includes(what)) {
+    closeSheets(); closeFolder(); showTypebar(false); endSearch();
+    while (layers.length) layers.pop()();  // not history.go: in the TV's frame, that's the TV's history too
+  }
+  if (what === "screen") { setFull(false); setScreenH(0); setFit("fit"); if (!screenOn) setScreen(true); }
+  if (what === "off") { setFull(false); setScreenH(0); setFit("fit"); setScreen(false); }  // put away: the TV stops capturing
+  if (what === "drag") {  // a finger along the touchpad, through m.path (fractions of the pad), over m.ms
+    const r = pad.getBoundingClientRect(), pts = m.path;
+    let last = 0;
+    await tourAnim(m.ms, f => {
+      const t = f * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(t)), u = t - i;
+      const x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, y = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u;
+      if (performance.now() - last > 45) { last = performance.now(); ripple(r.left + x * r.width, r.top + y * r.height); }
+    });
+  }
+  if (what === "tap") {  // a tap where the finger was
+    const r = pad.getBoundingClientRect(), [x, y] = m.at;
+    ripple(r.left + x * r.width, r.top + y * r.height);
+  }
+  if (what === "tapScreen") {  // a tap on the picture, at m.at (fractions of the TV's screen)
+    const r = screenEl.getBoundingClientRect(), [x, y] = m.at;
+    screenRipple(r.left + pic.x + x * pic.w, r.top + pic.y + y * pic.h);
+  }
+  if (what === "taller") {  // the grip dragged down: a taller picture, filled
+    const h0 = screenEl.offsetHeight, h1 = Math.max(h0, h0 + pad.offsetHeight - 110);
+    fit = "fill";
+    await tourAnim(900, f => { setScreenH(Math.round(h0 + (h1 - h0) * f)); layoutScreen(); });
+  }
+  if (what === "zoom") {  // pinched in on m.at (fractions of the picture), or back out with m.out
+    const r = screenEl.getBoundingClientRect(), z0 = zoom, z1 = m.out ? 1 : 2.6;
+    const px = m.at ? pic.x + m.at[0] * pic.w : r.width / 2, py = m.at ? pic.y + m.at[1] * pic.h : r.height / 2;
+    await tourAnim(900, f => zoomAt(px, py, z0 + (z1 - z0) * f));
+    if (m.out) { setScreenH(0); setFit("fit"); }
+  }
+  if (what === "full") setFull(!!m.on);
+  if (what === "apps") openSheet("sheet-apps");
+  if (what === "appTap") {  // a press on an app: it bounces, and shows as the one in front
+    const b = (appEls[m.id] || [])[0];
+    if (!b) return;
+    tourFront = m.id;
+    for (const els of Object.values(appEls)) for (const el of els) el.classList.toggle("front", el === b);
+    b.classList.remove("tour-tap"); void b.offsetWidth; b.classList.add("tour-tap");
+  }
+  if (what === "sound") { refresh(); openSheet("sheet-sound"); }
+  if (what === "type") {
+    typebar.hidden = false;  // as showTypebar, but without taking the keyboard from the TV
+    typeTab.classList.add("on");
+    input.value = "";
+    for (const ch of "Father Ted") {
+      if (run !== tourRun) return;
+      input.value += ch;
+      await tourWait(110);
+    }
+  }
+  if (what === "watchlist") openWl();
+  if (what === "homeTap") {  // a press on Home, at the top
+    const h = $("home");
+    h.classList.remove("tour-tap"); void h.offsetWidth; h.classList.add("tour-tap");
+  }
+}
+if (demo) addEventListener("message", e => {
+  if (e.source === parent && e.data && e.data.tour) tourDemo(e.data);
+});
 
 /* ---------- start ---------- */
 if (token) {

@@ -68,7 +68,7 @@ fi
 # ---------- files ----------
 say "Copying Deck TV…"
 mkdir -p "$DEST/images" "$DEST/icons" "$BIN" "$APPS"
-cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/watchlist.py" "$SRC/trailers.py" "$SRC/screen.py" "$SRC/dock.py" "$DEST/"
+cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/movy_tour.py" "$SRC/tour_overlay.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/watchlist.py" "$SRC/trailers.py" "$SRC/screen.py" "$SRC/dock.py" "$DEST/"
 cp "$SRC/icons/"*.png "$SRC/icons/"*.svg "$DEST/icons/"
 cp "$SRC/images/"* "$DEST/images/"
 cp "$SRC/uninstall.sh" "$DEST/"
@@ -264,9 +264,23 @@ for app in deck-tv $FULL; do
   esac
   case ",$RULES," in *",$id,"*) ;; *) RULES="${RULES:+$RULES,}$id" ;; esac
 done
+# The tour's pretend phone (tour-phone.html, in a browser of its own): no title bar, above every app, and
+# never taking the focus or a place in the taskbar, so whatever's behind it carries on as it was
+id="deck-tv-tour-phone"
+W() { kwriteconfig6 --file kwinrulesrc --group "$id" --key "$1" "$2"; }
+W Description "Deck TV: the tour's phone"
+W wmclass deck-tv-phone; W wmclassmatch 1; W wmclasscomplete false
+W noborder true; W noborderrule 3
+W above true; W aboverule 3
+W skiptaskbar true; W skiptaskbarrule 3
+W skipswitcher true; W skipswitcherrule 3
+W acceptfocus false; W acceptfocusrule 3
+W maximizevert false; W maximizevertrule 3
+W maximizehoriz false; W maximizehorizrule 3
+case ",$RULES," in *",$id,"*) ;; *) RULES="${RULES:+$RULES,}$id" ;; esac
 # Rules for apps no longer in Deck TV are removed
 for id in $(echo "$RULES" | tr ',' '\n' | grep '^deck-tv-'); do
-  case " deck-tv $FULL " in *" ${id#deck-tv-} "*) continue ;; esac
+  case " deck-tv tour-phone $FULL " in *" ${id#deck-tv-} "*) continue ;; esac
   for key in Description wmclass wmclassmatch wmclasscomplete windowrole windowrolematch fullscreen fullscreenrule noborder noborderrule; do
     kwriteconfig6 --file kwinrulesrc --group "$id" --key "$key" --delete
   done

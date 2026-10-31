@@ -48,6 +48,9 @@ SLIDE_IN = 150     # ms for the dock to slide up into place ...
 SLIDE_OUT = 120    # ... and back down out of sight
 DOCK_IDLE = 15     # ... or sits with the pointer still on it, untouched
 HOME_ICON = os.path.expanduser("~/.local/share/deck-tv/icons/deck-tv.png")
+# Where the line and the Home icon are on screen, kept up to date for the Deck TV tour, which moves the
+# real pointer to them to show the dock being used
+WHERE = os.path.expanduser("~/.cache/deck-tv-dock-at.json")
 
 # Same line icons as the Deck TV page, for tiles without an installed app icon
 LINE_ICONS = {
@@ -331,7 +334,8 @@ class Dock(Gtk.Window):
         except GLib.Error:
             home = Gtk.IconTheme.get_default().load_icon("video-television", ICON, 0)
             big_home = Gtk.IconTheme.get_default().load_icon("video-television", SWITCH_ICON, 0)
-        bar.pack_start(self.item("home", "Deck TV", home, self.go_home), False, False, 0)
+        self.home_btn = self.item("home", "Deck TV", home, self.go_home)
+        bar.pack_start(self.home_btn, False, False, 0)
         self.switch_icons = {"home": ("Deck TV", big_home)}  # the Alt+Tab switcher's icons, larger
         self.apps = {}
         for t in cfg["tiles"]:
@@ -414,6 +418,22 @@ class Dock(Gtk.Window):
             self.slide(x, a.y + a.height, y, SLIDE_IN, lambda t: 1 - (1 - t) ** 3)  # fast, then settles
         self.away_since = None
         GLib.idle_add(self.limit_clicks_to, child)
+        GLib.timeout_add(SLIDE_IN + 80 if slide else 60, self.report_where)
+
+    def report_where(self):
+        """Write where the line (or the dock's Home icon) is now, in screen pixels, for the tour."""
+        try:
+            x, y = self.get_position()
+            w, h = self.get_size()
+            at = {"state": self.state, "window": [x, y, w, h]}
+            if self.get_child() is self.dock:
+                r = self.home_btn.get_allocation()
+                at["home"] = [x + r.x, y + r.y, r.width, r.height]
+            with open(WHERE, "w") as f:
+                json.dump(at, f)
+        except Exception as e:
+            print("dock: couldn't say where it is:", repr(e), file=sys.stderr)
+        return False
 
     def slide(self, x, y0, y1, ms, ease, done=None):
         """Move the window from y0 to y1 over ms, a step per frame."""

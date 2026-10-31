@@ -20,6 +20,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import media
+import movy_tour
 import search
 import trailers
 from screen import screen
@@ -799,6 +800,268 @@ def watch_now(title):
     return {"ok": True, "searched": text, "found": len(found or [])}, 200
 
 
+def tour_movy(step):
+    """The home screen's tour, handing over to Movy for a walk round it (movy_tour.py)."""
+    tile = next((t for t in load_config()["tiles"] if t.get("search") == "movy" and installed(t)), None)
+    if not tile:
+        return {"error": "Movy isn't set up"}, 404
+    return movy_tour.start(tile, launch_item, go_home, tour_caption, step)
+
+
+# ---------- the tour: what the home screen can't do from inside its own page ----------
+# Its captions over other apps (tour_overlay.py), the pretend phone in a window that stays above apps,
+# the real pointer (and the dock, worked with it), and opening Claude. The home screen's tour calls
+# these as it goes; /api/tour/end puts it all away.
+tour_overlay = None
+tour_lock = threading.Lock()
+PHONE_TITLE = "Deck TV phone"   # tour-phone.html's title, which is how its window is found
+# The phone is its own browser (own profile, own window class), so KWin's rule that makes every Deck TV
+# window full screen leaves it be. So it can't hear the home screen directly: the tour's commands for it
+# queue here, and the phone fetches them (tour_phone_cmds), waiting for the next.
+phone_cmds = []                 # (number, command)
+phone_cond = threading.Condition()
+phone_ready = threading.Event()
+DOCK_AT = Path.home() / ".cache/deck-tv-dock-at.json"  # where dock.py says its line and Home icon are
+HOLDER = Path.home() / ".cache/deck-tv-tour-holder"     # the window tour_overlay.py keeps the phone in
+
+
+def tour_caption(c):
+    """Show (or with {"cmd": "hide"}, hide) a caption over everything, starting the overlay if need be."""
+    global tour_overlay
+    with tour_lock:
+        if tour_overlay is None or tour_overlay.poll() is not None:
+            if c.get("cmd") in ("hide", "holder-off"):  # nothing showing to put away
+                return {"ok": True}
+            tour_overlay = subprocess.Popen([sys.executable, str(ROOT / "tour_overlay.py")], stdin=subprocess.PIPE,
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True,
+                                            start_new_session=True)
+        try:
+            tour_overlay.stdin.write(json.dumps(c) + "\n")
+            tour_overlay.stdin.flush()
+        except OSError:
+            tour_overlay = None
+    return {"ok": True}
+
+
+def screen_size():
+    _, out = run("xdotool getdisplaygeometry")
+    try:
+        w, h = map(int, out.split())
+        return w, h
+    except ValueError:
+        return 1920, 1080
+
+
+def stage_scale():
+    """The home screen's 1280x720 stage on this screen: its scale and where its corner is."""
+    w, h = screen_size()
+    k = min(w / 1280, h / 720)
+    return k, (w - 1280 * k) / 2, (h - 720 * k) / 2
+
+
+def stage_to_screen(x, y):
+    k, ox, oy = stage_scale()
+    return round(ox + x * k), round(oy + y * k)
+
+
+def phone_window():
+    _, out = run(f"xdotool search --name '^{PHONE_TITLE}$'")
+    ids = out.split()
+    return ids[0] if ids else None
+
+
+def tour_phone(on):
+    """The pretend phone's window: opened in Deck TV's own browser (so the tour can talk to it), at the
+    bottom right where the home screen's phone was, borderless and kept above every app."""
+    wid = phone_window()
+    if not on:
+        tour_caption({"cmd": "holder-off"})
+        stop_phone_browser()
+        return {"ok": True}
+    _, was_active = run("xdotool getactivewindow")
+    if not wid:
+        stop_phone_browser()  # anything left of an earlier one, which would swallow the new window
+        phone_ready.clear()
+        spawn(["flatpak", "run", "com.google.Chrome", "--user-data-dir=~/.var/app/com.google.Chrome/deck-tv-phone",
+               "--class=deck-tv-phone", "--no-first-run", "--no-default-browser-check",
+               "--simulate-outdated-no-au=Tue, 31 Dec 2099 23:59:59 GMT",  # no "Can't update Chrome" (flatpak) taking the focus
+               f"--app=http://127.0.0.1:{PORT}/tour-phone.html"])
+        for _ in range(100):  # a browser of its own, so it can take a while the first time
+            time.sleep(0.25)
+            wid = phone_window()
+            if wid:
+                break
+        else:
+            return {"error": "the phone didn't open"}
+    # No title bar or focus at first: install.sh's KWin rule for its class. Then into tour_overlay.py's
+    # holder, an unmanaged window that stays above even the full-screen app in front
+    k, _, _ = stage_scale()
+    x, y = stage_to_screen(1280 - 90 - 300, 720 - 34 - 640)
+    w, h = round(300 * k), round(640 * k)
+    for state in ("MAXIMIZED_VERT", "MAXIMIZED_HORZ"):  # its browser remembers being maximised; one at a time
+        run(f"xdotool windowstate --remove {state} {wid}")
+    since = time.time()
+    tour_caption({"cmd": "holder", "x": x, "y": y, "w": w, "h": h})
+    holder = None
+    for _ in range(40):
+        try:
+            if HOLDER.stat().st_mtime >= since - 1:
+                holder = HOLDER.read_text().strip()
+                break
+        except OSError:
+            pass
+        time.sleep(0.05)
+    if holder:
+        run(f"xdotool windowreparent {wid} {holder}")
+        run(f"xdotool windowmove {wid} 0 0")
+    else:
+        run(f"xdotool windowmove {wid} {x} {y}")
+    run(f"xdotool windowsize {wid} {w} {h}")
+    if was_active.strip().isdigit():  # whatever was in front keeps the focus (and stays full screen)
+        for _ in range(2):  # again once it's settled: the move into the holder can take the focus too
+            run(f"xdotool windowactivate {was_active.strip()}")
+            time.sleep(0.4)
+    if not phone_ready.wait(15):  # the remote inside it, loaded and listening
+        return {"error": "the phone's remote didn't load"}
+    return {"ok": True}
+
+
+def stop_phone_browser():
+    """The phone's browser (a profile of its own), window and all. [d]: so pkill doesn't match itself."""
+    run("pkill -f [d]eck-tv-phone")
+    for _ in range(20):
+        if run("pgrep -f [d]eck-tv-phone")[0]:  # none left
+            return
+        time.sleep(0.1)
+    run("pkill -9 -f [d]eck-tv-phone")
+
+
+def tour_phone_cmd(c):
+    with phone_cond:
+        phone_cmds.append((len(phone_cmds), c))
+        del phone_cmds[:-50]  # only the last few matter
+        phone_cond.notify_all()
+    return {"ok": True}
+
+
+def tour_phone_cmds(after):
+    """The phone's commands after number after, waiting a while for one if there are none yet.
+    after None: just the latest number, to start from."""
+    with phone_cond:
+        latest = lambda: phone_cmds[-1][0] if phone_cmds else -1
+        if after is None:
+            return {"latest": latest(), "cmds": []}
+        phone_cond.wait_for(lambda: latest() > after, timeout=15)
+        return {"latest": latest(), "cmds": [c for n, c in phone_cmds if n > after]}
+
+
+def pointer_at():
+    _, out = run("xdotool getmouselocation --shell")
+    m = dict(line.split("=", 1) for line in out.split() if "=" in line)
+    return int(m.get("X", 0)), int(m.get("Y", 0))
+
+
+def glide(points, ms):
+    """Move the real pointer through screen points over ms, easing in and out, as a hand would."""
+    if not pointer or len(points) < 2:
+        return
+    start = time.monotonic()
+    while True:
+        f = min(1.0, (time.monotonic() - start) * 1000 / max(1, ms))
+        e = 2 * f * f if f < .5 else 1 - (-2 * f + 2) ** 2 / 2
+        t = e * (len(points) - 1)
+        i = min(len(points) - 2, int(t))
+        u = t - i
+        (x0, y0), (x1, y1) = points[i], points[i + 1]
+        pointer.move_to(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u)
+        if f >= 1:
+            return
+        time.sleep(0.012)
+
+
+def tour_pointer(path, ms, click):
+    """The pointer along a path given on the home screen's stage (1280x720), then a click if asked."""
+    if not pointer:
+        return {"error": "no pointer"}
+    glide([pointer_at()] + [stage_to_screen(x, y) for x, y in path], ms)
+    if click:
+        time.sleep(0.15)
+        pointer.click()
+    return {"ok": True}
+
+
+def dock_at(since, state):
+    """What dock.py last said about where it is, once it says so in this state, after since."""
+    for _ in range(40):
+        try:
+            if DOCK_AT.stat().st_mtime >= since:
+                at = json.loads(DOCK_AT.read_text())
+                if at.get("state") == state:
+                    return at
+        except (OSError, ValueError):
+            pass
+        time.sleep(0.05)
+    return None
+
+
+def tour_dock_home():
+    """Home the way a person would: the pointer to the bottom edge, the line that appears, the dock
+    that opens, and its Home icon."""
+    if not pointer:
+        return go_home()
+    w, h = screen_size()
+    start = time.time()
+    x0, _ = pointer_at()
+    glide([pointer_at(), (x0 + (w // 2 - x0) * .5, h - 60), (w // 2, h - 1)], 700)
+    hint = dock_at(start, "hint")
+    if not hint:
+        return go_home()
+    hx, hy, hw, hh = hint["window"]
+    glide([pointer_at(), (hx + hw // 2, hy + hh - 18)], 300)
+    time.sleep(0.25)
+    start = time.time()
+    pointer.click()
+    dock = dock_at(start, "dock")
+    if not dock or "home" not in dock:
+        return go_home()
+    x, y, bw, bh = dock["home"]
+    time.sleep(0.2)
+    glide([pointer_at(), (x + bw // 2, y + bh // 2)], 450)
+    time.sleep(0.3)
+    pointer.click()
+    return {"ok": True}
+
+
+def tour_claude(prompt):
+    """A new Claude Code session in the deck-tv folder, with the prompt in it, sent. Claude Desktop's
+    claude://code/new link opens the session with the prompt filled in; it asks to confirm the folder
+    first, then waits for Enter. So: wait for Claude to be in front, then Enter for each."""
+    folder = Path.home() / "Downloads/deck-tv"
+    if not folder.is_dir():
+        folder = ROOT
+    url = "claude://code/new?" + urllib.parse.urlencode({"q": prompt, "folder": str(folder)}, quote_via=urllib.parse.quote)
+    spawn(["xdg-open", url])
+
+    def press():
+        for _ in range(120):  # Claude may need starting first
+            _, cls = run("xdotool getactivewindow getwindowclassname")
+            if "claude" in cls.lower():
+                break
+            time.sleep(0.25)
+        time.sleep(3)
+        run("xdotool key --clearmodifiers Return")  # the folder: yes
+        time.sleep(2.5)
+        run("xdotool key --clearmodifiers Return")  # and send
+    threading.Thread(target=press, daemon=True).start()
+    return {"ok": True}
+
+
+def tour_end():
+    tour_caption({"cmd": "hide"})
+    tour_phone(False)
+    return {"ok": True}
+
+
 def close_item(item_id):
     """Close a tile's app windows the polite way, as their own close button would."""
     tile = {t["id"]: t for t in load_config()["tiles"]}.get(item_id)
@@ -1061,6 +1324,14 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(watchlist.load())
             if self.path.startswith(("/api/trailers?", "/api/details?")):
                 return self._lookup()
+            if self.path == "/api/tour/movy":
+                return self._json(movy_tour.status())
+            if self.path.startswith("/api/tour/phone-cmds?"):  # ?start, or ?after=<number>
+                try:
+                    after = int(self.path.rsplit("after=", 1)[1]) if "after=" in self.path else None
+                except ValueError:
+                    after = None
+                return self._json(tour_phone_cmds(after))
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
 
@@ -1154,6 +1425,32 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(media_control(parts[2]))
         if self.path == "/api/home":
             return self._json(go_home())
+        if self.path.startswith("/api/tour/") and not self.path.startswith("/api/tour/movy"):
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            what = self.path[len("/api/tour/"):]
+            if what == "caption":
+                return self._json(tour_caption(body))
+            if what == "phone":
+                return self._json(tour_phone(bool(body.get("on"))))
+            if what == "pointer":
+                return self._json(tour_pointer(body.get("path") or [], body.get("ms") or 800, bool(body.get("click"))))
+            if what == "phone-cmd":
+                return self._json(tour_phone_cmd(body))
+            if what == "phone-ready":
+                phone_ready.set()
+                return self._json({"ok": True})
+            if what == "dock-home":
+                return self._json(tour_dock_home())
+            if what == "claude":
+                return self._json(tour_claude(str(body.get("prompt") or "")[:500]))
+            if what == "end":
+                return self._json(tour_end())
+            return self._json({"error": "not found"}, 404)
+        if self.path.startswith("/api/tour/movy"):  # the tour's visit to Movy; ?step=4 of 15 for its caption
+            return self._json(*tour_movy((urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("step") or [""])[0][:20]))
         if self.path == "/api/volume/up":
             return self._json(change_volume(5))
         if self.path == "/api/volume/down":

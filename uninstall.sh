@@ -22,7 +22,9 @@ systemctl --user restart plasma-kglobalaccel.service 2>/dev/null
 RULES=$(kreadconfig6 --file kwinrulesrc --group General --key rules)
 KEEP=$(echo "$RULES" | tr ',' '\n' | grep -v '^deck-tv-' | paste -sd, -)
 for id in $(echo "$RULES" | tr ',' '\n' | grep '^deck-tv-'); do
-  for key in Description wmclass wmclassmatch wmclasscomplete fullscreen fullscreenrule noborder noborderrule; do
+  for key in Description wmclass wmclassmatch wmclasscomplete fullscreen fullscreenrule noborder noborderrule \
+             above aboverule skiptaskbar skiptaskbarrule skipswitcher skipswitcherrule acceptfocus acceptfocusrule \
+             maximizevert maximizevertrule maximizehoriz maximizehorizrule; do
     kwriteconfig6 --file kwinrulesrc --group "$id" --key "$key" --delete
   done
 done
