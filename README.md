@@ -1,7 +1,8 @@
 # Deck TV
 
 A TV-style home screen for the Steam Deck's Desktop Mode: big tiles for Movy, Steam Big Picture,
-Spotify, YouTube, UFC, Live TV (RTÉ Player, Virgin Media and Plex) and WhatsApp, a pop-up dock at the bottom of the screen for switching apps, a
+Spotify, YouTube, UFC, Live TV (RTÉ Player, Virgin Media and Plex), WhatsApp and Retro Games (ES-DE, when it's
+installed), a pop-up dock at the bottom of the screen for switching apps, a
 "now playing" card, and a phone remote.
 
 ## Install (about 5 minutes)
