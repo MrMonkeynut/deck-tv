@@ -377,14 +377,17 @@
   .set-wide.primary { background: #3FA66B; color: #fff; }
   .set-wide.primary:hover, .set-wide.primary.focus { background: #4CBB7B; }
 
-  /* A group's card: its apps' icons in a little grid, like a folder on a phone */
+  /* A group's card: its apps' icons, like a folder on a phone, in rows fitFolder picks to make them
+     as big as the card allows (its --s is the icons' size) */
   .tile .folder {
-    margin: auto 0; width: 168px; height: 168px; box-sizing: border-box; padding: 14px; border-radius: 36px;
-    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px;
+    margin: auto 0; box-sizing: border-box; padding: 14px; border-radius: 36px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
     background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); transition: transform .18s ease;
   }
+  .tile .folder .frow { display: flex; gap: inherit; }
+  .tile .folder img, .tile .folder i { flex: none; width: var(--s, 64px); height: var(--s, 64px); }
   .tile.focus .folder { transform: scale(1.06); }
-  #tiles.rows2 .tile .folder { width: 114px; height: 114px; padding: 10px; gap: 8px; border-radius: 26px; }
+  #tiles.rows2 .tile .folder { padding: 10px; gap: 8px; border-radius: 26px; }
   .folder img, .folder i, .mini-folder img, .mini-folder i { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; border-radius: 22%; }
   .folder i, .mini-folder i { display: flex; align-items: center; justify-content: center; background: var(--c); }
   .folder i svg, .mini-folder i svg { width: 62%; height: 62%; }
@@ -1180,6 +1183,7 @@ function renderTiles() {
   tilesEl.classList.toggle("stagger", shown > 7 && shown % 2 === 1);
   rows[0] = visible.map(makeTile);
   tilesEl.replaceChildren(...rows[0]);
+  rows[0].forEach(fitFolder);
   rows[0].forEach(b => b.classList.toggle("open", openIds.includes(b.dataset.id)));
   markRow2();
   const n = cfgTiles.filter(t => !t.hidden && t.off).length;
@@ -2155,6 +2159,36 @@ function folderFace(t, cls = "folder") {
     ? (one.appIcon ? `<img class="appicon" src="/appicon/${one.id}?v=${one.iconVersion}" alt="">` : svg(one.icon, "#fff"))
     : appIcon(one);
   return miniFolder(shownIn(t).map(ch => tileById(ch.tile)).filter(Boolean), cls);
+}
+/* A group's card shows up to four of its apps' icons, each as big as the space above the name allows
+   (but no bigger than an app's own card icon). The rows suit the count and the card: two side by side,
+   or one above the other on a tall card; three as two with one centred below; four as a square. A
+   layout further down the list only wins if its icons come out clearly bigger (by a tenth). */
+const FOLDER_ROWS = { 1: [[1]], 2: [[2], [1, 1]], 3: [[2, 1], [1, 1, 1], [3]], 4: [[2, 2], [4], [1, 1, 1, 1]] };
+function fitFolder(b) {
+  const f = b.querySelector(":scope > .folder");
+  if (!f) return;
+  const icons = [...f.querySelectorAll("img, i")];
+  if (!icons.length) return;
+  const two = document.getElementById("tiles").classList.contains("rows2");
+  const pad = two ? 10 : 14, gap = two ? 8 : 12, most = two ? 106 : 160;
+  const cs = getComputedStyle(b);
+  const w = b.clientWidth - 8 - 2 * pad;
+  const h = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - b.querySelector(":scope > div").offsetHeight - 6 - 2 * pad;
+  let best = null;
+  for (const rows of FOLDER_ROWS[icons.length]) {
+    const cols = Math.max(...rows);
+    const size = Math.min(most, (w - (cols - 1) * gap) / cols, (h - (rows.length - 1) * gap) / rows.length);
+    if (!best || size > best.size * 1.1) best = { rows, size };
+  }
+  f.style.setProperty("--s", Math.floor(best.size) + "px");
+  let k = 0;
+  f.replaceChildren(...best.rows.map(n => {
+    const row = document.createElement("span");
+    row.className = "frow";
+    row.append(...icons.slice(k, k += n));
+    return row;
+  }));
 }
 function miniFolder(apps, cls) {
   apps = apps.slice(0, 4);
