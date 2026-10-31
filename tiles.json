@@ -85,6 +85,7 @@
         "exec ~/VMs/start-windows.sh"
       ],
       "requires": ["~/VMs/start-windows.sh"],
+      "app_icon": ["~/.local/share/deck-tv/icons/windows.png"],
       "window_class": "qemu-system-x86_64",
       "accent": "#3AA0FF"
     },
