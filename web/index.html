@@ -337,6 +337,13 @@
   .power-opt.active { background: #34405A; box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
   /* In a group's picker: a line under the apps already open, as in the dock */
   .power-opt.running { position: relative; }
+  /* A look to pick for a group: a little card, its art behind the group's icons */
+  .look-face { width: 66px; height: 86px; border-radius: 12px; background-color: var(--c); background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .power-opt .look-face > img { width: 40px; height: 40px; object-fit: contain; border-radius: 9px; }
+  .power-opt .look-face > svg { width: 30px; height: 30px; }
+  .look-face .mini-folder { width: 40px; height: 40px; }
+  .power-opt .look-face .mini-folder img { width: 100%; height: 100%; }
   .power-opt.running::after { content: ""; position: absolute; bottom: 12px; width: 20px; height: 4px; border-radius: 2px; background: #F2F4F8; }
   .power-opt.active .opt-sub { color: #7BD3A2; }
   #snd-error { font-size: 16px; color: #FF8A8A; min-height: 0; }
@@ -2108,7 +2115,7 @@ function openPower(title, items, start = 0) {
   opts.replaceChildren(...items.map(it => {
     const b = document.createElement("button");
     b.className = "power-opt" + (it.open ? " running" : "");
-    b.innerHTML = `${it.img ? `<img src="${it.img}" alt="">` : svg(it.icon, "currentColor", 1.7)}${it.name}`;
+    b.innerHTML = `${it.face || (it.img ? `<img src="${it.img}" alt="">` : svg(it.icon, "currentColor", 1.7))}${it.name}`;
     b.onclick = () => { closePower(); it.run(); };
     b.onmouseenter = () => powerFocus(powerOpts().indexOf(b));
     return b;
@@ -2299,8 +2306,26 @@ function cardItems(t, b) {
   items.push({ icon: "pencil", name: "Rename", run: () => startRename(t, b.querySelector(".name")) });
   items.push({ icon: "eyeoff", name: "Hide", run: () => toggleHidden(t) });
   if (groupable(t)) items.push({ icon: "plus", name: "Add to group", run: () => groupPicker(t) });
+  if (t.userGroup) items.push({ icon: "spark", name: "Change look", run: () => lookPicker(t) });
   if (t.userGroup) items.push({ icon: "trash", name: "Delete group", danger: true, run: () => deleteGroup(t) });
   return items;
+}
+/* A group's look: one of the colour looks (the card's art, with its apps' icons on it), or one of its
+   apps' own (that app's art and icon). Each shown as a little card; a line under the one it has now. */
+function lookPicker(g) {
+  const face = (image, inner, color) =>
+    `<span class="look-face" style="--c:${color}; background-image:url('/images/${encodeURIComponent(image)}')">${inner}</span>`;
+  const apps = shownIn(g).map(ch => tileById(ch.tile)).filter(Boolean);
+  const set = (style, icon) => saveLayout(l => { const x = l.groups.find(x => x.id === g.id); if (style) x.style = style; x.icon = icon; });
+  const items = [
+    ...Object.entries(groupStyles).map(([id, st]) => ({
+      face: face(`group-${id}.svg`, miniFolder(apps, "mini-folder"), st.color), open: !g.iconApp && g.style === id,
+      name: id[0].toUpperCase() + id.slice(1), run: () => set(id, null) })),
+    ...apps.map(app => ({
+      face: face(app.image || "", appIcon(app), app.color), open: g.iconApp === app.id,
+      name: `Like ${app.name}`, run: () => set(null, app.id) })),
+  ];
+  openPower(`${g.name}: look`, items, Math.max(0, items.findIndex(it => it.open)));
 }
 function groupPicker(t) {
   const groups = cfgTiles.filter(g => g.userGroup);

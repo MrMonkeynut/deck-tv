@@ -49,6 +49,8 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
     own name.
   - **Hide**: right-click → Hide, on a card or on an app inside a group. **Hidden cards** in the bar
     lists every card, with each group's apps under it, and a switch to bring any of them back.
+  - **Change a group's look** (right-click → Change look): one of eight colours, or look like one of
+    its apps.
   - **Open a group** (right-click → Open group): rename it, pick its colour, drag its apps into
     order, or drag one onto **Remove from group** (it goes to the end of the home screen). Delete
     group puts all its apps back.
