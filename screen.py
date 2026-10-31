@@ -18,7 +18,7 @@ try:
 except (ImportError, ValueError, TypeError, RuntimeError):
     AVAILABLE = False
 
-FPS = 10         # snapshots a second while a phone is watching
+FPS = 15         # snapshots a second while a phone is watching
 WIDTH = 960      # the picture's width; tall enough to read on a phone, small enough to send quickly
 QUALITY = "68"   # JPEG quality
 

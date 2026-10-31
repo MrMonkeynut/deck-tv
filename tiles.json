@@ -54,6 +54,25 @@
       "accent": "#66C0F4"
     },
     {
+      "id": "es-de",
+      "name": "Retro Games",
+      "sub": "ES-DE",
+      "color": "#3A1418",
+      "icon": "gamepad",
+      "image": "es-de.svg",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/es-de.svg"
+      ],
+      "command": [
+        "sh",
+        "-c",
+        "for l in ~/Emulation/tools/launchers/es-de-pad.sh ~/Emulation/tools/launchers/es-de/es-de.sh; do [ -x \"$l\" ] && exec \"$l\"; done; exec $(ls ~/Applications/ES-DE*.AppImage | head -n1)"
+      ],
+      "requires": ["~/Applications/ES-DE*.AppImage"],
+      "window_class": "es-de",
+      "accent": "#F2542D"
+    },
+    {
       "id": "spotify",
       "name": "Spotify",
       "sub": "Music",

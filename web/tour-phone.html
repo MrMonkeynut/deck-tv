@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deck TV phone</title>
+<!-- The tour's pretend phone, in a small window of its own that the server keeps above every app, so
+     apps can open behind it. The real phone remote is inside, in its look-only demo mode (?demo).
+     The home screen's tour works it: its commands come through the server (this is a browser of its own). -->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #phone { position: absolute; inset: 0; border-radius: 69px; background: #05070A; box-shadow: inset 0 0 0 3px #3A4252; }
+  #clip { position: absolute; inset: 18px; overflow: hidden; border-radius: 54px; background: #0E1116; }
+  /* The remote laid out at a phone's width (390), scaled to fill the screen of the pretend phone */
+  iframe { width: 390px; height: 870px; border: 0; display: block; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<div id="phone"><div id="clip"><iframe id="remote" title="Phone remote" tabindex="-1"></iframe></div></div>
+<script>
+const frame = document.getElementById("remote"), clip = document.getElementById("clip");
+const fit = () => { frame.style.transform = `scale(${clip.clientWidth / 390})`; frame.style.height = `${clip.clientHeight / (clip.clientWidth / 390)}px`; };
+addEventListener("resize", fit); fit();
+let origin = null;
+fetch("/api/remote", { headers: { "X-Deck-TV": "1" } }).then(r => r.json()).then(({ url }) => {
+  const [page, token] = url.split("#");
+  origin = new URL(page).origin;
+  frame.src = `${page}?demo#${token}`;
+});
+const api = (path, body) => fetch(path, { method: body ? "POST" : "GET", headers: { "X-Deck-TV": "1", "Content-Type": "application/json" },
+  body: body && JSON.stringify(body) }).then(r => r.json());
+// Once the remote's in, say so, then pass on each command as it comes
+frame.onload = async () => {
+  await new Promise(r => setTimeout(r, 800));
+  let { latest } = await api("/api/tour/phone-cmds?start");
+  api("/api/tour/phone-ready", {});
+  for (;;) {
+    try {
+      const got = await api(`/api/tour/phone-cmds?after=${latest}`);
+      for (const c of got.cmds) if (c.tour) frame.contentWindow.postMessage(c, origin);
+      latest = got.latest;
+    } catch { await new Promise(r => setTimeout(r, 1000)); }
+  }
+};
+</script>
+</body>
+</html>
