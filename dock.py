@@ -709,7 +709,7 @@ class Dock(Gtk.Window):
         return row
 
     def desktop_group(self):
-        # A way out to the ordinary desktop, as on the home screen (the dock and Super+H bring you back)
+        # A way out to the ordinary desktop, as on the home screen (Deck TV's icon or Super+H bring you back)
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         row.pack_start(Gtk.Image.new_from_pixbuf(line_icon("desktop", 24)), False, False, 0)
         row.pack_start(Gtk.Label.new("Go to the desktop"), False, False, 0)
@@ -1058,6 +1058,10 @@ def main():
             break
         except Exception:
             GLib.usleep(500_000)
+    try:
+        api("/api/tv", "POST")  # the dock starting means Deck TV is in charge again (out of desktop mode)
+    except Exception:
+        pass
     Dock()
     GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, lambda: Gtk.main_quit() or False)
     alt_tab("claim")

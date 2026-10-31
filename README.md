@@ -48,8 +48,11 @@ groups (Streaming, UFC, Torrents). Rearrange them in Settings.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
 - **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
   Alt and press Tab to pick, or click an app while it's showing). If Deck TV isn't running, Alt+Tab works as normal.
-- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power) tucks
-  everything away to show the normal desktop. **Alt+F4** on the home screen closes Deck TV
+- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power, or in the dock's speaker
+  menu) tucks everything away and switches Deck TV off while you use the normal desktop: no dock,
+  KDE's own Alt+Tab, and apps open as ordinary windows. To come back, click the **Deck TV icon on
+  the desktop**, press **Super+H**, pick Deck TV from the taskbar or Alt+Tab, or press Home on the
+  phone remote: the dock, Deck TV's Alt+Tab and full-screen apps all come back. **Alt+F4** on the home screen closes Deck TV
   completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.
 - **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
   skip. Starting something in another app pauses the first. Right-click a tile →

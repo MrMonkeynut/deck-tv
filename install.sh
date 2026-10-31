@@ -147,6 +147,9 @@ Icon=$DEST/icons/deck-tv.png
 StartupWMClass=deck-tv
 Categories=AudioVideo;
 EOF
+# And on the desktop: the way back to Deck TV after "Go to the desktop", without a keyboard
+# (executable, so KDE opens it without asking whether to trust it)
+[ -d "$HOME/Desktop" ] && install -m 755 "$APPS/deck-tv.desktop" "$HOME/Desktop/deck-tv.desktop"
 
 # Menu entries for the browser apps (Movy, YouTube, UFC), so each gets its own taskbar icon.
 # Skipped where you already have one for that app.

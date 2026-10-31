@@ -385,14 +385,56 @@ def used(item_id):
     recent.insert(0, item_id)
 
 
-def shut_down():
-    """Deck TV's window was closed (Alt+F4, or its own close): take the dock and server down
-    with it, so nothing of Deck TV is left on screen. Opening Deck TV again starts it all afresh."""
+def stop_dock():
+    """The dock goes, and gives Alt+Tab back to KDE as it does (see dock.py)."""
     try:
         os.kill(int((Path.home() / ".cache/deck-tv-dock.lock").read_text().strip()), signal.SIGTERM)
     except (OSError, ValueError):
         pass
+
+
+def shut_down():
+    """Deck TV's window was closed (Alt+F4, or its own close): take the dock and server down
+    with it, so nothing of Deck TV is left on screen. Opening Deck TV again starts it all afresh."""
+    stop_dock()
     os._exit(0)
+
+
+# Desktop mode: "Go to the desktop" steps out of Deck TV altogether. The dock goes (and with it Deck
+# TV's Alt+Tab, so KDE's is back), apps open as ordinary windows, and closing one no longer brings
+# Deck TV back. Coming back to Deck TV's own screen, any way at all (its taskbar icon, Alt+Tab, the
+# desktop icon, Super+H, the phone's Home), switches it all back on.
+desktop_mode = False
+
+
+def app_rules(on):
+    """Deck TV's KWin rules for the apps (full screen, no title bar): on for Deck TV, off on the
+    desktop. Only rewritten when they're the wrong way round, as the dock asks at every start."""
+    _, out = run("kreadconfig6 --file kwinrulesrc --group General --key rules")
+    rules = [r for r in out.strip().split(",") if r.startswith("deck-tv-")
+             and r not in ("deck-tv-deck-tv", "deck-tv-tour-phone")]
+    want = "3" if on else "1"  # KWin's "Apply initially", or "Do not affect"
+    if not rules or run(f"kreadconfig6 --file kwinrulesrc --group {rules[0]} --key fullscreenrule")[1].strip() == want:
+        return
+    for r in rules:
+        for key in ("fullscreenrule", "noborderrule"):
+            run(f"kwriteconfig6 --file kwinrulesrc --group {r} --key {key} {want}")
+    run("qdbus org.kde.KWin /KWin reconfigure")
+
+
+def tv_mode():
+    """The dock asks for this as it starts: Deck TV is in charge again."""
+    global desktop_mode
+    desktop_mode = False
+    threading.Thread(target=app_rules, args=(True,), daemon=True).start()
+    return {"ok": True}
+
+
+def back_to_tv():
+    """From desktop mode: the launcher restarts the dock (which calls tv_mode) and brings Deck TV up."""
+    global desktop_mode
+    desktop_mode = False
+    spawn([str(Path.home() / ".local/bin/deck-tv")])
 
 
 # Tiles with "fullscreen": "launch" only go full screen when opened from Deck TV:
@@ -417,6 +459,7 @@ def watch_for_closed_apps():
     seen = set()
     dropped = {}  # window -> seen out of full screen once
     home_seen = False
+    left_home = False  # desktop mode: something other than Deck TV has been in front
     while True:
         time.sleep(1)
         try:
@@ -424,7 +467,7 @@ def watch_for_closed_apps():
             wins = client_windows()
             owned = {t["id"]: tile_windows(t, wins) for t in tiles}
             current = {wid for ids in owned.values() for wid in ids}
-            for t in tiles:
+            for t in tiles if not desktop_mode else []:
                 fresh = set(owned[t["id"]]) - seen
                 ours = time.time() - launched.get(t["id"], 0) < 60
                 if fresh and (t.get("fullscreen") is True or (t.get("fullscreen") == "launch" and ours)):
@@ -441,6 +484,18 @@ def watch_for_closed_apps():
             if home_seen and not home:
                 shut_down()
             home_seen = home is not None
+            if desktop_mode:
+                # Ordinary windows: nothing made full screen, nothing brought back. Deck TV in front
+                # again, after something else was, means back to Deck TV.
+                if active != home:
+                    left_home = True
+                elif left_home:
+                    left_home = False
+                    back_to_tv()
+                seen = current
+                dropped.clear()
+                continue
+            left_home = False
             in_front = next((t["id"] for t in tiles if active in owned[t["id"]]), None) or ("home" if active == home else None)
             if in_front and (not recent or recent[0] != in_front):
                 used(in_front)
@@ -1079,13 +1134,26 @@ def close_item(item_id):
 
 
 def show_desktop():
-    """Step out to the ordinary desktop: KWin's Show Desktop, which tucks every window away."""
+    """Step out to the ordinary desktop (desktop mode, above), with every window tucked away by
+    KWin's Show Desktop."""
+    global desktop_mode
+    desktop_mode = True
+    stop_dock()
+    threading.Thread(target=app_rules, args=(False,), daemon=True).start()
+    # Deck TV itself properly minimised: Show Desktop alone puts it back the moment anything else
+    # takes the focus, and the watcher would take that for coming back to it
+    home = find_window(HOME_CLASS)
+    if home:
+        run(f"xdotool windowminimize {int(home, 16)}")
     run('qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Show Desktop"')
     return {"ok": True}
 
 
 def go_home():
     used("home")
+    if desktop_mode:
+        back_to_tv()
+        return {"ok": True}
     wid = find_window(HOME_CLASS)
     if wid:
         activate(wid)
@@ -1413,6 +1481,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"ok": now_playing.focus(parts[3])})
         if self.path == "/api/desktop":
             return self._json(show_desktop())
+        if self.path == "/api/tv":
+            return self._json(tv_mode())
         if self.path == "/api/audio/search":
             return self._json(search_speakers())
         if len(parts) == 4 and parts[:3] == ["api", "audio", "pair"]:

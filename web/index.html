@@ -929,7 +929,7 @@
         <section class="ft-group"><h3><i data-icon="gamepad"></i>Controller</h3><ul><li><b>Everywhere</b><span>D-pad or stick to move, A to choose, B to go back</span></li><li><b>Y</b><span>undoes the last watchlist change</span></li></ul></section>
         </div>
         <div class="ft-col">
-        <section class="ft-group"><h3><i data-icon="desktop"></i>Switching apps</h3><ul><li><b>Dock</b><span>nudge the mouse to the bottom edge: Home, open apps and the sound menu</span></li><li><b>Alt+Tab</b><span>Deck TV's own switcher; hold Alt and tap, or click an app</span></li><li><b>Home</b><span>Super+H or the dock's TV icon, from anywhere</span></li><li><b>Desktop</b><span>tuck everything away in one press; Alt+F4 closes Deck TV</span></li></ul></section>
+        <section class="ft-group"><h3><i data-icon="desktop"></i>Switching apps</h3><ul><li><b>Dock</b><span>nudge the mouse to the bottom edge: Home, open apps and the sound menu</span></li><li><b>Alt+Tab</b><span>Deck TV's own switcher; hold Alt and tap, or click an app</span></li><li><b>Home</b><span>Super+H or the dock's TV icon, from anywhere</span></li><li><b>Desktop</b><span>Deck TV steps aside: KDE's Alt+Tab, ordinary windows, no dock. Its desktop icon, Super+H or switching back to it turns it all on again; Alt+F4 closes Deck TV</span></li></ul></section>
         <section class="ft-group"><h3><i data-icon="music"></i>Now playing & sound</h3><ul><li><b>Now playing</b><span>whatever's playing, with play/pause and skip, wherever it is</span></li><li><b>One at a time</b><span>starting something new pauses the last</span></li><li><b>Sound</b><span>volume, and play on the TV, the Deck, headphones or Bluetooth</span></li><li><b>Speakers</b><span>pair a new Bluetooth speaker from the sofa</span></li></ul></section>
         </div>
         <div class="ft-col">
@@ -1185,7 +1185,7 @@ async function build() {
   pw.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 0);
   pw.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(pw); rows[1].push(pw);
-  // And a way out: the ordinary desktop, every window tucked away (the dock and Super+H bring you back)
+  // And a way out: the ordinary desktop, Deck TV switched off (its icon, Super+H or switching back to it bring it back)
   const db = document.createElement("button");
   db.className = "action power";
   db.setAttribute("aria-label", "Desktop");
