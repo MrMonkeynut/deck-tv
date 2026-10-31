@@ -73,6 +73,22 @@
       "accent": "#F2542D"
     },
     {
+      "id": "windows-vm",
+      "name": "Windows 11",
+      "sub": "Virtual PC",
+      "color": "#0B2A4A",
+      "icon": "desktop",
+      "image": "windows-vm.svg",
+      "command": [
+        "sh",
+        "-c",
+        "exec ~/VMs/start-windows.sh"
+      ],
+      "requires": ["~/VMs/start-windows.sh"],
+      "window_class": "qemu-system-x86_64",
+      "accent": "#3AA0FF"
+    },
+    {
       "id": "spotify",
       "name": "Spotify",
       "sub": "Music",
