@@ -630,8 +630,7 @@
   .ed-count { min-width: 26px; height: 26px; padding: 0 7px; box-sizing: border-box; border-radius: 13px; background: #F2F4F8; color: #0E1116;
     font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
   body.editing .tile > div { align-self: stretch; min-width: 0; }
-  body.editing .tile .name { cursor: text; border-radius: 8px; overflow: hidden; text-overflow: ellipsis; }
-  body.editing .tile .name:hover { background: rgba(255,255,255,.18); }
+  body.editing .tile .name { overflow: hidden; text-overflow: ellipsis; }
   /* A name being renamed: a text box right where the name was */
   .name-input {
     all: unset; box-sizing: border-box; width: 100%; text-align: center; font: inherit; color: #fff; cursor: text;
@@ -668,17 +667,14 @@
     outline: 3px solid transparent; outline-offset: 3px; transition: outline-color .15s, opacity .15s;
   }
   .gp-app.focus { outline-color: var(--ring); }
-  .gp-app.off { opacity: .45; }
-  .gp-app.off:hover, .gp-app.off.focus { opacity: .8; }
   .gp-app.look { box-shadow: inset 0 0 0 3px rgba(255,255,255,.7); }
   .gp-app.placeholder { opacity: .25; }
   .gp-ghost { position: absolute; z-index: 20; pointer-events: none; cursor: grabbing; transform: scale(1.06); box-shadow: 0 20px 50px rgba(0,0,0,.6); }
   .gp-icon { display: flex; }
   .gp-icon img { width: 64px; height: 64px; object-fit: contain; border-radius: 14px; }
   .gp-icon svg { width: 48px; height: 48px; }
-  .gp-nm { max-width: 100%; font-size: 18px; font-weight: 700; padding: 0 6px; border-radius: 6px; cursor: text;
+  .gp-nm { max-width: 100%; font-size: 18px; font-weight: 700; padding: 0 6px; border-radius: 6px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .gp-nm:hover { background: rgba(255,255,255,.18); }
   .gp-nm:has(input) { width: 100%; }
   .gp-sub { font-size: 13px; color: rgba(255,255,255,.75); }
   /* While an app is dragged: Remove from group, to drop it on, in place of the buttons */
@@ -709,6 +705,10 @@
   .hd-icon .mini-folder { width: 38px; height: 38px; }
   .hd-name { flex: 1; font-size: 21px; }
   .hd-row.off .hd-icon, .hd-row.off .hd-name { opacity: .4; }
+  .hd-row.member { margin-left: 44px; padding-top: 5px; padding-bottom: 5px; background: #1D222B; }
+  .hd-row.member .hd-icon { width: 38px; height: 38px; border-radius: 10px; }
+  .hd-row.member .hd-icon > img { width: 30px; height: 30px; }
+  .hd-row.member .hd-name { font-size: 18px; }
   .gp-empty { grid-column: 1 / -1; padding: 34px; text-align: center; color: var(--muted); font-size: 18px; line-height: 1.5;
     border: 2px dashed #39414F; border-radius: 20px; }
   .gp-hint { font-size: 15px; color: var(--muted); margin-top: -8px; }
@@ -827,7 +827,7 @@
   </div>
 
   <div id="edit-bar" role="toolbar" aria-label="Editing the home screen">
-    <span class="ed-hint">Drag to move · drop an app on another to group · click a name to rename</span>
+    <span class="ed-hint">Drag to move · drop an app on another to group · right-click for more</span>
     <button class="set-wide" id="edit-hidden"></button>
     <button class="set-wide" id="edit-new"></button>
     <button class="set-wide primary" id="edit-done"></button>
@@ -850,7 +850,7 @@
   <div id="hidden-ed" role="dialog" aria-label="Hidden cards">
     <div class="power-card hd-card">
       <b>Hidden cards</b>
-      <div class="gp-hint">Switch a card off to take it off the home screen; switch it back on to bring it back.</div>
+      <div class="gp-hint">Switch a card off to take it off the home screen, or an app off to take it out of sight in its group. Switch it back on to bring it back.</div>
       <div id="hd-list"></div>
       <div class="set-btns"><button class="set-wide primary" id="hd-done">Done</button></div>
     </div>
@@ -1194,11 +1194,7 @@ function makeTile(t) {
   b.innerHTML = `${icon}<span class="eq"><i></i><i></i><i></i></span><span class="unread"></span><div><div class="name">${esc(t.name)}</div><div class="sub">${t.sub || ""}</div></div>`;
   b.onpointerdown = e => editing && onTileDown(b, e);
   b.onclick = () => {
-    if (editing) {  // editing: a group opens up, an app offers its choices (unless that was the end of a drag)
-      if (Date.now() - dragEndedAt < 300) return;
-      setFocus(0, rows[0].indexOf(b));
-      return t.userGroup ? openGroupPanel(t) : cardMenu(t, b);
-    }
+    if (editing) return;  // editing: a press is the start of a drag; the choices are a right-click away
     setFocus(0, rows[0].indexOf(b));
     // A tile with choices (UFC: Results or Fights) asks which page to open first
     if (t.userGroup) openGroup(t, b);
@@ -2132,10 +2128,10 @@ document.getElementById("power").onclick = e => { if (e.target.id === "power") c
 /* ---------- editing the home screen ----------
    The pencil puts the cards into edit mode, right where they are. Drag a card to move it; drop an app
    on the middle of a group to put it in, or on the middle of another app to make a group of the two.
-   Click a card's name to rename it; right-click it to rename, hide or group it. Hidden cards come back
-   from Hidden cards in the bar. A group opens up in place: its name, its look and its apps, to rearrange,
-   rename, hide, or drag onto Remove from group. With a controller, A on a card gives the same choices
-   as a menu. Every change saves at once. */
+   A press only ever drags; everything else is a right-click: rename, hide, add to a group, or open a
+   group up in place (its name, its look and its apps, to rearrange, or drag onto Remove from group).
+   Hidden cards, and apps hidden inside groups, come back from Hidden cards in the bar. With a controller,
+   A on a card gives the same choices as a menu. Every change saves at once. */
 let editing = false, edBar = -1, edHeld = null, drag = null, dragEndedAt = 0;
 let layoutOff = new Set();  // hidden: cards, and apps inside groups
 let customNames = {};       // the cards the person renamed: {tile id: name}
@@ -2184,6 +2180,10 @@ function postLayout(layout) {
 /* change(layout) edits a copy of the layout as it is now. With said, a toast says what happened, with
    Undo (which puts the layout from before back). */
 async function saveLayout(change, said) {
+  // Starting from the layout as saved now, not as this page loaded it (the TV, the phone or another
+  // window may have changed it since): only this one change goes on top
+  const fresh = await api("/api/config").catch(() => null);
+  if (fresh) takeConfig(fresh);
   const before = layoutNow(), after = layoutNow();
   change(after);
   const ok = await postLayout(after).then(() => true, () => false);
@@ -2289,7 +2289,9 @@ function startRename(t, el, isNew = false) {
   input.focus();
   input.select();
 }
-function cardMenu(t, b) { openPower(t.name, cardItems(t, b)); }
+// The controller's menus are the right-click ones, less their dividing lines
+const menuItems = items => items.filter(it => it !== "-");
+function cardMenu(t, b) { openPower(t.name, menuItems(cardItems(t, b))); }
 function cardItems(t, b) {
   const items = [];
   if (t.userGroup) items.push({ icon: "grid", name: "Open group", run: () => openGroupPanel(t) });
@@ -2316,6 +2318,7 @@ function startEditing() {
   hideCtx();
   document.body.classList.add("editing");
   renderTiles();
+  reloadTiles();  // and again with the layout as saved now, in case it changed somewhere else
   edFocusBar(-1);
   document.body.classList.contains("mouse") ? clearFocus() : setFocus(0, 0);
 }
@@ -2386,12 +2389,8 @@ function markRow2() {
   const top = Math.ceil(rows[0].length / 2);
   rows[0].forEach((b, i) => b.classList.toggle("row2", i === top));
 }
-// A card's name, in edit mode: click it to rename
+// An empty group, in edit mode, says what it's for
 function editExtras(t, b) {
-  const name = b.querySelector(".name");
-  name.title = "Rename";
-  name.onpointerdown = e => e.stopPropagation();
-  name.onclick = e => { e.stopPropagation(); startRename(t, name); };
   if (t.userGroup && !t.choices.length) b.querySelector(".sub").textContent = "Drop apps here";
 }
 
@@ -2495,30 +2494,38 @@ function openHidden() {
   hdOpen = true;
   document.getElementById("hidden-ed").classList.add("open");
   renderHidden();
-  hdFocus(Math.max(0, cfgTiles.filter(t => !t.hidden).findIndex(t => t.off)));  // starting on the first hidden one
+  hdFocus(Math.max(0, hdOpts().findIndex(sw => sw.getAttribute("aria-checked") === "false")));  // starting on the first hidden one
 }
 function closeHidden() {
   hdOpen = false;
   document.getElementById("hidden-ed").classList.remove("open");
 }
 function renderHidden() {
-  document.getElementById("hd-list").replaceChildren(...cfgTiles.filter(t => !t.hidden).map(t => {
+  const rowsOut = [];
+  for (const t of cfgTiles.filter(t => !t.hidden)) {
+    rowsOut.push(hiddenRow(t));
+    if (t.userGroup) for (const ch of t.choices) { const app = tileById(ch.tile); if (app) rowsOut.push(hiddenRow(app, t)); }
+  }
+  document.getElementById("hd-list").replaceChildren(...rowsOut);
+  if (!document.body.classList.contains("mouse")) hdFocus(hdAt);
+}
+// A card's row, or (with its group) an app's, tucked in under the group
+function hiddenRow(t, group) {
+    const off = layoutOff.has(t.id);
     const row = document.createElement("div");
-    row.className = "hd-row" + (t.off ? " off" : "");
+    row.className = "hd-row" + (group ? " member" : "") + (off ? " off" : "");
     row.style.setProperty("--c", t.color);
     row.innerHTML = `<span class="hd-icon">${t.userGroup ? folderFace(t, "mini-folder") : appIcon(t)}</span><span class="hd-name">${esc(t.name)}</span>`;
     const sw = document.createElement("button");
     sw.className = "set-btn switch";
     sw.setAttribute("role", "switch");
-    sw.setAttribute("aria-checked", String(!t.off));
-    sw.setAttribute("aria-label", `Show ${t.name}`);
+    sw.setAttribute("aria-checked", String(!off));
+    sw.setAttribute("aria-label", group ? `Show ${t.name} in ${group.name}` : `Show ${t.name}`);
     sw.innerHTML = "<i></i>";
     sw.onclick = () => toggleHidden(t, true);
     sw.onmouseenter = () => hdFocus(hdOpts().indexOf(sw));
     row.append(sw);
     return row;
-  }));
-  if (!document.body.classList.contains("mouse")) hdFocus(hdAt);
 }
 function hdFocus(i) {
   hdAt = clamp(i, 0, hdOpts().length - 1);
@@ -2574,18 +2581,14 @@ function renderGroupPanel() {
     return b;
   }));
   const apps = document.getElementById("gp-apps");
-  const items = g.choices.map(ch => tileById(ch.tile)).filter(Boolean).map(app => {
-    const hidden = layoutOff.has(app.id);
+  const items = shownIn(g).map(ch => tileById(ch.tile)).filter(Boolean).map(app => {
     const el = document.createElement("div");
-    el.className = "gp-app" + (hidden ? " off" : "") + (g.iconApp === app.id ? " look" : "");
+    el.className = "gp-app" + (g.iconApp === app.id ? " look" : "");
     el.dataset.id = app.id;
     el.tabIndex = -1;
     el.style.setProperty("--c", app.color);
-    el.innerHTML = `<span class="gp-icon">${appIcon(app)}</span><span class="gp-nm" title="Rename">${app.name}</span>
-      <span class="gp-sub">${hidden ? "Hidden" : g.iconApp === app.id ? "The card's look" : "&nbsp;"}</span>`;
-    const nm = el.querySelector(".gp-nm");
-    nm.onpointerdown = e => e.stopPropagation();
-    nm.onclick = e => { e.stopPropagation(); startRename(app, nm); };
+    el.innerHTML = `<span class="gp-icon">${appIcon(app)}</span><span class="gp-nm">${esc(app.name)}</span>
+      <span class="gp-sub">${g.iconApp === app.id ? "The card's look" : "&nbsp;"}</span>`;
     el.onpointerdown = e => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -2599,12 +2602,14 @@ function renderGroupPanel() {
   if (!items.length) {
     const empty = document.createElement("div");
     empty.className = "gp-empty";
-    empty.textContent = "Nothing in here yet. Drag apps onto this group's card on the home screen, or pick Add to group on an app.";
+    empty.textContent = g.choices.length ? "Every app in here is hidden: bring them back from Hidden cards."
+      : "Nothing in here yet. Drag apps onto this group's card on the home screen, or right-click an app → Add to group.";
     items.push(empty);
   }
   apps.replaceChildren(...items);
-  document.getElementById("gp-count").textContent = g.choices.length
-    ? `${g.choices.length} app${g.choices.length === 1 ? "" : "s"} · drag to rearrange, or onto Remove from group · right-click for more` : "";
+  const n = shownIn(g).length, hid = g.choices.length - n;
+  document.getElementById("gp-count").textContent = n
+    ? `${n} app${n === 1 ? "" : "s"}${hid ? ` (and ${hid} hidden)` : ""} · drag to rearrange, or onto Remove from group · right-click for more` : "";
   gpGrid().forEach((row, r) => row.forEach((el, c) => { if (!el.onmouseenter) el.onmouseenter = () => gpFocus({ r, c }); }));
   if (!document.body.classList.contains("mouse")) gpFocus(gpAt);
 }
@@ -2613,23 +2618,23 @@ function takeOut(g, app) {
 }
 // The controller's menu for an app in the group (A); the mouse gets the same, less the moving, on a right-click
 function appMenu(g, app) {
-  const ids = g.choices.map(c => c.tile), i = ids.indexOf(app.id);
+  const ids = shownIn(g).map(c => c.tile), i = ids.indexOf(app.id);
   const move = d => saveLayout(l => {
-    const x = l.groups.find(x => x.id === g.id);
-    x.apps.splice(i, 1);
-    x.apps.splice(i + d, 0, app.id);
+    const to = [...ids];
+    to.splice(i, 1);
+    to.splice(i + d, 0, app.id);
+    l.groups.find(x => x.id === g.id).apps = groupOrder(g, to);
   });
   openPower(app.name, [
     ...(i > 0 ? [{ icon: "back", name: "Move earlier", run: () => move(-1) }] : []),
     ...(i < ids.length - 1 ? [{ icon: "arrow", name: "Move later", run: () => move(1) }] : []),
-    ...appItems(g, app),
+    ...menuItems(appItems(g, app)),
   ]);
 }
 function appItems(g, app) {
-  const hidden = layoutOff.has(app.id);
   return [
     { icon: "pencil", name: "Rename", run: () => startRename(app, document.querySelector(`.gp-app[data-id="${app.id}"] .gp-nm`)) },
-    { icon: hidden ? "eye" : "eyeoff", name: hidden ? "Show in the group" : "Hide in the group", run: () => toggleHidden(app) },
+    { icon: "eyeoff", name: "Hide", run: () => toggleHidden(app) },
     g.iconApp === app.id
       ? { icon: "grid", name: "Folder look for the card", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = null; }) }
       : { icon: "spark", name: "Use its look for the card", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = app.id; }) },
@@ -2663,7 +2668,13 @@ function dropInPanel(d) {
   document.getElementById("gp-remove").classList.remove("over");
   if (d.out) return takeOut(d.g, d.t);
   const ids = [...document.querySelectorAll("#gp-apps .gp-app")].map(x => x.dataset.id);
-  if (ids.join() !== d.g.choices.map(c => c.tile).join()) saveLayout(l => { l.groups.find(x => x.id === d.g.id).apps = ids; });
+  if (ids.join() !== shownIn(d.g).map(c => c.tile).join()) saveLayout(l => { l.groups.find(x => x.id === d.g.id).apps = groupOrder(d.g, ids); });
+}
+// A group's apps in a new order from the ones showing: the hidden ones keep their places among them
+function groupOrder(g, shown) {
+  const on = new Set(shown);
+  let k = 0;
+  return g.choices.map(c => on.has(c.tile) ? shown[k++] : c.tile);
 }
 /* Focus grid: the name, the looks, the apps, then Delete group / Done */
 const gpGrid = () => [
@@ -2689,7 +2700,8 @@ function groupPanelInput(cmd) {
   }
   if (cmd === "left") gpFocus({ r, c: c - 1 });
   if (cmd === "right") gpFocus({ r, c: c + 1 });
-  if (cmd === "ok") el === gpName ? gpName.focus() : el.click();
+  if (cmd === "ok") el === gpName ? gpName.focus()
+    : el.classList.contains("gp-app") ? appMenu(tileById(gpGroup), tileById(el.dataset.id)) : el.click();
   if (cmd === "back") closeGroupPanel();
 }
 gpName.onblur = () => {
