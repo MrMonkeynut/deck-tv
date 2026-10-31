@@ -163,14 +163,12 @@
   #tiles.rows2.stagger { grid-template-columns: repeat(calc(var(--cols) * 2), minmax(0, 1fr)); }
   #tiles.rows2.stagger .tile { grid-column: span 2; }
   #tiles.rows2.stagger .tile.row2 { grid-column: 2 / span 2; }
-  #tiles.rows2 .tile { max-width: none; height: 172px; padding: 14px 10px 12px; border-radius: 22px; }
-  #tiles.rows2 .tile .appicon { width: 84px; height: 84px; border-radius: 18px; }
-  #tiles.rows2 .tile > svg { width: 64px; height: 64px; }
+  #tiles.rows2 .tile { max-width: none; height: 172px; padding: 12px 10px 8px; border-radius: 22px; }
+  #tiles.rows2 .tile .appicon { width: 106px; height: 106px; border-radius: 22px; }
+  #tiles.rows2 .tile > svg { width: 80px; height: 80px; }
   #tiles.rows2 .tile .name { font-size: 21px; }
-  #tiles.rows2 .tile .sub { font-size: 14px; margin-top: 2px; }
-  /* Eight or more cards to a row: narrow cards, so names and subtitles shrink to fit on one line */
-  #tiles.rows2.dense .tile .name { font-size: 17px; letter-spacing: -.3px; }
-  #tiles.rows2.dense .tile .sub { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Eight or more cards to a row: narrow cards, so names shrink to fit on one line */
+  #tiles.rows2.dense .tile .name { font-size: 17px; letter-spacing: -.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #tiles.rows2.dense .tile > div { max-width: 100%; min-width: 0; }
   #tiles.rows2 .tile.focus { transform: scale(1.05); }
   #tiles.rows2 .tile > .eq { top: 12px; right: 12px; }
@@ -189,7 +187,7 @@
   #tiles { display: flex; gap: 22px; align-items: center; justify-content: center; height: 400px; }
   .tile {
     all: unset; box-sizing: border-box; position: relative; flex: 1 1 0; max-width: 250px; height: 330px; border-radius: 26px;
-    padding: 22px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center;
+    padding: 22px 22px 16px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center;
     background-color: var(--c); background-size: cover; background-position: center;
     transition: transform .18s ease, outline-color .18s ease, opacity .18s ease;
     outline: 5px solid transparent; outline-offset: 6px; overflow: hidden; cursor: pointer;
@@ -200,11 +198,10 @@
   }
   .tile > * { position: relative; }
   .tile .name { font-size: 28px; font-weight: 700; white-space: nowrap; }
-  .tile .sub { font-size: 18px; color: rgba(255,255,255,.78); margin-top: 6px; }
-  /* The app's icon is the tile: big, centred in the space above the name, sitting in the art's glow */
+  /* The app's icon is the tile: big, centred in the space above its name, sitting in the art's glow */
   .tile > svg, .tile .appicon { margin: auto 0; transition: transform .18s ease; }
-  .tile > svg { width: 96px; height: 96px; }
-  .tile .appicon { width: 124px; height: 124px; object-fit: contain; border-radius: 26px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
+  .tile > svg { width: 120px; height: 120px; }
+  .tile .appicon { width: 160px; height: 160px; object-fit: contain; border-radius: 34px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
   .tile.focus > svg, .tile.focus .appicon { transform: scale(1.06); }
   .tile.focus { transform: scale(1.14); outline-color: var(--ring); z-index: 2; }
   #tiles:has(.focus) .tile:not(.focus) { opacity: .72; }
@@ -382,12 +379,12 @@
 
   /* A group's card: its apps' icons in a little grid, like a folder on a phone */
   .tile .folder {
-    margin: auto 0; width: 124px; height: 124px; box-sizing: border-box; padding: 12px; border-radius: 28px;
-    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px;
+    margin: auto 0; width: 168px; height: 168px; box-sizing: border-box; padding: 14px; border-radius: 36px;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px;
     background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); transition: transform .18s ease;
   }
   .tile.focus .folder { transform: scale(1.06); }
-  #tiles.rows2 .tile .folder { width: 84px; height: 84px; padding: 8px; gap: 6px; border-radius: 20px; }
+  #tiles.rows2 .tile .folder { width: 114px; height: 114px; padding: 10px; gap: 8px; border-radius: 26px; }
   .folder img, .folder i, .mini-folder img, .mini-folder i { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; border-radius: 22%; }
   .folder i, .mini-folder i { display: flex; align-items: center; justify-content: center; background: var(--c); }
   .folder i svg, .mini-folder i svg { width: 62%; height: 62%; }
@@ -1198,7 +1195,7 @@ function makeTile(t) {
     : svg(t.icon, "#fff");
   b.dataset.id = t.id;
   if (t.accent) b.style.setProperty("--a", t.accent);
-  b.innerHTML = `${icon}<span class="eq"><i></i><i></i><i></i></span><span class="unread"></span><div><div class="name">${esc(t.name)}</div><div class="sub">${t.sub || ""}</div></div>`;
+  b.innerHTML = `${icon}<span class="eq"><i></i><i></i><i></i></span><span class="unread"></span><div><div class="name">${esc(t.name)}</div></div>`;
   b.onpointerdown = e => editing && onTileDown(b, e);
   b.onclick = () => {
     if (editing) return;  // editing: a press is the start of a drag; the choices are a right-click away
@@ -1215,7 +1212,6 @@ function makeTile(t) {
   b.onmouseenter = () => document.body.classList.contains("mouse") && !drag && setFocus(0, rows[0].indexOf(b));
   b.onmouseleave = () => document.body.classList.contains("mouse") && !drag && clearFocus();
   b.oncontextmenu = e => { e.preventDefault(); editing ? showMenu(e, t.name, cardItems(t, b)) : showCtx(t, e); };
-  if (editing) editExtras(t, b);
   return b;
 }
 async function build() {
@@ -2431,10 +2427,6 @@ function moveTile(b, to) {
 function markRow2() {
   const top = Math.ceil(rows[0].length / 2);
   rows[0].forEach((b, i) => b.classList.toggle("row2", i === top));
-}
-// An empty group, in edit mode, says what it's for
-function editExtras(t, b) {
-  if (t.userGroup && !t.choices.length) b.querySelector(".sub").textContent = "Drop apps here";
 }
 
 /* ----- dragging, with the mouse -----
