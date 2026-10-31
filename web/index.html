@@ -245,6 +245,8 @@
   #ctx button svg { width: 22px; height: 22px; flex: none; }
   #ctx button:hover { background: #2A3140; }
   #ctx button:disabled { color: var(--dim); cursor: default; background: none; }
+  #ctx button.danger { color: #FF8A8A; }
+  #ctx .ctx-line { height: 1px; margin: 6px 10px; background: rgba(255,255,255,.1); }
 
   /* System: storage first (the thing that runs out), then Wi-Fi, sound, battery and the Deck */
   #system {
@@ -621,20 +623,12 @@
   body.editing .tile { cursor: grab; outline: 3px dashed rgba(255,255,255,.28); outline-offset: 4px; touch-action: none; }
   body.editing .tile.focus { outline: 4px solid var(--ring); transform: scale(1.05); }
   body.editing #tiles:has(.focus) .tile:not(.focus) { opacity: 1; }
-  body.editing .tile.off { opacity: .4; filter: saturate(.3); }
-  body.editing .tile.off:hover, body.editing .tile.off.focus { opacity: .75; }
   body.editing .tile.held { outline: 4px solid #7BD3A2; transform: scale(1.1); z-index: 3; }
   body.editing .tile.dragging { cursor: grabbing; z-index: 5; transition: none; box-shadow: 0 24px 60px rgba(0,0,0,.6); opacity: .95; }
   /* An app held over the middle of a group (or of another app): let go and it goes in */
   body.editing .tile.drop-into { outline: 5px solid #7BD3A2; outline-offset: 6px; transform: scale(1.1); }
-  .tile > .ed-eye {
-    position: absolute; top: 10px; left: 10px; width: 40px; height: 40px; border-radius: 50%; z-index: 2;
-    display: flex; align-items: center; justify-content: center; background: rgba(8,10,14,.72); color: #fff; cursor: pointer;
-  }
-  .tile > .ed-eye svg { width: 22px; height: 22px; }
-  .tile > .ed-eye:hover { background: #F2F4F8; color: #0E1116; }
-  #tiles.rows2 .tile > .ed-eye { top: 8px; left: 8px; width: 34px; height: 34px; }
-  #tiles.rows2 .tile > .ed-eye svg { width: 19px; height: 19px; }
+  .ed-count { min-width: 26px; height: 26px; padding: 0 7px; box-sizing: border-box; border-radius: 13px; background: #F2F4F8; color: #0E1116;
+    font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
   body.editing .tile > div { align-self: stretch; min-width: 0; }
   body.editing .tile .name { cursor: text; border-radius: 8px; overflow: hidden; text-overflow: ellipsis; }
   body.editing .tile .name:hover { background: rgba(255,255,255,.18); }
@@ -655,8 +649,6 @@
     width: 940px; gap: 20px; transition: opacity .15s, box-shadow .15s;
     background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--a, #8B5CF6) 20%, #1B2029) 0%, #1B2029 70%);
   }
-  /* Dragging an app out of the group: let go here and it's back on the home screen */
-  #gpanel.dropping-out .gp-card { opacity: .6; box-shadow: 0 0 0 3px #FF8A8A; }
   .gp-title {
     all: unset; box-sizing: border-box; width: 100%; font-size: 34px; font-weight: 700; color: var(--ink);
     padding: 6px 14px; margin: -6px 0 0 -14px; border-radius: 14px; outline: 3px solid transparent; outline-offset: 2px; cursor: text;
@@ -679,7 +671,8 @@
   .gp-app.off { opacity: .45; }
   .gp-app.off:hover, .gp-app.off.focus { opacity: .8; }
   .gp-app.look { box-shadow: inset 0 0 0 3px rgba(255,255,255,.7); }
-  .gp-app.dragging { z-index: 5; cursor: grabbing; transition: none; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+  .gp-app.placeholder { opacity: .25; }
+  .gp-ghost { position: absolute; z-index: 20; pointer-events: none; cursor: grabbing; transform: scale(1.06); box-shadow: 0 20px 50px rgba(0,0,0,.6); }
   .gp-icon { display: flex; }
   .gp-icon img { width: 64px; height: 64px; object-fit: contain; border-radius: 14px; }
   .gp-icon svg { width: 48px; height: 48px; }
@@ -688,13 +681,34 @@
   .gp-nm:hover { background: rgba(255,255,255,.18); }
   .gp-nm:has(input) { width: 100%; }
   .gp-sub { font-size: 13px; color: rgba(255,255,255,.75); }
-  .gp-tool {
-    position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; background: rgba(8,10,14,.72); color: #fff;
+  /* While an app is dragged: Remove from group, to drop it on, in place of the buttons */
+  .gp-remove {
+    display: none; align-items: center; justify-content: center; gap: 14px; height: 96px; border-radius: 20px;
+    border: 3px dashed rgba(255,138,138,.55); color: #FF8A8A; font-size: 21px; font-weight: 600; transition: background .12s, border-color .12s;
   }
-  .gp-tool.right { left: auto; right: 8px; }
-  .gp-tool:hover { background: #F2F4F8; color: #0E1116; }
-  .gp-tool svg { width: 18px; height: 18px; }
+  .gp-x { width: 46px; height: 46px; border-radius: 12px; background: rgba(255,138,138,.16); display: flex; align-items: center; justify-content: center; }
+  .gp-x svg { width: 26px; height: 26px; }
+  .gp-remove.over { background: rgba(255,138,138,.16); border-color: #FF8A8A; border-style: solid; }
+  .gp-remove.over .gp-x { background: #FF8A8A; color: #1B2029; }
+  #gpanel.dragging .gp-remove { display: flex; }
+  #gpanel.dragging #gp-bottom, #gpanel.dragging .gp-hint { display: none; }
+
+  /* Hidden cards: every card, with a switch for whether it's on the home screen */
+  #hidden-ed {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.78); z-index: 10;
+  }
+  #hidden-ed.open { display: flex; }
+  .hd-card { width: 620px; gap: 20px; }
+  #hd-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding: 6px; margin: -6px;
+    scrollbar-width: thin; scrollbar-color: #4A5366 transparent; }
+  .hd-row { display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 12px; border-radius: 18px; background: #232934; }
+  .hd-icon { flex: none; width: 46px; height: 46px; border-radius: 12px; background: var(--c, #2A3140); display: flex; align-items: center; justify-content: center; }
+  .hd-icon > img { width: 38px; height: 38px; object-fit: contain; }
+  .hd-icon > svg { width: 26px; height: 26px; }
+  .hd-icon .mini-folder { width: 38px; height: 38px; }
+  .hd-name { flex: 1; font-size: 21px; }
+  .hd-row.off .hd-icon, .hd-row.off .hd-name { opacity: .4; }
   .gp-empty { grid-column: 1 / -1; padding: 34px; text-align: center; color: var(--muted); font-size: 18px; line-height: 1.5;
     border: 2px dashed #39414F; border-radius: 20px; }
   .gp-hint { font-size: 15px; color: var(--muted); margin-top: -8px; }
@@ -814,6 +828,7 @@
 
   <div id="edit-bar" role="toolbar" aria-label="Editing the home screen">
     <span class="ed-hint">Drag to move · drop an app on another to group · click a name to rename</span>
+    <button class="set-wide" id="edit-hidden"></button>
     <button class="set-wide" id="edit-new"></button>
     <button class="set-wide primary" id="edit-done"></button>
   </div>
@@ -824,10 +839,20 @@
       <div class="ge-styles gp-styles" id="gp-styles" role="radiogroup" aria-label="Look"></div>
       <div id="gp-apps"></div>
       <div class="gp-hint" id="gp-count"></div>
+      <div class="gp-remove" id="gp-remove"><span class="gp-x"></span><span>Remove from group</span></div>
       <div class="set-btns" id="gp-bottom">
         <button class="set-wide danger" id="gp-delete"></button>
         <button class="set-wide primary" id="gp-done">Done</button>
       </div>
+    </div>
+  </div>
+
+  <div id="hidden-ed" role="dialog" aria-label="Hidden cards">
+    <div class="power-card hd-card">
+      <b>Hidden cards</b>
+      <div class="gp-hint">Switch a card off to take it off the home screen; switch it back on to bring it back.</div>
+      <div id="hd-list"></div>
+      <div class="set-btns"><button class="set-wide primary" id="hd-done">Done</button></div>
     </div>
   </div>
 
@@ -1139,11 +1164,11 @@ function takeConfig(cfg) {
   layoutOff = new Set(cfg.layoutOff || []);
   customNames = cfg.names || {};
 }
-/* The cards. Apps opened from a group tile (Live TV's RTÉ, Virgin, Plex) don't get a tile of their own;
-   hidden cards ("off") only show while editing the home screen. */
+/* The cards. Apps opened from a group tile (Live TV's RTÉ, Virgin, Plex) don't get a tile of their own,
+   nor do hidden cards ("off": brought back from Hidden cards, while editing). */
 function renderTiles() {
   const tilesEl = document.getElementById("tiles");
-  const visible = cfgTiles.filter(t => !t.hidden && (editing || !t.off));
+  const visible = cfgTiles.filter(t => !t.hidden && !t.off);
   const shown = visible.length;
   tilesEl.classList.toggle("rows2", shown > 7);
   tilesEl.style.setProperty("--cols", Math.ceil(shown / 2));
@@ -1153,6 +1178,8 @@ function renderTiles() {
   tilesEl.replaceChildren(...rows[0]);
   rows[0].forEach(b => b.classList.toggle("open", openIds.includes(b.dataset.id)));
   markRow2();
+  const n = cfgTiles.filter(t => !t.hidden && t.off).length;
+  document.getElementById("edit-hidden").innerHTML = `${svg("eyeoff", "currentColor", 1.9)}Hidden cards${n ? ` <span class="ed-count">${n}</span>` : ""}`;
 }
 function makeTile(t) {
   const b = document.createElement("button");
@@ -1184,7 +1211,7 @@ function makeTile(t) {
   };
   b.onmouseenter = () => document.body.classList.contains("mouse") && !drag && setFocus(0, rows[0].indexOf(b));
   b.onmouseleave = () => document.body.classList.contains("mouse") && !drag && clearFocus();
-  b.oncontextmenu = e => { e.preventDefault(); editing ? cardMenu(t, b) : showCtx(t, e); };
+  b.oncontextmenu = e => { e.preventDefault(); editing ? showMenu(e, t.name, cardItems(t, b)) : showCtx(t, e); };
   if (editing) editExtras(t, b);
   return b;
 }
@@ -1623,16 +1650,33 @@ const FOCUS_ICON = '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><ci
 function showCtx(t, e) {
   const has = players.find(p => members(t).includes(p.tile));
   const current = np && members(t).includes(np.tile);
-  const label = current ? "In now playing" : has ? "Show in now playing" : `Nothing playing in ${t.name}`;
-  ctx.innerHTML = `<div class="ctx-head">${t.name}</div>
-    <button id="ctx-focus" ${has && !current ? "" : "disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FOCUS_ICON}</svg>${label}</button>
-    <button id="ctx-edit">${svg("pencil", "currentColor", 1.8)}Edit the home screen</button>`;
-  document.getElementById("ctx-edit").onclick = () => { hideCtx(); startEditing(); };
-  document.getElementById("ctx-focus").onclick = async () => {
-    hideCtx();
-    await api(`/api/media/focus/${has.tile}`, "POST").catch(() => {});
-    setTimeout(refreshOpen, 1100);  // the server switches on its next look, about a second
-  };
+  const b = rows[0].find(x => x.dataset.id === t.id);
+  showMenu(e, t.name, [
+    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FOCUS_ICON}</svg>`,
+      name: current ? "In now playing" : has ? "Show in now playing" : `Nothing playing in ${t.name}`, disabled: !has || current,
+      run: async () => {
+        await api(`/api/media/focus/${has.tile}`, "POST").catch(() => {});
+        setTimeout(refreshOpen, 1100);  // the server switches on its next look, about a second
+      } },
+    { icon: "pencil", name: "Rename", run: () => startRename(t, b?.querySelector(".name")) },
+    { icon: "eyeoff", name: "Hide", run: () => toggleHidden(t) },
+    "-",
+    { icon: "grid", name: "Edit the home screen", run: startEditing },
+  ]);
+}
+/* A right-click menu at the pointer: items are {icon, name, run, disabled, danger}, or "-" for a line */
+function showMenu(e, title, items) {
+  ctx.replaceChildren();
+  ctx.insertAdjacentHTML("beforeend", `<div class="ctx-head">${esc(title)}</div>`);
+  for (const it of items) {
+    if (it === "-") { ctx.insertAdjacentHTML("beforeend", '<div class="ctx-line"></div>'); continue; }
+    const b = document.createElement("button");
+    b.innerHTML = (it.icon.startsWith("<") ? it.icon : svg(it.icon, "currentColor", 1.8)) + esc(it.name);
+    b.disabled = !!it.disabled;
+    if (it.danger) b.className = "danger";
+    b.onclick = () => { hideCtx(); it.run(); };
+    ctx.append(b);
+  }
   // Place it at the pointer, in the stage's own (scaled) coordinates, kept on screen
   const stage = document.getElementById("stage"), r = stage.getBoundingClientRect(), k = r.width / 1280;
   ctx.classList.add("open");
@@ -2088,9 +2132,10 @@ document.getElementById("power").onclick = e => { if (e.target.id === "power") c
 /* ---------- editing the home screen ----------
    The pencil puts the cards into edit mode, right where they are. Drag a card to move it; drop an app
    on the middle of a group to put it in, or on the middle of another app to make a group of the two.
-   Click a card's name to rename it, its eye to hide it (hidden cards show here, dimmed, and nowhere
-   else). A group opens up in place: its name, its look and its apps, to rearrange, rename, hide or drag
-   back out. With a controller, A on a card gives the same choices as a menu. Every change saves at once. */
+   Click a card's name to rename it; right-click it to rename, hide or group it. Hidden cards come back
+   from Hidden cards in the bar. A group opens up in place: its name, its look and its apps, to rearrange,
+   rename, hide, or drag onto Remove from group. With a controller, A on a card gives the same choices
+   as a menu. Every change saves at once. */
 let editing = false, edBar = -1, edHeld = null, drag = null, dragEndedAt = 0;
 let layoutOff = new Set();  // hidden: cards, and apps inside groups
 let customNames = {};       // the cards the person renamed: {tile id: name}
@@ -2156,6 +2201,7 @@ async function reloadTiles() {
   const i = rows[0].findIndex(b => b.dataset.id === at);
   if (pos.r === 0 && edBar < 0 && !document.body.classList.contains("mouse")) setFocus(0, Math.max(0, i));
   if (gpOpen) renderGroupPanel();
+  if (hdOpen) renderHidden();
 }
 // The order to save: the cards in their places on screen, every other tile (the apps inside groups)
 // keeping its place among them
@@ -2171,20 +2217,20 @@ function putInGroup(l, app, gid) {
   l.groups.find(g => g.id === gid)?.apps.push(app);
 }
 function takeOutOf(l, g, app) {
-  // Back on the home screen, shown, right after its group's card
+  // Back on the home screen, shown, at the end
   l.groups = l.groups.map(x => x.id === g.id ? { ...x, apps: x.apps.filter(a => a !== app), icon: x.icon === app ? null : x.icon } : x);
-  l.order = l.order.filter(id => id !== app);
-  l.order.splice(l.order.indexOf(g.id) + 1, 0, app);
+  l.order = [...l.order.filter(id => id !== app), app];
   l.off = l.off.filter(id => id !== app);
 }
 const visibleCards = () => cfgTiles.filter(t => !t.hidden && !t.off);
 
 /* ----- the actions, shared by the mouse, the controller and the menus ----- */
-function toggleHidden(t) {
+// quiet: from the Hidden cards list, where the switch says it all
+function toggleHidden(t, quiet = false) {
   const hiding = !layoutOff.has(t.id);
   if (hiding && !t.inGroup && visibleCards().length === 1) return toast("Keep at least one card showing");
   saveLayout(l => { l.off = hiding ? [...l.off, t.id] : l.off.filter(id => id !== t.id); },
-    hiding ? `${t.name} hidden` : null);
+    hiding && !quiet ? `${t.name} hidden` : null);
 }
 function addToGroup(t, g) {
   saveLayout(l => putInGroup(l, t.id, g.id), `${t.name} is in ${g.name} now`);
@@ -2243,15 +2289,16 @@ function startRename(t, el, isNew = false) {
   input.focus();
   input.select();
 }
-function cardMenu(t, b) {
+function cardMenu(t, b) { openPower(t.name, cardItems(t, b)); }
+function cardItems(t, b) {
   const items = [];
   if (t.userGroup) items.push({ icon: "grid", name: "Open group", run: () => openGroupPanel(t) });
   items.push({ icon: "move", name: "Move", run: () => holdCard(b) });
   items.push({ icon: "pencil", name: "Rename", run: () => startRename(t, b.querySelector(".name")) });
-  items.push({ icon: t.off ? "eye" : "eyeoff", name: t.off ? "Show" : "Hide", run: () => toggleHidden(t) });
+  items.push({ icon: "eyeoff", name: "Hide", run: () => toggleHidden(t) });
   if (groupable(t)) items.push({ icon: "plus", name: "Add to group", run: () => groupPicker(t) });
-  if (t.userGroup) items.push({ icon: "trash", name: "Delete group", run: () => deleteGroup(t) });
-  openPower(t.name, items);
+  if (t.userGroup) items.push({ icon: "trash", name: "Delete group", danger: true, run: () => deleteGroup(t) });
+  return items;
 }
 function groupPicker(t) {
   const groups = cfgTiles.filter(g => g.userGroup);
@@ -2275,6 +2322,7 @@ function startEditing() {
 function stopEditing() {
   if (edHeld) dropHeld();
   closeGroupPanel();
+  closeHidden();
   editing = false;
   document.body.classList.remove("editing");
   edFocusBar(-1);
@@ -2338,24 +2386,13 @@ function markRow2() {
   const top = Math.ceil(rows[0].length / 2);
   rows[0].forEach((b, i) => b.classList.toggle("row2", i === top));
 }
-// A card's extras in edit mode: an eye to hide or show it, and a name to click and rename
+// A card's name, in edit mode: click it to rename
 function editExtras(t, b) {
-  b.classList.toggle("off", !!t.off);
-  const eye = document.createElement("span");
-  eye.className = "ed-eye";
-  eye.setAttribute("role", "button");
-  eye.title = t.off ? "Show on the home screen" : "Hide from the home screen";
-  eye.innerHTML = svg(t.off ? "eyeoff" : "eye", "currentColor", 2);
-  eye.onpointerdown = e => e.stopPropagation();
-  eye.onclick = e => { e.stopPropagation(); toggleHidden(t); };
-  b.append(eye);
   const name = b.querySelector(".name");
   name.title = "Rename";
   name.onpointerdown = e => e.stopPropagation();
   name.onclick = e => { e.stopPropagation(); startRename(t, name); };
-  const sub = b.querySelector(".sub");
-  if (t.off) sub.textContent = "Hidden";
-  else if (t.userGroup && !t.choices.length) sub.textContent = "Drop apps here";
+  if (t.userGroup && !t.choices.length) b.querySelector(".sub").textContent = "Drop apps here";
 }
 
 /* ----- dragging, with the mouse -----
@@ -2405,17 +2442,33 @@ addEventListener("pointermove", e => {
   if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
   if (!drag.moved) hideCtx();
   drag.moved = true;
+  if (drag.inPanel) return dragInPanel(e), followGhost(e);
   drag.b.classList.add("dragging");
-  if (drag.inPanel) dragInPanel(e); else dragOverCards(e);
+  dragOverCards(e);
   followPointer(drag.b, e, drag);
 });
+// An app dragged in a group is drawn as a copy over everything (its list scrolls, and clips what's in it),
+// its own place left faint
+function followGhost(e) {
+  if (!drag.ghost) {
+    drag.ghost = drag.b.cloneNode(true);
+    drag.ghost.className = "gp-app gp-ghost";
+    drag.ghost.style.width = drag.b.offsetWidth + "px";
+    document.getElementById("gpanel").append(drag.ghost);
+    drag.b.classList.add("placeholder");
+  }
+  const s = stageScale(), st = document.getElementById("stage").getBoundingClientRect();
+  drag.ghost.style.left = (e.clientX - st.left - drag.dx) / s + "px";
+  drag.ghost.style.top = (e.clientY - st.top - drag.dy) / s + "px";
+}
 addEventListener("pointerup", () => {
   if (!drag) return;
   const d = drag;
   drag = null;
   clearTimeout(d.wait);
-  d.b.classList.remove("dragging");
+  d.b.classList.remove("dragging", "placeholder");
   d.b.style.transform = "";
+  d.ghost?.remove();
   if (!d.moved) return;
   dragEndedAt = Date.now();  // not a click as well
   if (d.inPanel) return dropInPanel(d);
@@ -2433,6 +2486,54 @@ addEventListener("pointerup", () => {
 document.getElementById("edit-new").innerHTML = `${svg("plus", "currentColor", 2)}New group`;
 document.getElementById("edit-done").innerHTML = `${svg("check", "currentColor", 2)}Done`;
 document.getElementById("edit-new").onclick = () => newGroup(null);
+document.getElementById("edit-hidden").onclick = openHidden;
+
+/* ----- Hidden cards: every card, with a switch for whether it's on the home screen ----- */
+let hdOpen = false, hdAt = 0;
+const hdOpts = () => [...document.querySelectorAll("#hd-list .set-btn, #hd-done")];
+function openHidden() {
+  hdOpen = true;
+  document.getElementById("hidden-ed").classList.add("open");
+  renderHidden();
+  hdFocus(Math.max(0, cfgTiles.filter(t => !t.hidden).findIndex(t => t.off)));  // starting on the first hidden one
+}
+function closeHidden() {
+  hdOpen = false;
+  document.getElementById("hidden-ed").classList.remove("open");
+}
+function renderHidden() {
+  document.getElementById("hd-list").replaceChildren(...cfgTiles.filter(t => !t.hidden).map(t => {
+    const row = document.createElement("div");
+    row.className = "hd-row" + (t.off ? " off" : "");
+    row.style.setProperty("--c", t.color);
+    row.innerHTML = `<span class="hd-icon">${t.userGroup ? folderFace(t, "mini-folder") : appIcon(t)}</span><span class="hd-name">${esc(t.name)}</span>`;
+    const sw = document.createElement("button");
+    sw.className = "set-btn switch";
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(!t.off));
+    sw.setAttribute("aria-label", `Show ${t.name}`);
+    sw.innerHTML = "<i></i>";
+    sw.onclick = () => toggleHidden(t, true);
+    sw.onmouseenter = () => hdFocus(hdOpts().indexOf(sw));
+    row.append(sw);
+    return row;
+  }));
+  if (!document.body.classList.contains("mouse")) hdFocus(hdAt);
+}
+function hdFocus(i) {
+  hdAt = clamp(i, 0, hdOpts().length - 1);
+  hdOpts().forEach((b, n) => b.classList.toggle("focus", n === hdAt));
+  if (!document.body.classList.contains("mouse")) hdOpts()[hdAt].scrollIntoView({ block: "nearest" });
+}
+function hiddenInput(cmd) {
+  if (cmd === "up" || cmd === "left") hdFocus(hdAt - 1);
+  if (cmd === "down" || cmd === "right") hdFocus(hdAt + 1);
+  if (cmd === "ok") hdOpts()[hdAt].click();
+  if (cmd === "back") closeHidden();
+}
+document.getElementById("hd-done").onmouseenter = () => hdFocus(hdOpts().length - 1);
+document.getElementById("hd-done").onclick = closeHidden;
+document.getElementById("hidden-ed").onclick = e => { if (e.target.id === "hidden-ed") closeHidden(); };
 document.getElementById("edit-done").onclick = stopEditing;
 
 /* ----- a group, opened up in edit mode: its name, its look, and its apps ----- */
@@ -2482,19 +2583,6 @@ function renderGroupPanel() {
     el.style.setProperty("--c", app.color);
     el.innerHTML = `<span class="gp-icon">${appIcon(app)}</span><span class="gp-nm" title="Rename">${app.name}</span>
       <span class="gp-sub">${hidden ? "Hidden" : g.iconApp === app.id ? "The card's look" : "&nbsp;"}</span>`;
-    const tool = (icon, title, run) => {
-      const s = document.createElement("span");
-      s.className = "gp-tool";
-      s.setAttribute("role", "button");
-      s.title = title;
-      s.innerHTML = svg(icon, "currentColor", 2);
-      s.onpointerdown = e => e.stopPropagation();
-      s.onclick = e => { e.stopPropagation(); run(); };
-      return s;
-    };
-    el.append(tool(hidden ? "eyeoff" : "eye", hidden ? "Show in the group" : "Hide in the group", () => toggleHidden(app)),
-              tool("out", "Take out of the group", () => takeOut(g, app)));
-    el.querySelector(".gp-tool:last-child").classList.add("right");
     const nm = el.querySelector(".gp-nm");
     nm.onpointerdown = e => e.stopPropagation();
     nm.onclick = e => { e.stopPropagation(); startRename(app, nm); };
@@ -2504,7 +2592,7 @@ function renderGroupPanel() {
       const r = el.getBoundingClientRect();
       drag = { b: el, t: app, g, inPanel: true, dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, moved: false };
     };
-    el.onclick = () => { if (Date.now() - dragEndedAt > 300) appMenu(g, app); };
+    el.oncontextmenu = e => { e.preventDefault(); showMenu(e, app.name, appItems(g, app)); };
     el.onmouseenter = () => gpFocusEl(el);
     return el;
   });
@@ -2516,13 +2604,14 @@ function renderGroupPanel() {
   }
   apps.replaceChildren(...items);
   document.getElementById("gp-count").textContent = g.choices.length
-    ? `${g.choices.length} app${g.choices.length === 1 ? "" : "s"} · drag to rearrange, or out of here to take one out` : "";
+    ? `${g.choices.length} app${g.choices.length === 1 ? "" : "s"} · drag to rearrange, or onto Remove from group · right-click for more` : "";
   gpGrid().forEach((row, r) => row.forEach((el, c) => { if (!el.onmouseenter) el.onmouseenter = () => gpFocus({ r, c }); }));
   if (!document.body.classList.contains("mouse")) gpFocus(gpAt);
 }
 function takeOut(g, app) {
   saveLayout(l => takeOutOf(l, g, app.id), `${app.name} is back on the home screen`);
 }
+// The controller's menu for an app in the group (A); the mouse gets the same, less the moving, on a right-click
 function appMenu(g, app) {
   const ids = g.choices.map(c => c.tile), i = ids.indexOf(app.id);
   const move = d => saveLayout(l => {
@@ -2530,25 +2619,33 @@ function appMenu(g, app) {
     x.apps.splice(i, 1);
     x.apps.splice(i + d, 0, app.id);
   });
-  const hidden = layoutOff.has(app.id);
   openPower(app.name, [
     ...(i > 0 ? [{ icon: "back", name: "Move earlier", run: () => move(-1) }] : []),
     ...(i < ids.length - 1 ? [{ icon: "arrow", name: "Move later", run: () => move(1) }] : []),
-    { icon: "pencil", name: "Rename", run: () => startRename(app, document.querySelector(`.gp-app[data-id="${app.id}"] .gp-nm`)) },
-    { icon: hidden ? "eye" : "eyeoff", name: hidden ? "Show" : "Hide", run: () => toggleHidden(app) },
-    { icon: "out", name: "Take out", run: () => takeOut(g, app) },
-    g.iconApp === app.id
-      ? { icon: "grid", name: "Folder look", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = null; }) }
-      : { icon: "spark", name: "Use its look", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = app.id; }) },
+    ...appItems(g, app),
   ]);
 }
-// Dragging inside the panel: over another app, take its place; outside the panel's card, it comes out
+function appItems(g, app) {
+  const hidden = layoutOff.has(app.id);
+  return [
+    { icon: "pencil", name: "Rename", run: () => startRename(app, document.querySelector(`.gp-app[data-id="${app.id}"] .gp-nm`)) },
+    { icon: hidden ? "eye" : "eyeoff", name: hidden ? "Show in the group" : "Hide in the group", run: () => toggleHidden(app) },
+    g.iconApp === app.id
+      ? { icon: "grid", name: "Folder look for the card", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = null; }) }
+      : { icon: "spark", name: "Use its look for the card", run: () => saveLayout(l => { l.groups.find(x => x.id === g.id).icon = app.id; }) },
+    "-",
+    { icon: "close", name: "Remove from group", danger: true, run: () => takeOut(g, app) },
+  ];
+}
+// Dragging inside the panel: over another app, take its place; over Remove from group (which shows
+// while dragging, in place of the buttons), let go and it's back on the home screen, at the end
 function dragInPanel(e) {
-  const card = document.querySelector("#gpanel .gp-card").getBoundingClientRect();
-  const out = e.clientX < card.left || e.clientX > card.right || e.clientY < card.top || e.clientY > card.bottom;
-  document.getElementById("gpanel").classList.toggle("dropping-out", out);
-  drag.out = out;
-  if (out) return;
+  const panel = document.getElementById("gpanel"), zone = document.getElementById("gp-remove");
+  panel.classList.add("dragging");
+  const z = zone.getBoundingClientRect();
+  drag.out = e.clientX >= z.left && e.clientX <= z.right && e.clientY >= z.top && e.clientY <= z.bottom;
+  zone.classList.toggle("over", drag.out);
+  if (drag.out) return;
   const els = [...document.querySelectorAll("#gp-apps .gp-app")];
   const over = els.find(x => {
     if (x === drag.b) return false;
@@ -2562,7 +2659,8 @@ function dragInPanel(e) {
   }
 }
 function dropInPanel(d) {
-  document.getElementById("gpanel").classList.remove("dropping-out");
+  document.getElementById("gpanel").classList.remove("dragging");
+  document.getElementById("gp-remove").classList.remove("over");
   if (d.out) return takeOut(d.g, d.t);
   const ids = [...document.querySelectorAll("#gp-apps .gp-app")].map(x => x.dataset.id);
   if (ids.join() !== d.g.choices.map(c => c.tile).join()) saveLayout(l => { l.groups.find(x => x.id === d.g.id).apps = ids; });
@@ -2603,6 +2701,7 @@ gpName.onkeydown = e => { if (e.key === "Escape") gpName.value = tileById(gpGrou
 document.getElementById("gp-delete").innerHTML = `${svg("trash", "currentColor", 1.8)}Delete group`;
 document.getElementById("gp-delete").onclick = () => { const g = tileById(gpGroup); closeGroupPanel(); deleteGroup(g); };
 document.getElementById("gp-done").onclick = closeGroupPanel;
+document.querySelector("#gp-remove .gp-x").innerHTML = svg("close", "currentColor", 2.2);
 document.getElementById("gpanel").onclick = e => { if (e.target.id === "gpanel") closeGroupPanel(); };
 
 /* ---------- opening a group from the home screen ----------
@@ -3766,6 +3865,7 @@ function input(cmd) {
     if (cmd === "back") closePower();
     return;
   }
+  if (hdOpen) return hiddenInput(cmd);
   if (gpOpen) return groupPanelInput(cmd);
   if (editing) return editInput(cmd);
   const { r, c } = pos;
