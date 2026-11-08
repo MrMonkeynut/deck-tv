@@ -400,11 +400,13 @@ def shut_down():
     os._exit(0)
 
 
-# Desktop mode: "Go to the desktop" steps out of Deck TV altogether. The dock goes (and with it Deck
-# TV's Alt+Tab, so KDE's is back), apps open as ordinary windows, and closing one no longer brings
-# Deck TV back. Coming back to Deck TV's own screen, any way at all (its taskbar icon, Alt+Tab, the
-# desktop icon, Super+H, the phone's Home), switches it all back on.
-desktop_mode = False
+# Desktop mode: a switch, on the home screen's desktop button. On, Deck TV's grip on the Deck lets
+# go: the dock goes (and with it Deck TV's Alt+Tab, so KDE's is back), apps open as ordinary
+# windows, and closing one no longer brings Deck TV back. Deck TV's own screen still works as a
+# launcher. It stays on, through restarts too (the file below; the launcher leaves the dock out
+# while it's there), until it's switched off again.
+DESKTOP_FLAG = Path.home() / ".config/deck-tv/desktop-mode"
+desktop_mode = DESKTOP_FLAG.exists()
 
 
 def app_rules(on):
@@ -423,18 +425,24 @@ def app_rules(on):
 
 
 def tv_mode():
-    """The dock asks for this as it starts: Deck TV is in charge again."""
-    global desktop_mode
-    desktop_mode = False
-    threading.Thread(target=app_rules, args=(True,), daemon=True).start()
-    return {"ok": True}
+    """The dock asks for this as it starts: the apps' rules the right way round for the mode."""
+    threading.Thread(target=app_rules, args=(not desktop_mode,), daemon=True).start()
+    return {"ok": True, "desktop": desktop_mode}
 
 
-def back_to_tv():
-    """From desktop mode: the launcher restarts the dock (which calls tv_mode) and brings Deck TV up."""
+def set_desktop_mode(on):
+    """Desktop mode on or off (above). Deck TV stays where it is either way."""
     global desktop_mode
-    desktop_mode = False
-    spawn([str(Path.home() / ".local/bin/deck-tv")])
+    desktop_mode = on
+    if on:
+        DESKTOP_FLAG.parent.mkdir(parents=True, exist_ok=True)
+        DESKTOP_FLAG.touch()
+        stop_dock()
+    else:
+        DESKTOP_FLAG.unlink(missing_ok=True)
+        spawn(["python3", str(Path(__file__).resolve().parent / "dock.py"), "--restart"])
+    threading.Thread(target=app_rules, args=(not on,), daemon=True).start()
+    return {"ok": True, "desktop": on}
 
 
 # Tiles with "fullscreen": "launch" only go full screen when opened from Deck TV:
@@ -459,7 +467,6 @@ def watch_for_closed_apps():
     seen = set()
     dropped = {}  # window -> seen out of full screen once
     home_seen = False
-    left_home = False  # desktop mode: something other than Deck TV has been in front
     while True:
         time.sleep(1)
         try:
@@ -485,17 +492,10 @@ def watch_for_closed_apps():
                 shut_down()
             home_seen = home is not None
             if desktop_mode:
-                # Ordinary windows: nothing made full screen, nothing brought back. Deck TV in front
-                # again, after something else was, means back to Deck TV.
-                if active != home:
-                    left_home = True
-                elif left_home:
-                    left_home = False
-                    back_to_tv()
+                # Ordinary windows: nothing made full screen, nothing brought back
                 seen = current
                 dropped.clear()
                 continue
-            left_home = False
             in_front = next((t["id"] for t in tiles if active in owned[t["id"]]), None) or ("home" if active == home else None)
             if in_front and (not recent or recent[0] != in_front):
                 used(in_front)
@@ -722,7 +722,7 @@ def app_state():
     return {"open": open_tiles(wins), "home": find_window(HOME_CLASS, wins) is not None,
             "front": front["id"] if front else None, "media": now_playing.now_playing(),
             "players": now_playing.players(), "page": page_version(), "unread": unread_counts(wins),
-            "recent": list(recent)}
+            "recent": list(recent), "desktop": desktop_mode}
 
 
 def unread_counts(wins):
@@ -1154,27 +1154,8 @@ def close_item(item_id):
     return {"ok": True, "closed": len(found)}, 200
 
 
-def show_desktop():
-    """Step out to the ordinary desktop (desktop mode, above), with every window tucked away by
-    KWin's Show Desktop."""
-    global desktop_mode
-    desktop_mode = True
-    stop_dock()
-    threading.Thread(target=app_rules, args=(False,), daemon=True).start()
-    # Deck TV itself properly minimised: Show Desktop alone puts it back the moment anything else
-    # takes the focus, and the watcher would take that for coming back to it
-    home = find_window(HOME_CLASS)
-    if home:
-        run(f"xdotool windowminimize {int(home, 16)}")
-    run('qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Show Desktop"')
-    return {"ok": True}
-
-
 def go_home():
     used("home")
-    if desktop_mode:
-        back_to_tv()
-        return {"ok": True}
     wid = find_window(HOME_CLASS)
     if wid:
         activate(wid)
@@ -1500,8 +1481,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:
             return self._json({"ok": now_playing.focus(parts[3])})
-        if self.path == "/api/desktop":
-            return self._json(show_desktop())
+        if self.path in ("/api/desktop", "/api/desktop/on", "/api/desktop/off"):
+            on = {"/api/desktop/on": True, "/api/desktop/off": False}.get(self.path, not desktop_mode)
+            return self._json(set_desktop_mode(on))
         if self.path == "/api/tv":
             return self._json(tv_mode())
         if self.path == "/api/audio/search":
@@ -1710,6 +1692,7 @@ def main():
     global pointer
     server = Server(("127.0.0.1", PORT), Handler)
     threading.Thread(target=watch_for_closed_apps, daemon=True).start()
+    threading.Thread(target=app_rules, args=(not desktop_mode,), daemon=True).start()
     threading.Thread(target=now_playing.run, daemon=True).start()
     # Phone remote: home network only (port 8766), every action needs the pairing token
     try:

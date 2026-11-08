@@ -60,18 +60,20 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
 - **The dock**: move the mouse to the very bottom edge of the screen and a glowing line appears.
   Click it to open the dock: Home (Deck TV), the apps you have open, and the speaker on the left.
   - Click the speaker for what's playing (previous, play/pause, next), the volume, and
-    **Go to the desktop**. Scroll over it to change the volume.
+    **Desktop mode**. Scroll over it to change the volume.
   - Right-click an app in the dock to close it.
   - Slide the dock left or right if it's in the way. It hides 4 seconds after the pointer leaves
     it, or click elsewhere.
 - **Home**: the TV icon in the dock, or **Super (Windows key) + H** on a keyboard.
 - **Alt+Tab** flips between Deck TV and your open apps (tap it to jump back to the last one; hold
   Alt and press Tab to pick, or click an app while it's showing). If Deck TV isn't running, Alt+Tab works as normal.
-- **Leaving Deck TV**: the **Desktop** button (bottom-left, beside Power, or in the dock's speaker
-  menu) tucks everything away and switches Deck TV off while you use the normal desktop: no dock,
-  KDE's own Alt+Tab, and apps open as ordinary windows. To come back, click the **Deck TV icon on
-  the desktop**, press **Super+H**, pick Deck TV from the taskbar or Alt+Tab, or press Home on the
-  phone remote: the dock, Deck TV's Alt+Tab and full-screen apps all come back. **Alt+F4** on the home screen closes Deck TV
+- **Desktop mode**: the **Desktop** button (bottom-left, beside Power) switches it on and off;
+  it's lit while it's on. On, Deck TV lets go of the Deck: no dock, KDE's own Alt+Tab, and apps open
+  as ordinary windows that stay put when closed, but the home screen still works for opening them.
+  It stays on (through restarts too) until you press the button again, which brings the dock, Deck
+  TV's Alt+Tab and full-screen apps back. The dock's speaker menu has **Desktop mode** too, to
+  switch it on from inside an app. Get back to the home screen with the **Deck TV icon on the
+  desktop**, **Super+H**, the taskbar, Alt+Tab, or Home on the phone remote. **Alt+F4** on the home screen closes Deck TV
   completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.
 - **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
   skip. Starting something in another app pauses the first. Right-click a tile →

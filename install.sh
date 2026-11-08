@@ -117,8 +117,8 @@ cat > "$BIN/deck-tv" <<'EOF'
 #!/usr/bin/env bash
 DIR="$HOME/.local/share/deck-tv"
 PORT="${DECK_TV_PORT:-8765}"
-# The dock, restarted fresh each time (so Home also recovers a misbehaving dock)
-setsid python3 "$DIR/dock.py" --restart >/dev/null 2>&1 < /dev/null &
+# The dock, restarted fresh each time (so Home also recovers a misbehaving dock); none in desktop mode
+[ -e "$HOME/.config/deck-tv/desktop-mode" ] || setsid python3 "$DIR/dock.py" --restart >/dev/null 2>&1 < /dev/null &
 # The server first, even with the window already open: an update stops the old server, and the
 # open page picks the new one up by itself
 if ! (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null; then
@@ -147,7 +147,7 @@ Icon=$DEST/icons/deck-tv.png
 StartupWMClass=deck-tv
 Categories=AudioVideo;
 EOF
-# And on the desktop: the way back to Deck TV after "Go to the desktop", without a keyboard
+# And on the desktop: the way back to Deck TV in desktop mode, without a keyboard
 # (executable, so KDE opens it without asking whether to trust it)
 [ -d "$HOME/Desktop" ] && install -m 755 "$APPS/deck-tv.desktop" "$HOME/Desktop/deck-tv.desktop"
 

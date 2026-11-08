@@ -709,10 +709,10 @@ class Dock(Gtk.Window):
         return row
 
     def desktop_group(self):
-        # A way out to the ordinary desktop, as on the home screen (Deck TV's icon or Super+H bring you back)
+        # Desktop mode on, as with the home screen's desktop button (which also switches it off again)
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         row.pack_start(Gtk.Image.new_from_pixbuf(line_icon("desktop", 24)), False, False, 0)
-        row.pack_start(Gtk.Label.new("Go to the desktop"), False, False, 0)
+        row.pack_start(Gtk.Label.new("Desktop mode"), False, False, 0)
         b = Gtk.Button()
         b.add(row)
         b.set_relief(Gtk.ReliefStyle.NONE)
@@ -883,7 +883,7 @@ class Dock(Gtk.Window):
     def go_desktop(self):
         self.hide_menu()
         self.request(self.show_hidden)
-        self.in_background(lambda: api("/api/desktop", "POST"))
+        self.in_background(lambda: api("/api/desktop/on", "POST"))
 
     def poll_state(self):
         # One question at a time: if the server is slow, don't pile more requests on top
@@ -1059,7 +1059,7 @@ def main():
         except Exception:
             GLib.usleep(500_000)
     try:
-        api("/api/tv", "POST")  # the dock starting means Deck TV is in charge again (out of desktop mode)
+        api("/api/tv", "POST")  # the dock starting: the apps' full-screen rules back on
     except Exception:
         pass
     Dock()

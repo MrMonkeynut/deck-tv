@@ -219,6 +219,7 @@
   .action.focus { outline-color: var(--ring); background: #2A3140; }
   .action.power { width: 52px; padding: 0; justify-content: center; }
   .action.power svg { width: 24px; height: 24px; }
+  .action.on { background: var(--ring); color: #10131A; }
 
   /* The status pill beside the corner buttons: Wi-Fi, battery and free space at a glance */
   .action.status { gap: 18px; padding: 0 22px 0 20px; font-size: 17px; font-variant-numeric: tabular-nums; }
@@ -1233,13 +1234,20 @@ async function build() {
   pw.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 0);
   pw.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(pw); rows[1].push(pw);
-  // And a way out: the ordinary desktop, Deck TV switched off (its icon, Super+H or switching back to it bring it back)
+  // Desktop mode, on and off: lit while it's on (no dock, apps as ordinary windows, KDE's Alt+Tab)
   const db = document.createElement("button");
   db.className = "action power";
-  db.setAttribute("aria-label", "Desktop");
-  db.title = "Go to the desktop";
+  db.id = "desktop-btn";
+  db.setAttribute("aria-label", "Desktop mode");
+  db.title = "Desktop mode";
   db.innerHTML = svg("desktop", "currentColor", 1.9);
-  db.onclick = () => { setFocus(1, 1); toast("Going to the desktop…"); api("/api/desktop", "POST").catch(() => {}); };
+  db.onclick = async () => {
+    setFocus(1, 1);
+    const { desktop } = await api("/api/desktop", "POST").catch(() => ({}));
+    if (desktop === undefined) return;
+    showDesktopMode(desktop);
+    toast(desktop ? "Desktop mode on: apps open as ordinary windows" : "Desktop mode off: back to Deck TV");
+  };
   db.onmouseenter = () => document.body.classList.contains("mouse") && setFocus(1, 1);
   db.onmouseleave = () => document.body.classList.contains("mouse") && clearFocus();
   actEl.appendChild(db); rows[1].push(db);
@@ -1285,10 +1293,19 @@ async function build() {
   setInterval(refreshOpen, 2000);
 }
 
+function showDesktopMode(on) {
+  const b = document.getElementById("desktop-btn");
+  if (!b) return;
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-pressed", on);
+  b.title = on ? "Desktop mode: on" : "Desktop mode: off";
+}
+
 /* Mark tiles whose app is already open */
 async function refreshOpen() {
-  const { open = [], media = null, players: found = [], page, unread } = await api("/api/state").catch(() => ({}));
+  const { open = [], media = null, players: found = [], page, unread, desktop } = await api("/api/state").catch(() => ({}));
   players = found;
+  if (desktop !== undefined) showDesktopMode(desktop);
   openIds = open;
   if (unread) showUnread(unread);
   reloadIfUpdated(page);
