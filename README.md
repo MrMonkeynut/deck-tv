@@ -90,8 +90,7 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
   microSD card or USB drive. **Overview** splits each drive into Games, Saves & Proton, Apps,
   Videos, Music, Pictures, Documents, Archives & disk images, Caches & Trash and Other; click one to
   see the folders that make it up (games and apps by name). **Folders** goes through any folder,
-  sorted by size, name, oldest change or type; **Biggest files** filters by kind and by how long
-  since they changed; **File types** lists every ending by space. Under the overview, **Ideas**
+  sorted by size, name, oldest change or type; **Biggest folders** ranks every folder by size (leaving out the ones that can't be deleted from here, like a drive's top folder, Documents or Steam's own folders; games show as one entry each), filtered by what they mostly hold and by how long since anything in them changed; **File types** lists every ending by space, and opens the biggest files of one. Under the overview, **Ideas**
   finds app caches, shader caches, leftovers from uninstalled games, old downloads and games not
   played for 3 months (those are uninstalled through Steam, which asks first).
   Click a drive on the left to open its top folder, from anywhere.

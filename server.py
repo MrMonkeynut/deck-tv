@@ -1418,6 +1418,8 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path.startswith("/api/storage/files?"):
                 return self._json(storage.biggest(self._query("drive"), self._query("cat"), self._query("ext"),
                                                   int(self._query("older") or 0)))
+            if self.path.startswith("/api/storage/folders?"):
+                return self._json(storage.biggest_folders(self._query("drive"), self._query("cat"), int(self._query("older") or 0)))
             if self.path.startswith("/api/storage/types?"):
                 return self._json(storage.types(self._query("drive")))
             if self.path == "/api/storage/ideas":

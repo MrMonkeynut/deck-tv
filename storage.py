@@ -869,6 +869,49 @@ def where(did, cat, limit=36):
     return {"rows": rows, "total": total, "small": small}
 
 
+def biggest_folders(did, cat="", older=0, limit=200, smallest=100 << 20):
+    """Folders by size, leaving out the ones that can't be removed from here anyway (a drive's top, Documents,
+    Steam's own folders...), except installed games, which Steam uninstalls. A game is one entry, not its
+    parts, and a folder that's nearly all of the one around it (MGSDelta/MGSDelta) isn't listed twice.
+    cat: mostly that kind of space. older: nothing inside changed for that many days."""
+    mounts = _mounts()
+    if did not in mounts:
+        return {"error": "unknown"}
+    d = _state(did, mounts[did][2])
+    c = CATS.index(cat) if cat in CATS else None
+    cutoff = time.time() - older * 86400 if older else None
+    found = []
+    with _lock:
+        tree = d["tree"]
+        if tree is None:
+            return {"rows": []}
+        stack = [(d["root"].rstrip("/") or "/", tree)]
+        while stack:  # bigger folders hold the smaller ones: nothing under the smallest size is looked inside
+            path, node = stack.pop()
+            for k in (node.kids or {}).values():
+                if k.size >= smallest:
+                    p = f"{path}/{k.name}"
+                    found.append((k.size, p, k))
+                    stack.append((p, k))
+        found.sort(key=lambda x: -x[0])
+        picked = [(p, k.size, k.files, k.mtime, list(k.cats)) for size, p, k in found
+                  if (c is None or k.cats[c] * 2 >= k.size) and (cutoff is None or k.mtime <= cutoff)]
+    keeps, rows, shown = _keeps(), [], {}
+    for p, size, files, newest, cats in picked:
+        up = shown.get(os.path.dirname(p))
+        if up and size >= up * .95:
+            continue
+        level, why, extra = guard(p, keeps, mounts)
+        if level == "blocked" and not (extra.get("steam") and why.startswith("An installed game")) or why.startswith("Part of"):
+            continue
+        shown[p] = size
+        rows.append({"path": p, "name": os.path.basename(p), "label": label(p), "dir": True, "size": size, "files": files,
+                     "newest": newest, "cats": _cats(cats), "level": level, "why": why, **extra})
+        if len(rows) >= limit:
+            break
+    return {"rows": rows}
+
+
 def biggest(did, cat="", ext="", older=0, limit=300):
     mounts = _mounts()
     if did not in mounts:

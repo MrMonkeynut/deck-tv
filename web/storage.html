@@ -218,7 +218,7 @@
     <div id="drives"></div>
     <button class="nav f" data-view="ov"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Overview</button>
     <button class="nav f" data-view="fold"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Folders</button>
-    <button class="nav f" data-view="files"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg>Biggest files</button>
+    <button class="nav f" data-view="folders"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 15v-2M12 15v-4M16 15v-3"/></svg>Biggest folders</button>
     <button class="nav f" data-view="types"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg>File types</button>
     <button class="nav f" data-view="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Trash<em id="trash-n"></em></button>
     <button id="basket-btn" class="f" data-view="basket"><b><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Delete list</b><span id="basket-sum">Nothing marked for deletion</span></button>
@@ -231,6 +231,7 @@
       <section id="where" class="view"></section>
       <section id="idea" class="view"></section>
       <section id="fold" class="view"><div id="fold-info"></div><div id="fold-list"></div></section>
+      <section id="folders" class="view"></section>
       <section id="files" class="view"></section>
       <section id="types" class="view"></section>
       <section id="trash" class="view"></section>
@@ -323,7 +324,7 @@ let info = null, drive = store.get("storage-drive", "internal"), view = "ov";
 let steps = [];  // every place you've been, newest last: Back goes to each in turn, with what had focus and how far down it was
 let basket = new Map(store.get("storage-basket", []).map(x => [x.path, x]));
 let fold = { path: null, data: null, sort: store.get("storage-sort", "size"), show: "all" };
-let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
+let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, foldersFilter = { cat: "", older: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
 
 const saveBasket = () => { store.set("storage-basket", [...basket.values()]); drawBasketBtn(); };
 function drawBasketBtn() {
@@ -381,14 +382,15 @@ function wireRows(el) {
 }
 
 /* ---------- moving between views ---------- */
-const TITLES = { ov: "Overview", fold: "Folders", files: "Biggest files", types: "File types", trash: "Trash", basket: "Delete list" };
+const TITLES = { ov: "Overview", fold: "Folders", folders: "Biggest folders", files: "Biggest files", types: "File types", trash: "Trash", basket: "Delete list" };
 /* Where you are now, as a step to come back to */
 function here() {
-  return { view, drive, path: fold.path, whereCat, idea, filesFilter: { ...filesFilter }, focus: focusKey(), scroll: $("body").scrollTop };
+  return { view, drive, path: fold.path, whereCat, idea, filesFilter: { ...filesFilter }, foldersFilter: { ...foldersFilter }, focus: focusKey(), scroll: $("body").scrollTop };
 }
 const samePlace = (a, b) => a.view === b.view && a.drive === b.drive && (a.view !== "fold" || a.path === b.path)
   && (a.view !== "where" || a.whereCat === b.whereCat) && (a.view !== "idea" || a.idea === b.idea)
-  && (a.view !== "files" || JSON.stringify(a.filesFilter) === JSON.stringify(b.filesFilter));
+  && (a.view !== "files" || JSON.stringify(a.filesFilter) === JSON.stringify(b.filesFilter))
+  && (a.view !== "folders" || JSON.stringify(a.foldersFilter) === JSON.stringify(b.foldersFilter));
 /* Called just before going somewhere else */
 function remember() {
   const h = here();
@@ -412,7 +414,8 @@ function go(v, push = true) {
   view = v;
   setFocus(null);  // the new view's first thing gets it once it's drawn
   document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id === v));
-  document.querySelectorAll("#side [data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "where" || v === "idea") && b.dataset.view === "ov"));
+  document.querySelectorAll("#side [data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "where" || v === "idea") && b.dataset.view === "ov"
+    || v === "files" && b.dataset.view === "types"));
   $("body").scrollTop = 0;
   drawBack();
   return draw();
@@ -426,7 +429,7 @@ async function back() {
     return api("/api/home", {});
   }
   if (s.drive !== drive) { drive = s.drive; store.set("storage-drive", drive); ideas = null; drawDrives(); drawScan(); }
-  whereCat = s.whereCat; idea = s.idea; filesFilter = { ...s.filesFilter }; fold.path = s.path;
+  whereCat = s.whereCat; idea = s.idea; filesFilter = { ...s.filesFilter }; foldersFilter = { ...s.foldersFilter }; fold.path = s.path;
   await go(s.view, false);
   $("body").scrollTop = s.scroll;
   restoreFocus(s.focus);
@@ -439,6 +442,7 @@ async function draw() {
   else if (view === "where") await drawWhere();
   else if (view === "idea") drawIdea();
   else if (view === "fold") { if (!fold.path) fold.path = curDrive()?.root; await openFolder(fold.path, null, false); }
+  else if (view === "folders") await drawFolders();
   else if (view === "files") await drawFiles();
   else if (view === "types") await drawTypes();
   else if (view === "trash") await drawTrash();
@@ -496,7 +500,7 @@ let wasScanning = false;
 async function tick() {
   await loadInfo();
   const scanning = info?.drives.some(d => d.scanning);
-  if (wasScanning && !scanning) { ideas = null; if (["ov", "where", "files", "types"].includes(view)) draw(); }
+  if (wasScanning && !scanning) { ideas = null; if (["ov", "where", "folders", "files", "types"].includes(view)) draw(); }
   else if (view === "ov" && scanning) drawOverview();
   wasScanning = scanning;
   setTimeout(tick, scanning ? 1500 : 15000);
@@ -708,6 +712,32 @@ async function drawFiles() {
   settle();
 }
 
+/* ---------- biggest folders: every folder by size, but not ones that can't be removed from here ---------- */
+async function drawFolders() {
+  const el = $("folders"), f = foldersFilter;
+  const res = await api(`/api/storage/folders?drive=${drive}&cat=${f.cat}&older=${f.older}`);
+  if (view !== "folders") return;
+  items = new Map();
+  const cats = Object.keys(curDrive()?.scanned?.cats || {});
+  const b = (k, v, t) => `<button class="btn f${f[k] === v ? " on" : ""}" data-g="${k}" data-v="${esc(v)}">${t}</button>`;
+  const top = res.rows[0]?.size || 1;
+  el.innerHTML = `<p class="note">The biggest folders on ${esc(curDrive()?.name)}, leaving out the ones that can't be deleted from here (the drive's top,
+      Documents, Steam's own folders…). Games are shown whole. Open one to look inside.</p>
+    <div class="tools"><span class="lbl">Mostly</span>${b("cat", "", "Anything")}${cats.filter(c => c !== "system").map(c => b("cat", c, esc(CAT[c][0]))).join("")}</div>
+    <div class="tools"><span class="lbl">Nothing changed for</span>${b("older", 0, "Any time")}${b("older", 90, "3 months")}${b("older", 365, "A year")}${b("older", 730, "2 years")}</div>
+    <div class="rows">${res.rows.map(r => row(r, { name: r.label || placeName(r.path), sub: dirOf(r.path) + ` · ${n(r.files)} files`,
+      bar: r.size / top, cats: r.cats, catTotal: r.size, date: ago(r.newest) })).join("")
+      || `<p class="empty">No folders like that (100 MB and up).</p>`}</div>`;
+  el.querySelectorAll("[data-g]").forEach(x => x.onclick = () => {
+    const k = x.dataset.g;
+    remember();
+    foldersFilter = { ...f, [k]: k === "older" ? +x.dataset.v : x.dataset.v };
+    drawFolders().then(() => setFocus(document.querySelector(`[data-g="${k}"][data-v="${CSS.escape(String(foldersFilter[k]))}"]`)));
+  });
+  wireRows(el);
+  settle();
+}
+
 /* ---------- file types ---------- */
 async function drawTypes() {
   const el = $("types");
@@ -782,7 +812,7 @@ async function drawTrash() {
 async function drawBasket() {
   const el = $("basket");
   if (!basket.size) {
-    el.innerHTML = `<p class="empty">Nothing is marked for deletion.<br>Press ${svg("bin").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} (or X) on anything in Overview, Folders or Biggest files to mark it for deletion.
+    el.innerHTML = `<p class="empty">Nothing is marked for deletion.<br>Press ${svg("bin").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} (or X) on anything in Overview, Folders or Biggest folders to mark it for deletion.
       Keep marking as you look around; nothing is deleted until you come here, tick each one you want deleted, see them all listed, and hold to confirm: to the Trash, or deleted for good.</p>`;
     return settle();
   }
@@ -989,12 +1019,12 @@ function setFocus(el, auto = false) {
 }
 const focusables = () => [...document.querySelectorAll($("ask").classList.contains("on") ? "#ask .f" : "#side .f, #main .f, #toast.show .f")]
   .filter(e => e.offsetParent !== null && !e.hasAttribute("disabled"));
-function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick, f: focus.dataset.f, v: focus.dataset.v, view: focus.dataset.view, drv: focus.dataset.drive } : null; }
+function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick, f: focus.dataset.f, g: focus.dataset.g, v: focus.dataset.v, view: focus.dataset.view, drv: focus.dataset.drive } : null; }
 function restoreFocus(k) {
   if (!k) return;
   const sel = k.id ? "#" + CSS.escape(k.id) : k.open != null ? `[data-open="${CSS.escape(k.open)}"]` : k.pick ? `[data-pick="${CSS.escape(k.pick)}"]`
     : k.cat ? `[data-cat="${k.cat}"]` : k.idea ? `[data-idea="${k.idea}"]` : k.tid ? `[data-tid="${CSS.escape(k.tid)}"]` : k.tpick ? `[data-tpick="${CSS.escape(k.tpick)}"]` : k.tick ? `[data-tick="${CSS.escape(k.tick)}"]`
-    : k.f ? `[data-f="${k.f}"][data-v="${CSS.escape(k.v)}"]` : k.view ? `#side [data-view="${k.view}"]` : k.drv ? `[data-drive="${CSS.escape(k.drv)}"]` : null;
+    : k.f ? `[data-f="${k.f}"][data-v="${CSS.escape(k.v)}"]` : k.g ? `[data-g="${k.g}"][data-v="${CSS.escape(k.v)}"]` : k.view ? `#side [data-view="${k.view}"]` : k.drv ? `[data-drive="${CSS.escape(k.drv)}"]` : null;
   const el = sel && document.querySelector(sel);
   if (el) setFocus(el);
 }
@@ -1022,7 +1052,7 @@ function move(dir) {
   }
   if (best) setFocus(best);
 }
-const VIEWS = ["ov", "fold", "files", "types", "trash", "basket"];
+const VIEWS = ["ov", "fold", "folders", "types", "trash", "basket"];
 function input(cmd) {
   hideMouse();
   if ((cmd === "up" || cmd === "down") && focus?.classList.contains("itemized")) {
