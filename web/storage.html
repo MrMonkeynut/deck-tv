@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage</title><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1116; --panel: #161A22; --row: #1B2029; --row-hi: #252B37; --ink: #F2F4F8; --muted: #A3ACBD; --dim: #6B7486;
+    --ring: #FFFFFF; --accent: #7DD3FC;
+    --safe: #7BD3A2; --check: #8EC5FF; --careful: #F2B84B; --blocked: #8A94A6; --danger: #FF8A8A;
+    --games: #5B8CFF; --saves: #A78BFA; --apps: #2DD4BF; --video: #F472B6; --music: #FB923C; --pictures: #A3E635;
+    --docs: #FDE68A; --archives: #F87171; --cache: #C4B5A0; --system: #566176; --other: #8A94A6; --uncounted: #313847;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; color: var(--ink);
+    background: radial-gradient(ellipse at 15% 0%, #10273A 0%, transparent 55%), var(--bg); }
+  body { font-family: "Space Grotesk", "Cantarell", "Noto Sans", system-ui, sans-serif; }
+  body.mouse { cursor: default; }
+  svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  button { all: unset; box-sizing: border-box; cursor: pointer; }
+  .f { outline: 3px solid transparent; outline-offset: 1px; transition: outline-color .1s, background .12s; }
+  .f.focus { outline-color: var(--ring); }
+
+  #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; display: flex; }
+
+  /* ---------- the side: drives, views, the cleanup list ---------- */
+  #side { width: 268px; flex: none; padding: 30px 14px 22px 26px; display: flex; flex-direction: column; gap: 6px; }
+  #side h1 { margin: 0 0 14px 8px; font-size: 34px; letter-spacing: -1px; display: flex; align-items: center; gap: 12px; }
+  #side h1 svg { width: 32px; height: 32px; color: var(--accent); }
+  .drv { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 14px; background: transparent; }
+  .drv:hover, .drv.on { background: var(--row); }
+  .drv b { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .drv b svg { width: 18px; height: 18px; color: var(--muted); }
+  .drv span { font-size: 13px; color: var(--muted); }
+  .drv .mini { height: 6px; border-radius: 3px; background: #2A303C; overflow: hidden; display: flex; }
+  .drv.low .mini i { background: var(--careful) !important; }
+  .drv.crit .mini i { background: var(--danger) !important; }
+  #drives { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .nav { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: 17px; color: #C9D1E0; }
+  .nav svg { width: 20px; height: 20px; color: var(--muted); }
+  .nav:hover { background: var(--row); }
+  .nav.on { background: var(--row-hi); color: var(--ink); }
+  .nav.on svg { color: var(--accent); }
+  .nav em { margin-left: auto; font-style: normal; font-size: 13px; color: var(--muted); }
+  #basket-btn { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; background: #13283A; }
+  #basket-btn b { font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  #basket-btn b svg { width: 20px; height: 20px; color: var(--accent); }
+  #basket-btn span { font-size: 14px; color: var(--muted); }
+  #basket-btn.on, #basket-btn:hover { background: #1A3850; }
+  #side .keys { font-size: 12px; color: var(--dim); margin: 10px 4px 0; line-height: 1.5; }
+
+  /* ---------- the main area ---------- */
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 30px 34px 22px 18px; }
+  #head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 14px; min-height: 44px; }
+  #head h2 { margin: 0; font-size: 30px; letter-spacing: -.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #head h2 small { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 8px; }
+  #scan { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 11px; background: var(--row-hi); font-size: 15px; white-space: nowrap; }
+  .btn svg { width: 17px; height: 17px; }
+  .btn:hover { background: #303846; }
+  .btn.on { background: #1D3B52; color: #BAE6FD; }
+  .btn.warn { color: var(--careful); }
+  .btn.danger { color: var(--danger); }
+  .btn.big { padding: 12px 20px; font-size: 17px; border-radius: 14px; }
+  .btn[disabled] { opacity: .4; pointer-events: none; }
+  #body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px; margin: -4px; scrollbar-width: thin; scrollbar-color: #39414F transparent; }
+  .view { display: none; }
+  .view.on { display: block; }
+  .note { font-size: 15px; color: var(--muted); line-height: 1.45; margin: 0 0 12px; }
+  .sec { font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin: 22px 0 10px; }
+
+  /* overview */
+  #bigbar { height: 30px; border-radius: 10px; display: flex; overflow: hidden; background: #1A1F28; border: 1px solid #2A303C; }
+  #bigbar i { display: block; height: 100%; min-width: 0; }
+  #bigbar i + i { box-shadow: inset 2px 0 0 #0E1116; }
+  #bignums { display: flex; gap: 22px; margin: 10px 0 18px; font-size: 16px; color: var(--muted); }
+  #bignums b { color: var(--ink); font-size: 22px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  #legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .cat { display: grid; grid-template-columns: 14px 1fr auto; column-gap: 10px; align-items: center; padding: 11px 14px; border-radius: 13px; background: var(--row); }
+  .cat:hover { background: var(--row-hi); }
+  .cat i { width: 14px; height: 14px; border-radius: 4px; grid-row: 1 / 3; }
+  .cat b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat em { font-style: normal; font-size: 16px; font-variant-numeric: tabular-nums; text-align: right; }
+  .cat span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat small { font-size: 12.5px; color: var(--muted); text-align: right; }
+  .idea { width: 100%; display: grid; grid-template-columns: 1fr auto auto; column-gap: 16px; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--row); margin-bottom: 8px; }
+  .idea:hover { background: var(--row-hi); }
+  .idea b { font-size: 17px; }
+  .idea p { margin: 4px 0 0; font-size: 14px; color: var(--muted); line-height: 1.4; }
+  .idea em { font-style: normal; font-size: 19px; font-variant-numeric: tabular-nums; }
+
+  /* rows: folders, files, places */
+  .rows { display: flex; flex-direction: column; gap: 5px; }
+  .r { display: flex; align-items: center; gap: 12px; padding: 0 6px 0 0; border-radius: 12px; background: var(--row); min-height: 54px; }
+  .r:has(> .open.focus), .r:has(> .open:hover) { background: var(--row-hi); }
+  .r .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 4px 8px 14px; border-radius: 12px; align-self: stretch; }
+  .r .ico { width: 22px; height: 22px; color: var(--muted); }
+  .r .ico.dir { color: #93C5FD; }
+  .r .t { flex: 1; min-width: 0; }
+  .r .t b { display: block; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .t span { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .r .bar { width: 120px; flex: none; height: 7px; border-radius: 4px; background: #2A303C; overflow: hidden; display: flex; }
+  .r .bar i { height: 100%; display: block; }
+  .r .sz { width: 82px; flex: none; text-align: right; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .r .dt { width: 92px; flex: none; text-align: right; font-size: 13px; color: var(--muted); }
+  .r .lv { width: 104px; flex: none; }
+  .r.picked { background: #142C3F; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 4px 9px; border-radius: 999px; background: #2A3140; color: var(--muted); white-space: nowrap; }
+  .chip svg { width: 13px; height: 13px; }
+  .chip.safe { background: #163526; color: var(--safe); }
+  .chip.check { background: #172A44; color: var(--check); }
+  .chip.careful { background: #3A2D12; color: var(--careful); }
+  .chip.blocked { background: #232833; color: var(--blocked); }
+  .chip.recent { background: #3A2D12; color: var(--careful); }
+  #basket .act { width: auto; gap: 6px; }
+  .act { width: 152px; flex: none; display: flex; justify-content: flex-end; }
+  .pick { width: 40px; height: 40px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: #262D3A; color: var(--muted); }
+  .pick svg { width: 20px; height: 20px; }
+  .pick:hover { background: #313A4A; color: var(--ink); }
+  .pick.on { background: var(--accent); color: #0B2233; }
+  .pick.lock { background: transparent; color: var(--dim); cursor: default; }
+  .pick.steam { width: auto; padding: 0 12px; white-space: nowrap; font-size: 13px; color: #BAE6FD; background: #1D3B52; }
+  .more { font-size: 14px; color: var(--muted); padding: 10px 14px; }
+  .empty { font-size: 18px; color: var(--muted); padding: 30px 6px; line-height: 1.5; }
+
+  /* folders */
+  #fold.on { display: flex; gap: 18px; }
+  #fold-list { flex: 1; min-width: 0; }
+  #crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 10px; font-size: 15px; }
+  #crumbs .crumb { padding: 5px 9px; border-radius: 8px; color: var(--muted); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #crumbs .crumb:hover { background: var(--row); color: var(--ink); }
+  #crumbs .crumb:last-child { color: var(--ink); }
+  #crumbs .sep { color: var(--dim); }
+  .tools { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+  .tools .lbl { font-size: 13px; color: var(--dim); margin: 0 4px 0 8px; }
+  .tools .lbl:first-child { margin-left: 0; }
+  .tools .btn { padding: 6px 11px; font-size: 14px; }
+  #fold .act { width: auto; }
+  #fold .r .bar { width: 64px; }
+  #fold .r .dt { width: 76px; }
+  #fold .r .lv { width: 96px; }
+  #fold-info { width: 250px; flex: none; position: sticky; top: 0; align-self: flex-start; display: flex; flex-direction: column; gap: 10px;
+    padding: 18px; border-radius: 16px; background: var(--panel); }
+  #fold-info h3 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+  #fold-info .big { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #fold-info .big small { font-size: 15px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .kinds { display: flex; flex-direction: column; gap: 5px; }
+  .kind { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; font-size: 13.5px; }
+  .kind i { width: 10px; height: 10px; border-radius: 3px; }
+  .kind em { font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .why { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+  #fold-info .btn { justify-content: flex-start; }
+
+  /* the cleanup list */
+  .sum { display: flex; align-items: center; gap: 18px; padding: 16px 18px; border-radius: 16px; background: var(--panel); margin-bottom: 14px; }
+  .sum .big { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sum p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.45; flex: 1; }
+  .tick { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; background: #2A2312; color: var(--careful); font-size: 15.5px; margin-bottom: 14px; }
+  .tick .box { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--careful); display: flex; align-items: center; justify-content: center; flex: none; }
+  .tick .box svg { width: 16px; height: 16px; opacity: 0; }
+  .tick.on .box { background: var(--careful); color: #2A2312; }
+  .tick.on .box svg { opacity: 1; }
+  .hold { position: relative; overflow: hidden; }
+  .hold > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #ffffff2a; pointer-events: none; }
+  .hold.holding > i { width: 100%; transition: width 1.2s linear; }
+  .hold > span { position: relative; }
+  .actions { display: flex; gap: 10px; align-items: center; margin: 4px 0 14px; flex-wrap: wrap; }
+  .actions .hint { font-size: 13.5px; color: var(--dim); }
+
+  #toast { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 20px;
+    border-radius: 16px; background: #2A3140; font-size: 16px; opacity: 0; transition: opacity .25s; pointer-events: none; box-shadow: 0 10px 30px #0008; max-width: 900px; }
+  #toast.show { opacity: 1; pointer-events: auto; }
+  #toast .btn { background: #3A4352; }
+
+  #ask { position: absolute; inset: 0; background: #080A0ECC; display: none; align-items: center; justify-content: center; z-index: 5; }
+  #ask.on { display: flex; }
+  #ask .card { width: 640px; max-height: 600px; display: flex; flex-direction: column; gap: 14px; padding: 26px 28px; border-radius: 22px; background: #1B2029; }
+  #ask h3 { margin: 0; font-size: 26px; }
+  #ask p { margin: 0; font-size: 16px; color: #C9D1E0; line-height: 1.45; }
+  #ask ul { margin: 0; padding: 0 0 0 18px; overflow-y: auto; font-size: 14px; color: var(--muted); line-height: 1.6; max-height: 260px; }
+  #ask .card.wide { width: 860px; max-height: 660px; }
+  .itemized { flex: 1; min-height: 0; max-height: 380px; overflow-y: auto; border-radius: 14px; background: #12161D; padding: 6px; scrollbar-width: thin; }
+  .itemized .it { display: grid; grid-template-columns: 1fr auto auto; column-gap: 14px; align-items: center; padding: 8px 10px; border-radius: 9px; }
+  .itemized .it + .it { border-top: 1px solid #222833; }
+  .itemized b { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .itemized span.p { grid-column: 1; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .itemized em { font-style: normal; font-size: 15px; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1; grid-column: 3; }
+  .itemized .chip { grid-row: 1; grid-column: 2; }
+  .itemized-sum { font-size: 15px; color: var(--ink); }
+  .pick.box { color: transparent; border: 2px solid #4A5468; background: transparent; }
+  .pick.box.on { color: #0B2233; border-color: var(--accent); background: var(--accent); }
+  .r.off { opacity: .55; }
+  .r.off:has(.focus) { opacity: .85; }
+  .peek { margin: -2px 0 4px 48px; padding: 8px 14px; border-radius: 0 0 12px 12px; background: #141920; font-size: 13.5px; color: var(--muted); }
+  .peek div { display: flex; gap: 12px; padding: 2px 0; }
+  .peek div span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #C9D1E0; }
+  .peek div span:last-child { font-variant-numeric: tabular-nums; }
+  #ask .btns { display: flex; gap: 10px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <aside id="side">
+    <h1><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="16.5" cy="17" r=".9"/><circle cx="13" cy="17" r=".9"/></svg>Storage</h1>
+    <div id="drives"></div>
+    <button class="nav f" data-view="ov"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Overview</button>
+    <button class="nav f" data-view="fold"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Folders</button>
+    <button class="nav f" data-view="files"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg>Biggest files</button>
+    <button class="nav f" data-view="types"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg>File types</button>
+    <button class="nav f" data-view="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Trash<em id="trash-n"></em></button>
+    <button id="basket-btn" class="f" data-view="basket"><b><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Cleanup list</b><span id="basket-sum">Nothing picked yet</span></button>
+    <div class="keys">A open · X pick / tick · Y cleanup list<br>L1 / R1 views · B back</div>
+  </aside>
+  <main id="main">
+    <div id="head"><h2 id="title"></h2><div id="scan"></div></div>
+    <div id="body">
+      <section id="ov" class="view"></section>
+      <section id="where" class="view"></section>
+      <section id="idea" class="view"></section>
+      <section id="fold" class="view"><div id="fold-list"></div><div id="fold-info"></div></section>
+      <section id="files" class="view"></section>
+      <section id="types" class="view"></section>
+      <section id="trash" class="view"></section>
+      <section id="basket" class="view"></section>
+    </div>
+  </main>
+  <div id="toast"></div>
+  <div id="ask"><div class="card"></div></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const api = (path, body) => fetch(path, body === undefined ? { headers: { "X-Deck-TV": "1" } }
+  : { method: "POST", headers: { "X-Deck-TV": "1", "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json());
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+function fit() {
+  const s = Math.min(innerWidth / 1280, innerHeight / 720);
+  $("stage").style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+
+/* ---------- words and numbers ---------- */
+const CAT = {
+  games: ["Games", "Steam, emulator and PC games"], saves: ["Saves & Proton", "Proton setups, Steam saves and settings"],
+  apps: ["Apps", "Flatpak apps, Steam itself, AppImages"], video: ["Videos", "Films, clips, recordings"],
+  music: ["Music", "Songs and soundtracks"], pictures: ["Pictures", "Photos, screenshots, art"],
+  docs: ["Documents", "PDFs, books, text"], archives: ["Archives & disk images", "Zips, ISOs, VM disks, installers"],
+  cache: ["Caches & Trash", "Rebuilt when needed; the Trash"], system: ["System", "SteamOS's own files"],
+  other: ["Other files", "Everything else"], uncounted: ["Not counted", "Other accounts, the system, unreadable"],
+};
+const catColor = c => `var(--${c})`;
+function size(b) {
+  if (b == null) return "—";
+  if (b < 1e6) return Math.max(0, Math.round(b / 1e3)) + " KB";
+  if (b < 1e9) return (b < 1e7 ? (b / 1e6).toFixed(1) : Math.round(b / 1e6)) + " MB";
+  if (b < 1e12) return (b < 1e11 ? (b / 1e9).toFixed(1) : Math.round(b / 1e9)) + " GB";
+  return (b / 1e12).toFixed(2) + " TB";
+}
+function ago(t) {
+  if (!t) return "";
+  const d = (Date.now() / 1000 - t) / 86400;
+  if (d < 1) return "today"; if (d < 2) return "yesterday";
+  if (d < 30) return Math.floor(d) + " days ago"; if (d < 365) return Math.floor(d / 30.4) + " mo ago";
+  return (d / 365).toFixed(d < 3650 ? 1 : 0).replace(/\.0$/, "") + " yr ago";
+}
+const since = t => { const m = (Date.now() / 1000 - t) / 60; return m < 1 ? "just now" : m < 60 ? Math.round(m) + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
+const n = x => Number(x || 0).toLocaleString("en");
+const base = p => p.split("/").filter(Boolean).pop() || p;
+const dirOf = p => p.replace(/\/[^/]*$/, "") || "/";
+const LEVEL = { safe: "Safe", check: "Look first", careful: "Careful", blocked: "Can't remove" };
+const ICON = {
+  dir: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', ok: '<path d="M5 12l5 5 9-10"/>', up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>', back: '<path d="M15 18l-6-6 6-6"/>', undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+  sd: '<path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6z"/><path d="M9.5 7v2.5M12.5 7v2.5M15.5 7v2.5"/>',
+  disk: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="16.5" cy="17" r=".9"/>',
+  usb: '<path d="M12 3v14M8 7l4-4 4 4M7 12v2l5 3 5-3v-3"/><circle cx="12" cy="19" r="2"/>',
+};
+const svg = (k, cls = "") => `<svg viewBox="0 0 24 24"${cls ? ` class="${cls}"` : ""}>${ICON[k]}</svg>`;
+const chip = (level, why, kept) => kept ? `<span class="chip blocked" title="${esc(why)}">${svg("lock")}Keep</span>`
+  : `<span class="chip ${level}" title="${esc(why)}">${level === "blocked" ? svg("lock") : ""}${LEVEL[level] || ""}</span>`;
+function catBar(cats, total) {
+  if (!cats || !total) return "";
+  return Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, b]) => `<i style="width:${100 * b / total}%;background:${catColor(c)}"></i>`).join("");
+}
+
+/* ---------- state ---------- */
+let info = null, drive = store.get("storage-drive", "internal"), view = "ov", trail = [];
+let basket = new Map(store.get("storage-basket", []).map(x => [x.path, x]));
+let fold = { path: null, data: null, sort: store.get("storage-sort", "size"), show: "all" };
+let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
+
+const saveBasket = () => { store.set("storage-basket", [...basket.values()]); drawBasketBtn(); };
+function drawBasketBtn() {
+  const tot = [...basket.values()].reduce((a, x) => a + (x.size || 0), 0);
+  const on = [...basket.values()].filter(x => x.ticked === true).length;
+  $("basket-sum").textContent = basket.size ? `${basket.size} on the list · ${on} ticked` : "Nothing picked yet";
+}
+function pick(item, on, ticked = true) {
+  if (!item || item.level === "blocked") return;
+  on = on ?? !basket.has(item.path);
+  if (on) basket.set(item.path, { path: item.path, name: item.label || item.name || base(item.path), size: item.size, level: item.level,
+                                  ticked: basket.get(item.path)?.ticked || ticked });
+  else basket.delete(item.path);
+  saveBasket();
+  document.querySelectorAll(`[data-pick="${CSS.escape(item.path)}"]`).forEach(b => {
+    b.classList.toggle("on", on); b.innerHTML = svg(on ? "ok" : "plus");
+    b.closest(".r")?.classList.toggle("picked", on);
+  });
+}
+const curDrive = () => info?.drives.find(d => d.id === drive) || info?.drives[0];
+
+/* Rows are drawn from items; what each one is (for picking with X) is kept by its path */
+let items = new Map();
+function row(it, o = {}) {
+  items.set(it.path, it);
+  const picked = basket.has(it.path);
+  const icon = it.dir ? svg("dir", "ico dir") : it.link != null ? svg("link", "ico") : svg("file", "ico");
+  const bar = o.bar != null ? `<span class="bar">${o.cats ? catBar(o.cats, o.catTotal) : `<i style="width:${Math.max(1, 100 * o.bar)}%;background:${o.color || "var(--accent)"}"></i>`}</span>` : "";
+  let action = o.action;
+  if (action) {}
+  else if (it.steam) action = `<button class="pick steam f" data-steam="${esc(it.steam)}" title="Steam asks before it uninstalls">Uninstall in Steam</button>`;
+  else if (it.level === "blocked") action = `<span class="pick lock" title="${esc(it.why)}">${svg("lock")}</span>`;
+  else action = `<button class="pick f${picked ? " on" : ""}" data-pick="${esc(it.path)}" title="Add to the cleanup list">${svg(picked ? "ok" : "plus")}</button>`;
+  return `<div class="r${picked ? " picked" : ""}" data-path="${esc(it.path)}">
+    <button class="open f" data-open="${esc(o.open ?? it.path)}" data-kind="${o.kind || (it.dir ? "dir" : "file")}" title="${esc(it.why || "")}">${icon}
+      <div class="t"><b>${esc(o.name ?? (it.label || it.name || base(it.path)))}</b><span>${esc(o.sub ?? "")}</span></div>
+      ${bar}<span class="sz">${size(o.size ?? it.size)}</span><span class="dt">${esc(o.date ?? "")}</span>
+      <span class="lv">${o.recent ? `<span class="chip recent">Changed ${ago(o.recent)}</span>` : it.steam ? `<span class="chip check" title="${esc(it.why)}">Steam game</span>` : chip(it.level, it.why, it.kept)}</span></button><span class="act">${action}</span></div>`;
+}
+function wireRows(el) {
+  el.querySelectorAll("[data-pick]").forEach(b => b.onclick = e => { e.stopPropagation(); pick(items.get(b.dataset.pick)); });
+  el.querySelectorAll("[data-steam]").forEach(b => b.onclick = e => { e.stopPropagation(); uninstall(b.dataset.steam); });
+  el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
+    const p = b.dataset.open;
+    if (b.dataset.kind === "dir") openFolder(p);
+    else if (b.dataset.kind === "ext") { filesFilter = { cat: "", ext: b.dataset.open, older: 0 }; go("files"); }
+    else openFolder(dirOf(p), p);
+  });
+}
+
+/* ---------- moving between views ---------- */
+const TITLES = { ov: "Overview", fold: "Folders", files: "Biggest files", types: "File types", trash: "Trash", basket: "Cleanup list" };
+function go(v, push = true) {
+  if (push && view !== v) trail.push(view);
+  view = v;
+  setFocus(null);  // the new view's first thing gets it once it's drawn
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id === v));
+  document.querySelectorAll("#side [data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "where" || v === "idea") && b.dataset.view === "ov"));
+  $("body").scrollTop = 0;
+  draw();
+}
+function back() {
+  if ($("ask").classList.contains("on")) return closeAsk();
+  if (view === "fold" && fold.data && fold.data.crumbs.length > 1) return openFolder(fold.data.crumbs.at(-2).path, fold.path);
+  const v = trail.pop();
+  if (v) return go(v, false);
+  if (view !== "ov") return go("ov", false);
+  api("/api/home", {});
+}
+async function draw() {
+  $("title").innerHTML = view === "where" ? `${esc(CAT[whereCat]?.[0])}<small>on ${esc(curDrive()?.name)}</small>`
+    : view === "idea" ? esc(idea?.title) : esc(TITLES[view] || "");
+  if (view === "ov") drawOverview();
+  else if (view === "where") drawWhere();
+  else if (view === "idea") drawIdea();
+  else if (view === "fold") { if (!fold.path) fold.path = curDrive()?.root; await openFolder(fold.path, null, false); }
+  else if (view === "files") drawFiles();
+  else if (view === "types") drawTypes();
+  else if (view === "trash") drawTrash();
+  else if (view === "basket") drawBasket();
+  settle();
+}
+
+/* ---------- drives and scanning ---------- */
+async function loadInfo() {
+  try { info = await api("/api/storage"); } catch { return; }
+  if (!info.drives.some(d => d.id === drive)) drive = info.drives[0]?.id;
+  drawDrives();
+  drawScan();
+  $("trash-n").textContent = info.trash.items ? size(info.trash.bytes) : "";
+  return info;
+}
+function drawDrives() {
+  $("drives").innerHTML = info.drives.map(d => {
+    const tight = d.free / d.total < .05 || d.free < 5e9 ? "crit" : d.free / d.total < .15 ? "low" : "";
+    return `<button class="drv f${d.id === drive ? " on" : ""} ${tight}" data-drive="${d.id}">
+      <b>${svg(d.kind === "sd" ? "sd" : d.kind === "usb" ? "usb" : "disk")}${esc(d.name)}</b>
+      <div class="mini"><i style="width:${100 * d.used / d.total}%;background:var(--accent)"></i></div>
+      <span>${size(d.free)} free of ${size(d.total)}</span></button>`;
+  }).join("");
+  $("drives").querySelectorAll(".drv").forEach(b => b.onclick = () => {
+    if (drive === b.dataset.drive) return;
+    drive = b.dataset.drive; store.set("storage-drive", drive);
+    fold.path = null; ideas = null; drawDrives();
+    if (view === "where" || view === "idea") go("ov", false); else draw();
+  });
+}
+function drawScan() {
+  const d = curDrive();
+  if (!d) return;
+  const s = d.scanning;
+  $("scan").innerHTML = s ? `Looking through ${esc(d.name)}… ${s.files ? n(s.files) + " files, " + size(s.bytes) : ""}`
+    : d.error ? `<span style="color:var(--danger)">Couldn't look through it: ${esc(d.error)}</span>`
+    : d.scanned ? `Counted ${since(d.scanned.at)} <button class="btn f" id="rescan">${svg("refresh")}Count again</button>` : "";
+  const b = $("rescan");
+  if (b) b.onclick = async () => { await api("/api/storage/scan", { drive }); await loadInfo(); };
+}
+let wasScanning = false;
+async function tick() {
+  await loadInfo();
+  const scanning = info?.drives.some(d => d.scanning);
+  if (wasScanning && !scanning) { ideas = null; if (["ov", "where", "files", "types"].includes(view)) draw(); }
+  else if (view === "ov" && scanning) drawOverview();
+  wasScanning = scanning;
+  setTimeout(tick, scanning ? 1500 : 15000);
+}
+
+/* ---------- overview ---------- */
+async function drawOverview() {
+  const d = curDrive();
+  if (!d) return;
+  const el = $("ov");
+  const sc = d.scanned;
+  const cats = sc ? Object.entries(sc.cats).sort((a, b) => b[1] - a[1]) : [];
+  const uncounted = sc ? Math.max(0, d.used - sc.bytes) : 0;
+  if (uncounted > d.used * .01) cats.push(["uncounted", uncounted]);
+  const segs = cats.map(([c, b]) => `<i style="width:${100 * b / d.total}%;background:${catColor(c)}" title="${esc(CAT[c][0])} ${size(b)}"></i>`).join("");
+  const keep = focusKey();
+  el.innerHTML = `
+    <div id="bigbar">${sc ? segs : `<i style="width:${100 * d.used / d.total}%;background:var(--uncounted)"></i>`}</div>
+    <div id="bignums"><span><b>${size(d.used)}</b>used</span><span><b>${size(d.free)}</b>free</span><span><b>${size(d.total)}</b>in all</span>
+      ${d.reserved > 1e9 ? `<span><b>${size(d.reserved)}</b>kept back by the system</span>` : ""}</div>
+    ${sc ? `<div id="legend">${cats.map(([c, b]) => `<button class="cat f" ${c === "uncounted" ? "" : `data-cat="${c}"`}>
+        <i style="background:${catColor(c)}"></i><b>${esc(CAT[c][0])}</b><em>${size(b)}</em><span>${esc(CAT[c][1])}</span><small>${Math.round(100 * b / d.used)}%</small></button>`).join("")}</div>`
+      : `<p class="empty">Counting what's on ${esc(d.name)} for the first time. This takes a minute or two…</p>`}
+    <div class="sec">Ideas for making room</div><div id="ideas"><p class="note">Looking for ideas…</p></div>`;
+  el.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { whereCat = b.dataset.cat; go("where"); });
+  restoreFocus(keep);
+  if (!sc) return;
+  if (!ideas) ideas = await api("/api/storage/ideas").catch(() => ({ groups: [] }));
+  if (view !== "ov") return;
+  const k2 = focusKey();
+  $("ideas").innerHTML = ideas.groups.length ? ideas.groups.map((g, i) => `<button class="idea f" data-idea="${i}">
+      <div><b>${esc(g.title)}</b><p>${esc(g.text)}</p></div>
+      ${g.level === "steam" ? `<span class="chip check">In Steam</span>` : chip(g.level)}<em>${size(g.bytes)}</em></button>`).join("")
+    : `<p class="note">Nothing obvious: no caches, leftovers or old downloads worth clearing.</p>`;
+  $("ideas").querySelectorAll("[data-idea]").forEach(b => b.onclick = () => {
+    const g = ideas.groups[+b.dataset.idea];
+    if (g.id === "trash") return go("trash");
+    idea = g; go("idea");
+  });
+  restoreFocus(k2);
+}
+
+/* ---------- one kind of space, broken into its folders ---------- */
+async function drawWhere() {
+  const el = $("where");
+  el.innerHTML = `<p class="note">Working it out…</p>`;
+  const cat = whereCat, res = await api(`/api/storage/where?drive=${drive}&cat=${cat}`);
+  if (view !== "where" || cat !== whereCat) return;
+  items = new Map();
+  const top = res.rows[0]?.bytes || 1;
+  el.innerHTML = `<p class="note">The places that make up the ${size(res.total)} of ${esc(CAT[cat][0].toLowerCase())}, biggest first. Open one to see what's inside.</p>
+    <div class="rows">${res.rows.map(r => {
+      const own = r.what === "own", rest = r.what.startsWith("rest:");
+      const name = own ? `Files directly in ${r.label || base(r.path)}` : rest ? `${r.what.slice(5)} more folders in ${r.label || base(r.path)}` : null;
+      const it = { ...r, dir: true, size: r.bytes };
+      if (own || rest) Object.assign(it, { level: "blocked", why: "Open the folder to pick from it", steam: null, path: r.path + "#" + r.what });
+      return row(it, { name, open: r.path, kind: "dir", sub: r.path, bar: r.bytes / top, color: catColor(cat),
+                       date: ago(r.newest), size: r.bytes });
+    }).join("")}</div>${res.small ? `<div class="more">and ${size(res.small)} in smaller places</div>` : ""}`;
+  wireRows(el);
+  settle();
+}
+
+/* ---------- an idea: the places it found ---------- */
+function drawIdea() {
+  const el = $("idea"), g = idea;
+  if (!g) return go("ov", false);
+  items = new Map();
+  const top = g.rows[0]?.size || 1;
+  const pickable = g.rows.filter(r => r.level !== "blocked");
+  el.innerHTML = `<p class="note">${esc(g.text)}</p>
+    ${pickable.length ? `<div class="actions"><button class="btn f" id="pick-all">${svg("plus")}Add all ${pickable.length} to the list (${size(pickable.reduce((a, r) => a + r.size, 0))})</button>
+      <span class="hint">They go on the cleanup list unticked: you tick each one you want there, and see them all again before anything moves.</span></div>` : ""}
+    <div class="rows">${g.rows.map(r => row({ ...r, dir: true }, {
+      sub: r.lastPlayed !== undefined ? (r.lastPlayed ? "Last played " + ago(r.lastPlayed) : "Not played on this Deck") : r.path,
+      bar: r.size / top, date: r.lastPlayed !== undefined ? "" : ago(r.newest) })).join("")}</div>`;
+  wireRows(el);
+  const all = $("pick-all");
+  if (all) all.onclick = () => { pickable.forEach(r => pick(r, true, false)); toast(`${pickable.length} added to the cleanup list, unticked: tick each one there`); };
+}
+
+/* ---------- folders ---------- */
+async function openFolder(path, focusPath, push = true) {
+  if (!path) return;
+  if (view !== "fold") { fold.path = path; return go("fold", push); }
+  const res = await api("/api/storage/folder?path=" + encodeURIComponent(path));
+  if (res.error) {
+    if (res.gone && path !== curDrive()?.root) return openFolder(dirOf(path), null, false);
+    return toast(res.error);
+  }
+  if (res.drive !== drive) { drive = res.drive; store.set("storage-drive", drive); drawDrives(); drawScan(); }
+  fold.path = res.path; fold.data = res;
+  drawFolder(focusPath);
+}
+function drawFolder(focusPath) {
+  const d = fold.data;
+  if (!d) return;
+  items = new Map();
+  const keepFocus = focusPath ? null : focusKey();
+  const sorters = {
+    size: (a, b) => (b.size ?? -1) - (a.size ?? -1),
+    name: (a, b) => (a.label || a.name).localeCompare(b.label || b.name, undefined, { numeric: true, sensitivity: "base" }),
+    changed: (a, b) => (a.newest ?? a.mtime) - (b.newest ?? b.mtime),
+    type: (a, b) => (b.dir ? 1 : 0) - (a.dir ? 1 : 0) || (a.ext || "").localeCompare(b.ext || "") || (b.size ?? 0) - (a.size ?? 0),
+  };
+  let list = d.entries.filter(e => fold.show === "all" || (fold.show === "dirs") === !!e.dir);
+  list.sort(sorters[fold.sort]);
+  const max = Math.max(1, ...d.entries.map(e => e.size || 0));
+  const total = d.scanned?.size || d.entries.reduce((a, e) => a + (e.size || 0), 0) || 1;
+  const sortBtn = (k, t) => `<button class="btn f${fold.sort === k ? " on" : ""}" data-sort="${k}">${t}</button>`;
+  const showBtn = (k, t) => `<button class="btn f${fold.show === k ? " on" : ""}" data-show="${k}">${t}</button>`;
+  const stale = d.entries.some(e => e.dir && e.size == null && !e.other_drive);
+  $("fold-list").innerHTML = `
+    <div id="crumbs">${d.crumbs.map((c, i) => `${i ? '<span class="sep">›</span>' : ""}<button class="crumb f" data-crumb="${esc(c.path)}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="tools"><span class="lbl">Sort</span>${sortBtn("size", "Size")}${sortBtn("name", "Name")}${sortBtn("changed", "Oldest change")}${sortBtn("type", "Type")}
+      <span class="lbl">Show</span>${showBtn("all", "All")}${showBtn("dirs", "Folders")}${showBtn("files", "Files")}</div>
+    ${d.error ? `<p class="empty">${esc(d.error)}</p>` : ""}
+    ${stale ? `<p class="note">Some folders are new since the last count, so their size shows as —. Count again to include them.</p>` : ""}
+    <div class="rows">${list.map(e => row(e, {
+      sub: e.dir ? (e.other_drive ? "Another drive" : e.files != null ? `${n(e.files)} files${e.label ? " · " + e.name : ""}` : e.label ? e.name : "")
+           : e.link != null ? "Shortcut to " + e.link : (e.ext ? "." + e.ext + " · " : "") + CAT[e.cat]?.[0],
+      bar: (e.size || 0) / max, cats: e.dir ? e.cats : null, catTotal: e.size,
+      color: e.cat ? catColor(e.cat) : undefined, date: ago(e.dir ? e.newest : e.mtime),
+    })).join("") || (d.error ? "" : `<p class="empty">This folder is empty.</p>`)}</div>
+    ${d.more ? `<div class="more">and ${n(d.more)} smaller things (${size(d.moreBytes)})</div>` : ""}`;
+  const kinds = d.scanned ? Object.entries(d.scanned.cats).sort((a, b) => b[1] - a[1]) : [];
+  const me = { path: d.path, label: d.label, name: base(d.path), size: d.scanned?.size, level: d.level, why: d.why, kept: d.kept, dir: true };
+  items.set(d.path, me);
+  const atRoot = d.crumbs.length <= 1;
+  $("fold-info").innerHTML = `<h3>${esc(d.label || base(d.path) || d.path)}</h3>
+    <div class="big">${size(d.scanned?.size)}<small>${d.scanned ? n(d.scanned.files) + " files" : "not counted yet"}</small></div>
+    ${kinds.length ? `<div class="r" style="min-height:0;background:none"><span class="bar" style="width:100%;height:9px">${catBar(d.scanned.cats, d.scanned.size)}</span></div>
+      <div class="kinds">${kinds.slice(0, 6).map(([c, b]) => `<div class="kind"><i style="background:${catColor(c)}"></i>${esc(CAT[c][0])}<em>${size(b)}</em></div>`).join("")}</div>` : ""}
+    <div>${chip(d.level, d.why, d.kept)}</div><div class="why">${esc(d.why)}</div>
+    ${d.steam ? `<button class="btn f" data-steam="${esc(d.steam)}">Uninstall in Steam</button>` : ""}
+    ${d.level !== "blocked" ? `<button class="btn f${basket.has(d.path) ? " on" : ""}" id="pick-here" data-pick="${esc(d.path)}">${svg(basket.has(d.path) ? "ok" : "plus")}${basket.has(d.path) ? "On the cleanup list" : "Add this folder"}</button>` : ""}
+    ${!atRoot && (d.kept || d.level !== "blocked" || d.why.startsWith("Has something")) ? `<button class="btn f" id="keep">${svg("lock")}${d.kept ? "Stop keeping" : "Keep (can't be removed)"}</button>` : ""}
+    <button class="btn f" id="reveal">${svg("eye")}Show in Dolphin</button>
+    ${!atRoot ? `<button class="btn f" id="up">${svg("up")}Up a folder</button>` : ""}`;
+  wireRows($("fold-list"));
+  wireRows($("fold-info"));
+  const ph = $("pick-here");
+  if (ph) ph.onclick = () => { pick(me); drawFolder(); };
+  $("fold-list").querySelectorAll("[data-crumb]").forEach(b => b.onclick = () => openFolder(b.dataset.crumb, fold.path));
+  $("fold-list").querySelectorAll("[data-sort]").forEach(b => b.onclick = () => { fold.sort = b.dataset.sort; store.set("storage-sort", fold.sort); drawFolder(); });
+  $("fold-list").querySelectorAll("[data-show]").forEach(b => b.onclick = () => { fold.show = b.dataset.show; drawFolder(); });
+  const kb = $("keep");
+  if (kb) kb.onclick = async () => {
+    const on = !d.kept;
+    await api("/api/storage/keep", { path: d.path, on });
+    if (on) for (const p of [...basket.keys()]) if (p === d.path || p.startsWith(d.path + "/")) basket.delete(p);
+    saveBasket();
+    toast(on ? "Kept: it and everything in it can't be removed from here" : "No longer kept");
+    openFolder(d.path, null, false);
+  };
+  $("reveal").onclick = () => api("/api/storage/reveal", { path: d.path });
+  const up = $("up");
+  if (up) up.onclick = () => openFolder(d.crumbs.at(-2).path, d.path);
+  if (focusPath) {
+    const el = [...document.querySelectorAll("#fold-list [data-open]")].find(b => b.dataset.open === focusPath);
+    setFocus(el || document.querySelector("#fold-list .r .open") || document.querySelector("#fold-list .f"));
+  } else restoreFocus(keepFocus);
+  if (!focus || !document.body.contains(focus)) setFocus(document.querySelector("#fold-list .r .open") || document.querySelector("#fold-list .f"));
+  $("title").innerHTML = "Folders";
+}
+
+/* ---------- biggest files ---------- */
+async function drawFiles() {
+  const el = $("files"), f = filesFilter;
+  const res = await api(`/api/storage/files?drive=${drive}&cat=${f.cat}&ext=${encodeURIComponent(f.ext)}&older=${f.older}`);
+  if (view !== "files") return;
+  items = new Map();
+  const cats = Object.keys(curDrive()?.scanned?.cats || {});
+  const b = (k, v, t) => `<button class="btn f${f[k] === v ? " on" : ""}" data-f="${k}" data-v="${esc(v)}">${t}</button>`;
+  const top = res.rows[0]?.size || 1;
+  el.innerHTML = `<div class="tools"><span class="lbl">Kind</span>${b("cat", "", "All")}${cats.map(c => b("cat", c, esc(CAT[c][0]))).join("")}
+      ${f.ext ? `<button class="btn f on" data-f="ext" data-v="">.${esc(f.ext)} ${svg("x")}</button>` : ""}</div>
+    <div class="tools"><span class="lbl">Not changed for</span>${b("older", 0, "Any time")}${b("older", 90, "3 months")}${b("older", 365, "A year")}${b("older", 730, "2 years")}</div>
+    <div class="rows">${res.rows.map(r => row(r, { sub: dirOf(r.path), bar: r.size / top, color: catColor(r.cat), date: ago(r.mtime) })).join("")
+      || `<p class="empty">No big files like that.</p>`}</div>
+    ${res.partial ? `<div class="more">The ${n(3000)} biggest files on the drive (1 MB and up) are looked at here.</div>` : ""}`;
+  el.querySelectorAll("[data-f]").forEach(x => x.onclick = () => {
+    const k = x.dataset.f;
+    filesFilter = { ...f, [k]: k === "older" ? +x.dataset.v : x.dataset.v };
+    const key = `[data-f="${k}"][data-v="${CSS.escape(String(filesFilter[k]))}"]`;
+    drawFiles().then(() => setFocus(document.querySelector(key)));
+  });
+  wireRows(el);
+  settle();
+}
+
+/* ---------- file types ---------- */
+async function drawTypes() {
+  const el = $("types");
+  const res = await api(`/api/storage/types?drive=${drive}`);
+  if (view !== "types") return;
+  items = new Map();
+  const top = res.rows[0]?.bytes || 1;
+  el.innerHTML = `<p class="note">Every kind of file on ${esc(curDrive()?.name)}, by the space it takes. Open one to see its biggest files.</p>
+    <div class="rows">${res.rows.map(r => `<div class="r"><button class="open f" data-open="${esc(r.ext)}" data-kind="ext">
+      <span class="chip" style="width:84px;justify-content:center;color:${catColor(r.cat)}">${r.ext ? "." + esc(r.ext) : "no ending"}</span>
+      <div class="t"><b>${esc(CAT[r.cat][0])}</b><span>${n(r.files)} files</span></div>
+      <span class="bar" style="width:220px"><i style="width:${Math.max(1, 100 * r.bytes / top)}%;background:${catColor(r.cat)}"></i></span>
+      <span class="sz">${size(r.bytes)}</span></button></div>`).join("")}</div>
+    ${res.count > res.rows.length ? `<div class="more">and ${n(res.count - res.rows.length)} rarer kinds</div>` : ""}`;
+  el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
+    filesFilter = { cat: "", ext: b.dataset.open, older: 0 };
+    if (!b.dataset.open) return toast("Files without an ending can't be listed on their own");
+    go("files");
+  });
+  settle();
+}
+
+/* ---------- the Trash ---------- */
+async function drawTrash() {
+  const el = $("trash");
+  el.innerHTML = `<p class="note">Looking in the Trash…</p>`;
+  const res = await api("/api/storage/trash");
+  if (view !== "trash") return;
+  trashPick = new Set([...trashPick].filter(id => res.items.some(i => i.id === id)));
+  const picked = res.items.filter(i => trashPick.has(i.id));
+  const pickedBytes = picked.reduce((a, i) => a + (i.size || 0), 0);
+  el.innerHTML = `<div class="sum"><div class="big">${size(res.bytes)}</div>
+      <p>${res.items.length ? `${res.items.length} thing${res.items.length === 1 ? "" : "s"} in the Trash. They still take up space until they're removed for good, and until then they can be put back where they were.` : "The Trash is empty."}</p></div>
+    ${res.items.length ? `<div class="actions">
+      <button class="btn f" id="t-all">${picked.length === res.items.length ? "Pick none" : "Pick all"}</button>
+      <button class="btn f" id="t-back"${picked.length ? "" : " disabled"}>${svg("undo")}Put back${picked.length ? " " + picked.length : ""}</button>
+      <button class="btn danger f" id="t-empty"${picked.length ? "" : " disabled"}>Remove ${picked.length || ""} for good${picked.length ? " (" + size(pickedBytes) + ")" : ""}…</button>
+      <span class="hint">Removing for good can't be undone.</span></div>` : ""}
+    <div class="rows">${res.items.map(i => `<div class="r${trashPick.has(i.id) ? " picked" : ""}">
+      <button class="open f" data-tid="${esc(i.id)}">${svg(i.dir ? "dir" : "file", "ico" + (i.dir ? " dir" : ""))}
+        <div class="t"><b>${esc(i.from ? base(i.from) : i.name)}</b><span>From ${esc(i.from ? dirOf(i.from) : "somewhere unknown")}</span></div>
+        <span class="sz">${size(i.size)}</span><span class="dt">${esc(i.deleted ? ago(Date.parse(i.deleted) / 1000) : "")}</span></button>
+      <button class="pick f${trashPick.has(i.id) ? " on" : ""}" data-tpick="${esc(i.id)}">${svg(trashPick.has(i.id) ? "ok" : "plus")}</button></div>`).join("")}</div>`;
+  const toggle = id => { trashPick.has(id) ? trashPick.delete(id) : trashPick.add(id); const k = focusKey(); drawTrash().then(() => restoreFocus(k)); };
+  el.querySelectorAll("[data-tid]").forEach(b => b.onclick = () => toggle(b.dataset.tid));
+  el.querySelectorAll("[data-tpick]").forEach(b => b.onclick = () => toggle(b.dataset.tpick));
+  if ($("t-all")) $("t-all").onclick = () => {
+    trashPick = picked.length === res.items.length ? new Set() : new Set(res.items.map(i => i.id));
+    drawTrash().then(() => setFocus($("t-all")));
+  };
+  if ($("t-back")) $("t-back").onclick = async () => {
+    const r = await api("/api/storage/restore", { ids: [...trashPick] });
+    trashPick = new Set();
+    toast(r.refused.length ? `Put back ${r.done.length}. Couldn't put back ${r.refused.length}: ${r.refused[0].why}` : `Put back ${r.done.length} where ${r.done.length === 1 ? "it was" : "they were"}`);
+    await loadInfo(); drawTrash();
+  };
+  if ($("t-empty")) $("t-empty").onclick = () => confirmList(`Remove ${picked.length} for good?`,
+    "Exactly these, and nothing else. This can't be undone: they won't be in the Trash any more.",
+    picked.map(i => ({ name: i.from ? base(i.from) : i.name, path: "Was in " + (i.from ? dirOf(i.from) : "somewhere unknown"), size: i.size, files: i.dir ? i.files : null })),
+    `Hold to remove these ${picked.length} for good`, true, async () => {
+    const ids = picked.map(i => i.id);
+    const r = await api("/api/storage/empty", { ids });
+    trashPick = new Set();
+    toast(r.refused.length ? `Freed ${size(r.bytes)}. ${r.refused.length} couldn't be removed: ${r.refused[0].why}` : `Freed ${size(r.bytes)}`);
+    ideas = null; await loadInfo(); drawTrash();
+  });
+  settle();
+}
+
+/* ---------- the cleanup list: a last look, then to the Trash ---------- */
+async function drawBasket() {
+  const el = $("basket");
+  if (!basket.size) {
+    el.innerHTML = `<p class="empty">Nothing picked yet.<br>Press ${svg("plus").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} (or X) on anything in Overview, Folders or Biggest files to put it here.
+      You tick each thing you want gone, see the whole list again before anything moves, and it goes to the Trash first, so it can be put back.</p>`;
+    return settle();
+  }
+  el.innerHTML = `<p class="note">Checking each one again…</p>`;
+  checked = await api("/api/storage/check", { paths: [...basket.keys()] });
+  if (view !== "basket") return;
+  // the list as it is now: gone ones dropped, ones inside another picked folder folded into it, levels read fresh
+  const fresh = new Map(checked.rows.filter(r => !r.gone).map(r => [r.path, r]));
+  for (const p of [...basket.keys()]) if (!fresh.has(p)) basket.delete(p);
+  for (const r of fresh.values()) basket.set(r.path, { ...basket.get(r.path), size: r.size, level: r.level, ticked: basket.get(r.path)?.ticked === true && r.level !== "blocked" });
+  saveBasket();
+  items = new Map();
+  const order = { blocked: 0, careful: 1, check: 2, safe: 3 };
+  const rows = [...fresh.values()].sort((a, b) => order[a.level] - order[b.level] || b.size - a.size);
+  const ok = rows.filter(r => r.level !== "blocked"), blocked = rows.filter(r => r.level === "blocked");
+  const on = ok.filter(r => basket.get(r.path).ticked), careful = on.filter(r => r.level === "careful"), recent = on.filter(r => r.recent);
+  const total = on.reduce((a, r) => a + r.size, 0);
+  const ready = on.length && (!careful.length || carefulOk);
+  el.innerHTML = `<div class="sum"><div class="big">${size(total)}</div>
+      <p>${on.length} of ${ok.length} ticked (${n(on.reduce((a, r) => a + r.files, 0))} files). Only ticked things move, and only after you've seen
+      the full list of them once more. They go to the Trash, where you can put them back until you remove them for good.</p></div>
+    ${careful.length ? `<button class="tick f${carefulOk ? " on" : ""}" id="tick"><span class="box">${svg("ok")}</span>
+      I've looked at the ${careful.length} careful one${careful.length === 1 ? "" : "s"} I ticked (amber) and I'm sure</button>` : ""}
+    ${recent.length ? `<p class="note" style="color:var(--careful)">${recent.length} ticked ${recent.length === 1 ? "one" : "ones"} changed in the last 3 days: something may still be using ${recent.length === 1 ? "it" : "them"}.</p>` : ""}
+    ${blocked.length ? `<p class="note">${blocked.length} can't be removed from here any more and will be left alone.</p>` : ""}
+    <div class="actions">
+      <button class="btn big f" id="go"${ready ? "" : " disabled"}>Review the ${on.length || ""} ticked…</button>
+      <button class="btn f" id="tick-all">${on.length === ok.length ? "Untick all" : "Tick all"}</button>
+      <button class="btn f" id="clear">Clear the list</button>
+      <span class="hint">${!on.length ? "Tick (or X) each thing you want gone." : careful.length && !carefulOk ? "Tick the box above first." : "You'll see each one listed before anything moves."}</span></div>
+    <div class="rows">${rows.map(r => {
+      const t = basket.get(r.path).ticked;
+      const act = r.level === "blocked" ? `<span class="pick lock" title="${esc(r.why)}">${svg("lock")}</span>`
+        : `<button class="pick box f${t ? " on" : ""}" data-tick="${esc(r.path)}" title="${t ? "Untick" : "Tick to remove"}">${svg("ok")}</button>`;
+      return row(r, { sub: r.path + (r.dir ? ` · ${n(r.files)} files` : ""), kind: "peek", date: ago(r.newest), recent: r.recent && r.level !== "blocked" ? r.newest : 0,
+        action: act + `<button class="pick f" data-drop="${esc(r.path)}" title="Take off the list">${svg("x")}</button>` })
+        .replace('<div class="r', `<div class="r${t || r.level === "blocked" ? "" : " off"}`) + `<div class="peek" data-peek="${esc(r.path)}" hidden></div>`;
+    }).join("")}</div>`;
+  const redraw = () => { const k = focusKey(); drawBasket().then(() => restoreFocus(k)); };
+  el.querySelectorAll("[data-tick]").forEach(b => b.onclick = () => { const x = basket.get(b.dataset.tick); x.ticked = !x.ticked; saveBasket(); redraw(); });
+  el.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => { basket.delete(b.dataset.drop); saveBasket(); redraw(); });
+  el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => peek(b.dataset.open, fresh.get(b.dataset.open)));
+  $("tick-all").onclick = () => { const all = on.length !== ok.length; ok.forEach(r => basket.get(r.path).ticked = all); saveBasket(); drawBasket().then(() => setFocus($("tick-all"))); };
+  if ($("tick")) $("tick").onclick = () => { carefulOk = !carefulOk; drawBasket().then(() => setFocus($("tick"))); };
+  $("clear").onclick = () => ask("Clear the cleanup list?", "Nothing is removed; the list is just emptied.", [["Clear it", () => { basket.clear(); saveBasket(); drawBasket(); }], ["Keep the list"]]);
+  $("go").onclick = () => confirmList(`Move ${on.length} to the Trash?`,
+    "Exactly these, and nothing else. They can be put back from Trash until you remove them for good.",
+    on.map(r => ({ name: r.label || base(r.path), path: r.path, size: r.size, level: r.level, why: r.why, files: r.dir ? r.files : null })),
+    `Hold to move these ${on.length} to the Trash`, false, async () => {
+      const r = await api("/api/storage/remove", { paths: on.map(x => x.path), careful: carefulOk });
+      for (const d of r.done) basket.delete(d.path);
+      saveBasket(); carefulOk = false; ideas = null;
+      const ids = r.done.map(d => d.id);
+      toast(`Moved ${r.done.length} to the Trash (${size(r.bytes)})` + (r.refused.length ? `. ${r.refused.length} left alone: ${r.refused[0].why}` : "") +
+            ". Empty the Trash to get the space back.", ids.length ? ["Undo", async () => {
+              const u = await api("/api/storage/restore", { ids });
+              toast(u.refused.length ? `Put back ${u.done.length}; ${u.refused.length} couldn't be: ${u.refused[0].why}` : "Put back");
+              await loadInfo(); draw();
+            }] : null, 9000);
+      await loadInfo(); drawBasket();
+    });
+  settle();
+}
+
+/* What's inside a folder on the list: its biggest things, right under it */
+async function peek(path, r) {
+  const box = [...document.querySelectorAll("[data-peek]")].find(x => x.dataset.peek === path);
+  if (!box) return;
+  if (!box.hidden) { box.hidden = true; return; }
+  if (!r?.dir) { box.innerHTML = `<div><span>${esc(path)}</span><span>${size(r?.size)}</span></div>`; box.hidden = false; return; }
+  box.innerHTML = "Looking inside…"; box.hidden = false;
+  const res = await api("/api/storage/folder?path=" + encodeURIComponent(path));
+  if (res.error) { box.textContent = res.error; return; }
+  const list = res.entries.slice().sort((a, b) => (b.size || 0) - (a.size || 0));
+  const shown = list.slice(0, 12), rest = list.slice(12), restBytes = rest.reduce((a, e) => a + (e.size || 0), 0) + (res.moreBytes || 0);
+  box.innerHTML = (shown.map(e => `<div><span>${e.dir ? "▸ " : ""}${esc(e.label ? `${e.label} (${e.name})` : e.name)}${e.dir && e.files != null ? ` · ${n(e.files)} files` : ""}</span><span>${size(e.size)}</span></div>`).join("")
+    || "<div><span>Empty</span><span></span></div>") + (rest.length || res.more ? `<div><span>and ${n(rest.length + (res.more || 0))} more</span><span>${size(restBytes)}</span></div>` : "");
+}
+
+/* The last look before anything moves or goes: every item by name, where it is and its size, then hold to do it */
+function confirmList(title, text, list, holdLabel, danger, done) {
+  askReturn = focus;
+  const card = $("ask").querySelector(".card");
+  card.classList.add("wide");
+  const total = list.reduce((a, x) => a + (x.size || 0), 0);
+  card.innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p>
+    <div class="itemized f" id="itemized" tabindex="-1">${list.map(x => `<div class="it"><b>${esc(x.name)}</b>${x.level ? chip(x.level, x.why) : "<span></span>"}<em>${size(x.size)}</em>
+      <span class="p">${esc(x.path)}${x.files != null ? ` · ${n(x.files)} files` : ""}</span></div>`).join("")}</div>
+    <div class="itemized-sum">${list.length} item${list.length === 1 ? "" : "s"} · ${size(total)} in all</div>
+    <div class="btns"><button class="btn big f${danger ? " danger" : ""} hold" id="confirm-go"><i></i><span>${esc(holdLabel)}</span></button>
+      <button class="btn big f" id="confirm-back">Go back</button></div>`;
+  $("ask").classList.add("on");
+  holdable($("confirm-go"), () => { closeAsk(); done(); });
+  $("confirm-back").onclick = closeAsk;
+  setFocus($("confirm-back"));
+}
+
+async function uninstall(appid) {
+  ask("Uninstall in Steam?", "Steam opens and asks first. It keeps your saves in Steam Cloud for games that use it, and you can install it again any time.",
+      [["Open Steam", async () => { const r = await api("/api/storage/uninstall", { appid }); toast(r.error || "Steam is asking about it"); }], ["Not now"]]);
+}
+
+/* ---------- toasts, questions, holding to confirm ---------- */
+let toastT, toastAction = null;
+function toast(text, action = null, ms = 3500) {
+  toastAction = action;
+  $("toast").innerHTML = `<span>${esc(text)}</span>${action ? `<button class="btn f" id="toast-btn">${svg("undo")}${esc(action[0])}</button><span style="font-size:12px;color:var(--dim)">Y</span>` : ""}`;
+  $("toast").classList.add("show");
+  if (action) $("toast-btn").onclick = () => { const a = toastAction; hideToast(); a[1](); };
+  clearTimeout(toastT); toastT = setTimeout(hideToast, ms);
+}
+function hideToast() { $("toast").classList.remove("show"); toastAction = null; }
+
+let askReturn = null;
+function ask(title, text, buttons) {
+  askReturn = focus;
+  const card = $("ask").querySelector(".card");
+  card.classList.remove("wide");
+  card.innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="btns">${buttons.map((b, i) => `<button class="btn big f" data-i="${i}">${esc(b[0])}</button>`).join("")}</div>`;
+  $("ask").classList.add("on");
+  card.querySelectorAll("[data-i]").forEach(x => x.onclick = () => { closeAsk(); buttons[+x.dataset.i][1]?.(); });
+  setFocus(card.querySelector(".f:last-child"));
+}
+function closeAsk() { holdEnd(); $("ask").classList.remove("on"); $("ask").querySelector(".card").classList.remove("wide"); if (askReturn && document.body.contains(askReturn)) setFocus(askReturn); }
+
+let holding = null, holdT;
+function holdable(btn, done) {
+  if (!btn) return;
+  btn._done = done;
+  btn.onpointerdown = e => { e.preventDefault(); holdStart(btn); };
+  btn.onpointerup = btn.onpointerleave = () => holdEnd();
+  btn.onclick = e => { e.preventDefault(); if (!holding) toast("Hold it down until the bar fills"); };
+}
+function holdStart(btn) {
+  if (btn.hasAttribute("disabled")) return;
+  holdEnd();
+  holding = btn; btn.classList.add("holding");
+  holdT = setTimeout(() => { const b = holding; holdEnd(); b._done(); }, 1200);
+}
+function holdEnd() { clearTimeout(holdT); if (holding) holding.classList.remove("holding"); holding = null; }
+
+/* ---------- focus: the controller and the arrow keys move it to the nearest thing that way ---------- */
+let focus = null, focusAuto = false;  // focusAuto: put on the side only until the view has something
+function setFocus(el, auto = false) {
+  if (focus) focus.classList.remove("focus");
+  focus = el || null;
+  focusAuto = auto;
+  if (!focus) return;
+  focus.classList.add("focus");
+  focus.scrollIntoView({ block: "nearest" });
+}
+const focusables = () => [...document.querySelectorAll($("ask").classList.contains("on") ? "#ask .f" : "#side .f, #main .f, #toast.show .f")]
+  .filter(e => e.offsetParent !== null && !e.hasAttribute("disabled"));
+function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick } : null; }
+function restoreFocus(k) {
+  if (!k) return;
+  const sel = k.id ? "#" + CSS.escape(k.id) : k.open != null ? `[data-open="${CSS.escape(k.open)}"]` : k.pick ? `[data-pick="${CSS.escape(k.pick)}"]`
+    : k.cat ? `[data-cat="${k.cat}"]` : k.idea ? `[data-idea="${k.idea}"]` : k.tid ? `[data-tid="${CSS.escape(k.tid)}"]` : k.tpick ? `[data-tpick="${CSS.escape(k.tpick)}"]` : k.tick ? `[data-tick="${CSS.escape(k.tick)}"]` : null;
+  const el = sel && document.querySelector(sel);
+  if (el) setFocus(el);
+}
+/* After drawing: keep the focus where it was if it's still there, otherwise the first thing in the main area */
+function settle() {
+  const first = document.querySelector("#main .view.on .f");
+  if (focus && document.body.contains(focus) && focus.offsetParent !== null && !(focusAuto && first)) return;
+  if (first) setFocus(first); else setFocus(document.querySelector("#side .nav.on"), true);
+}
+function move(dir) {
+  const all = focusables();
+  if (!focus || !all.includes(focus)) return setFocus(all.find(e => e.closest("#main")) || all[0]);
+  const a = focus.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+  let best = null, bestScore = Infinity;
+  for (const e of all) {
+    if (e === focus) continue;
+    const b = e.getBoundingClientRect(), bx = b.left + b.width / 2, by = b.top + b.height / 2;
+    let main, cross;
+    if (dir === "down") { if (b.top < a.bottom - 4) continue; main = b.top - a.bottom; cross = Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right)) ? Math.abs(bx - ax) : 0; }
+    else if (dir === "up") { if (b.bottom > a.top + 4) continue; main = a.top - b.bottom; cross = Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right)) ? Math.abs(bx - ax) : 0; }
+    else if (dir === "right") { if (b.left < a.right - 4) continue; main = b.left - a.right; cross = Math.abs(by - ay); }
+    else { if (b.right > a.left + 4) continue; main = a.left - b.right; cross = Math.abs(by - ay); }
+    const score = Math.max(0, main) + cross * 3;
+    if (score < bestScore) { bestScore = score; best = e; }
+  }
+  if (best) setFocus(best);
+}
+const VIEWS = ["ov", "fold", "files", "types", "trash", "basket"];
+function input(cmd) {
+  hideMouse();
+  if ((cmd === "up" || cmd === "down") && focus?.classList.contains("itemized")) {
+    const el = focus, before = el.scrollTop;
+    el.scrollTop += cmd === "down" ? 90 : -90;
+    if (el.scrollTop !== before) return;
+  }
+  if (cmd === "up" || cmd === "down" || cmd === "left" || cmd === "right") return move(cmd);
+  if (cmd === "ok") { if (focus?.classList.contains("hold")) return holdStart(focus); return focus?.click(); }
+  if (cmd === "ok-up") return holdEnd();
+  if (cmd === "back") return back();
+  if (cmd === "pick") {
+    const r = focus?.closest(".r");
+    const p = r?.querySelector("[data-pick]")?.dataset.pick || focus?.dataset.pick;
+    const tk = r?.querySelector("[data-tick]");
+    if (view === "basket") return tk?.click();
+    if (p && items.get(p)) return pick(items.get(p));
+    const t = r?.querySelector("[data-tpick]");
+    if (t) return t.click();
+    return;
+  }
+  if (cmd === "basket") { if (toastAction) { const a = toastAction; hideToast(); return a[1](); } return go("basket"); }
+  if (cmd === "prev" || cmd === "next") {
+    const i = Math.max(0, VIEWS.indexOf(view === "where" || view === "idea" ? "ov" : view));
+    return go(VIEWS[(i + (cmd === "next" ? 1 : VIEWS.length - 1)) % VIEWS.length]);
+  }
+}
+
+const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", Enter: "ok", Escape: "back", Backspace: "back",
+               x: "pick", " ": "pick", y: "basket", "[": "prev", "]": "next", PageUp: "prev", PageDown: "next" };
+addEventListener("keydown", e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const cmd = KEYS[e.key];
+  if (!cmd) return;
+  e.preventDefault();
+  if (e.repeat && (cmd === "ok" || cmd === "back" || cmd === "pick" || cmd === "basket")) return;
+  input(cmd);
+});
+addEventListener("keyup", e => { if (e.key === "Enter") input("ok-up"); });
+function hideMouse() { document.body.classList.remove("mouse"); }
+addEventListener("mousemove", () => document.body.classList.add("mouse"));
+addEventListener("pointerdown", e => { const f = e.target.closest(".f"); if (f) setFocus(f); });
+
+/* Gamepad (when the controller isn't already sending keys) */
+const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back", 2: "pick", 3: "basket", 4: "prev", 5: "next" };
+const held = {};
+let lastStick = 0, stickDir = null;
+function poll() {
+  if (document.hasFocus()) {
+    for (const gp of navigator.getGamepads ? navigator.getGamepads() : []) {
+      if (!gp) continue;
+      for (const [i, cmd] of Object.entries(BTN)) {
+        const down = gp.buttons[i] && gp.buttons[i].pressed;
+        if (down && !held[gp.index + ":" + i]) input(cmd);
+        if (!down && held[gp.index + ":" + i] && cmd === "ok") input("ok-up");
+        held[gp.index + ":" + i] = down;
+      }
+      const [x, y] = gp.axes, now = performance.now();
+      const dir = Math.abs(x) > .6 ? (x > 0 ? "right" : "left") : Math.abs(y) > .6 ? (y > 0 ? "down" : "up") : null;
+      if (dir && (dir !== stickDir || now - lastStick > 160)) { input(dir); lastStick = now + (dir !== stickDir ? 200 : 0); }
+      stickDir = dir;
+    }
+  }
+  requestAnimationFrame(poll);
+}
+requestAnimationFrame(poll);
+
+document.querySelectorAll("#side [data-view]").forEach(b => b.onclick = () => go(b.dataset.view));
+drawBasketBtn();
+loadInfo().then(() => { go("ov", false); tick(); });
+</script>
+</body>
+</html>

@@ -23,6 +23,7 @@ import karaoke
 import media
 import movy_tour
 import search
+import storage
 import trailers
 from screen import screen
 import watchlist
@@ -1401,6 +1402,21 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(karaoke.lyrics(self._query("id")))
             if self.path.startswith("/api/karaoke/audio?"):
                 return self._file(karaoke.track(self._query("id"), self._query("track")))
+            if self.path == "/api/storage":
+                return self._json(storage.overview())
+            if self.path.startswith("/api/storage/folder?"):
+                return self._json(storage.folder(self._query("path")))
+            if self.path.startswith("/api/storage/where?"):
+                return self._json(storage.where(self._query("drive"), self._query("cat")))
+            if self.path.startswith("/api/storage/files?"):
+                return self._json(storage.biggest(self._query("drive"), self._query("cat"), self._query("ext"),
+                                                  int(self._query("older") or 0)))
+            if self.path.startswith("/api/storage/types?"):
+                return self._json(storage.types(self._query("drive")))
+            if self.path == "/api/storage/ideas":
+                return self._json(storage.suggestions())
+            if self.path == "/api/storage/trash":
+                return self._json(storage.trash_list())
             if self.path == "/api/tour/movy":
                 return self._json(movy_tour.status())
             if self.path.startswith("/api/tour/phone-cmds?"):  # ?start, or ?after=<number>
@@ -1508,6 +1524,12 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError:
                 return self._json({"error": "bad request"}, 400)
             return self._json(karaoke.prepare(str(body.get("id", "")) if isinstance(body, dict) else ""))
+        if len(parts) == 3 and parts[:2] == ["api", "storage"]:
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            return self._json(storage.act(parts[2], body))
         if len(parts) == 3 and parts[:2] == ["api", "close"]:
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:
@@ -1726,6 +1748,7 @@ def main():
     threading.Thread(target=app_rules, args=(not desktop_mode,), daemon=True).start()
     threading.Thread(target=now_playing.run, daemon=True).start()
     threading.Thread(target=karaoke.run, daemon=True).start()
+    threading.Thread(target=storage.run, daemon=True).start()
     # Phone remote: home network only (port 8766), every action needs the pairing token
     try:
         pointer = Pointer()

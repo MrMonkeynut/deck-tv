@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0C2C44"/><stop offset="1" stop-color="#050E16"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="240" cy="262" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7DD3FC" stop-opacity=".42"/>
+      <stop offset=".45" stop-color="#7DD3FC" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#7DD3FC" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#bg)"/>
+  <rect width="480" height="640" fill="url(#halo)"/>
+  <!-- Faint bars of space, by kind -->
+  <g stroke-linecap="round" stroke-width="10" stroke-opacity=".14">
+    <path d="M60 520h170" stroke="#5B8CFF"/><path d="M250 520h60" stroke="#2DD4BF"/><path d="M330 520h30" stroke="#F472B6"/>
+    <path d="M60 552h90" stroke="#5B8CFF"/><path d="M170 552h110" stroke="#A78BFA"/><path d="M300 552h40" stroke="#FB923C"/>
+    <path d="M60 584h40" stroke="#C4B5A0"/><path d="M120 584h200" stroke="#5B8CFF"/>
+  </g>
+</svg>

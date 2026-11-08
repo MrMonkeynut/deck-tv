@@ -86,6 +86,33 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
   for the details: space on the Deck (and any microSD card or USB drive), the Wi-Fi network and
   signal, sound, battery, and the Deck's temperature and memory. Space turns amber when it's
   getting full and red when it's almost out.
+- **Storage** (its own card, or System → Storage): what's using the space on the Deck and any
+  microSD card or USB drive. **Overview** splits each drive into Games, Saves & Proton, Apps,
+  Videos, Music, Pictures, Documents, Archives & disk images, Caches & Trash and Other; click one to
+  see the folders that make it up (games and apps by name). **Folders** goes through any folder,
+  sorted by size, name, oldest change or type; **Biggest files** filters by kind and by how long
+  since they changed; **File types** lists every ending by space. Under the overview, **Ideas**
+  finds app caches, shader caches, leftovers from uninstalled games, old downloads and games not
+  played for 3 months (those are uninstalled through Steam, which asks first).
+  Removing is careful on purpose:
+  - Each thing is marked **Safe** (comes back by itself), **Look first** (your own files),
+    **Careful** (an app's settings, a game's Proton setup or saves, part of a game) or **Can't
+    remove** (the folders everything lives in, Steam's and the apps' own files, Steam saves,
+    Deck TV, keys and passwords). The server refuses those too, not just the page.
+  - **+** (or X) puts things on the **Cleanup list** (Y), ticked. **Add all** from an idea puts them
+    there *unticked*: tick (or X) each one you want gone. Open any of them to see what's inside. The
+    list reads everything again, warns about anything changed in the last 3 days, and needs a tick
+    for Careful ones.
+  - **Review the ticked…** then lists every one by name, where it is and its size, and only a
+    **hold** (until the bar fills) moves exactly those to the **Trash** (the same one Dolphin uses),
+    with **Undo**. Unticked ones stay on the list, untouched.
+  - The space comes back only when you remove them for good in **Trash**: tick each one, and the
+    same itemized list comes up first, then a hold. Until then, **Put back** returns them where
+    they were.
+  - **Keep** (in a folder's panel) protects a folder and everything in it.
+  - Everything moved, put back or removed is written to `~/.local/share/deck-tv/storage.log`;
+    Keep marks are in `~/.config/deck-tv/storage.json`. Counting a drive takes a minute or so, in
+    the background, and again when it's more than 12 hours old (or **Count again**).
 - **Sound** (System → Sound): the volume, and where sound plays: the TV, the Deck's
   speakers, headphones or a Bluetooth speaker. A paired speaker that isn't connected shows
   "Connect": switch it on and click it. **Add speaker** pairs a new one: put it in pairing mode,

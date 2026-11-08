@@ -704,6 +704,30 @@
         "~/.local/share/deck-tv/icons/ultrastar.svg"
       ],
       "accent": "#8B5CF6"
+    },
+    {
+      "id": "storage",
+      "name": "Storage",
+      "sub": "What's using the space",
+      "color": "#0C2C44",
+      "icon": "disk",
+      "image": "storage.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/storage",
+        "--class=deck-storage",
+        "--no-first-run",
+        "--start-fullscreen",
+        "--app=http://127.0.0.1:8765/storage.html"
+      ],
+      "window_class": "deck-storage",
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/storage.svg"
+      ],
+      "accent": "#7DD3FC"
     }
   ],
   "groups": [

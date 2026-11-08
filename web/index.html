@@ -2063,7 +2063,7 @@ function showSystem(info) {
   document.getElementById("sys-model").textContent = `${d.model} · ${d.os}`;
   document.getElementById("sys-storage").innerHTML = info.storage.map(dr => {
     const pct = dr.free > 0 ? Math.min(99, Math.round(100 * dr.used / dr.total)) : 100, t = tight(dr);  // "100%" only when truly full
-    const warn = t === "crit" ? "Almost full. Uninstall a game in Steam → Storage to make room."
+    const warn = t === "crit" ? "Almost full. Open Storage below to see what's using it."
                : t === "low" ? "Getting full." : "";
     return `<div class="drive ${t}">${svg(dr.kind === "sd" ? "sdcard" : dr.kind === "usb" ? "usb" : "disk", "currentColor", 1.5)}
       <div class="d-name">${dr.name}<b>${size(dr.free)} free<small>of ${size(dr.total)}</small></b></div>
@@ -2087,11 +2087,16 @@ function showSystem(info) {
          `On for ${upFor(d.uptime)}<br>Memory ${size(d.memUsed)} of ${size(d.memTotal)}`),
     `<button class="sys-tile" id="sys-saver">${svg("moon", "currentColor", 1.7)}<div class="t-label">Screensaver</div>
       <div class="t-main"></div><div class="t-sub">A drifting clock when left alone.<br>Press to change</div></button>`,
+    `<button class="sys-tile" id="sys-space">${svg("disk", "currentColor", 1.7)}<div class="t-label">Storage</div>
+      <div class="t-main">What's using it</div><div class="t-sub">Folder by folder, and a careful way to clear space</div></button>`,
   ].join("");
   showSaverSetting();
   const sv = document.getElementById("sys-saver");
   sv.onclick = nextSaver;
   sv.onmouseenter = () => sysFocus(sysOpts().indexOf(sv));
+  const sp = document.getElementById("sys-space");
+  sp.onclick = () => { closeSystem(); api("/api/launch/storage", "POST").catch(() => {}); };
+  sp.onmouseenter = () => sysFocus(sysOpts().indexOf(sp));
   const sb = document.getElementById("sys-sound");
   sb.onclick = () => { closeSystem(); soundFromSystem = true; openSound(); };
   sb.onmouseenter = () => sysFocus(0);
