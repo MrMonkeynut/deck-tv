@@ -45,6 +45,24 @@ if ! ls ~/Applications/qbittorrent*.AppImage ~/Downloads/qbittorrent*.AppImage >
   flatpak install -y --user flathub org.qbittorrent.qBittorrent || echo "Couldn't install qBittorrent; carrying on without it. It's in Discover too."
 fi
 
+# Karaoke: the vocal remover (Demucs, from PyPI, CPU only) in its own Python, beside Deck TV.
+# Without it Karaoke still works, with the singing left in.
+if [ ! -x "$DEST/karaoke-env/bin/python" ] \
+   && ask_yes "Install the karaoke vocal remover? It takes about 5 minutes and 1 GB."; then
+  say "Installing the vocal remover…"
+  mkdir -p "$DEST"
+  if python3 -m venv "$DEST/karaoke-env" \
+     && "$DEST/karaoke-env/bin/pip" install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu \
+     && "$DEST/karaoke-env/bin/pip" install -q --no-deps demucs \
+     && "$DEST/karaoke-env/bin/pip" install -q dora-search einops julius lameenc openunmix pyyaml tqdm numpy; then
+    echo "Vocal remover installed."
+  else
+    rm -rf "$DEST/karaoke-env"
+    echo "Couldn't install the vocal remover; carrying on without it. Run this installer again to retry."
+  fi
+fi
+mkdir -p "$HOME/Music/Karaoke"
+
 # Claude's desktop app is made for Ubuntu, so it goes in a small Ubuntu box (distrobox, part of
 # SteamOS) named "claude", from Anthropic's own download. Its menu entry is shared out to the Deck.
 if ! ls ~/.local/share/applications/claude-*.desktop >/dev/null 2>&1 \
@@ -68,7 +86,7 @@ fi
 # ---------- files ----------
 say "Copying Deck TV…"
 mkdir -p "$DEST/images" "$DEST/icons" "$BIN" "$APPS"
-cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/movy_tour.py" "$SRC/tour_overlay.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/watchlist.py" "$SRC/trailers.py" "$SRC/screen.py" "$SRC/dock.py" "$DEST/"
+cp -r "$SRC/web" "$SRC/remote" "$SRC/server.py" "$SRC/search.py" "$SRC/movy_tour.py" "$SRC/tour_overlay.py" "$SRC/cdp.py" "$SRC/media.py" "$SRC/watchlist.py" "$SRC/trailers.py" "$SRC/screen.py" "$SRC/dock.py" "$SRC/karaoke.py" "$SRC/separate.py" "$DEST/"
 cp "$SRC/icons/"*.png "$SRC/icons/"*.svg "$DEST/icons/"
 cp "$SRC/images/"* "$DEST/images/"
 cp "$SRC/uninstall.sh" "$DEST/"

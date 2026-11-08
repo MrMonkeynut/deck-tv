@@ -176,6 +176,39 @@
   body.full #screen { position: fixed; inset: 0; z-index: 30; border-radius: 0; height: auto; aspect-ratio: auto; }
   body.full .screen-grip { display: none; }
   body.full .screen-ctl { top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); }
+  .screen-ctl #screen-kb { display: none; }
+  .screen-ctl #screen-rc.on { background: var(--accent); }
+  body.full .screen-ctl #screen-kb { display: grid; }
+  body.full .screen-ctl #screen-kb.on { background: var(--accent); }
+  /* Full screen's own keyboard: floats over the picture, moved by its grip, made smaller or bigger from
+     the corner, or tucked down to just the grip. It types on the TV; the phone's keyboard stays away. */
+  #fkb { position: fixed; z-index: 31; left: 0; top: 0; width: var(--kb-w, 420px); --k: calc(var(--kb-w, 420px) / 10);
+    display: none; flex-direction: column; border-radius: 14px; background: rgba(14,17,22,.82); color: var(--ink);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 6px 24px rgba(0,0,0,.45);
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  body.full #fkb.show { display: flex; }
+  .fkb-bar { display: flex; align-items: center; height: 30px; padding: 0 2px 0 8px; gap: 2px; cursor: move; touch-action: none; }
+  .fkb-bar .grab { flex: 1; height: 100%; display: grid; place-items: center; }
+  .fkb-bar .grab::after { content: ""; width: 44px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.55); }
+  .fkb-bar button { width: 30px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); }
+  .fkb-bar button:active { background: rgba(255,255,255,.14); }
+  .fkb-bar svg { width: 16px; height: 16px; }
+  .fkb-keys { display: flex; flex-direction: column; gap: calc(var(--k) * .1); padding: 0 calc(var(--k) * .1) calc(var(--k) * .12); }
+  #fkb.min { width: 150px; }
+  #fkb.min .fkb-keys, #fkb.min .fkb-size { display: none; }
+  .fkb-row { display: flex; gap: calc(var(--k) * .1); justify-content: center; }
+  .fkb-row button { flex: 1 1 0; min-width: 0; height: calc(var(--k) * 1.05); border-radius: calc(var(--k) * .16);
+    background: rgba(255,255,255,.13); color: #fff; font-size: calc(var(--k) * .42); display: grid; place-items: center; }
+  .fkb-row button.w15 { flex-grow: 1.5; }
+  .fkb-row button.w5 { flex-grow: 5; }
+  .fkb-row button.mod { background: rgba(255,255,255,.06); font-size: calc(var(--k) * .3); }
+  .fkb-row button.on { background: var(--accent); }
+  .fkb-row button.down { background: rgba(255,255,255,.34); }
+  .fkb-row svg { width: calc(var(--k) * .45); height: calc(var(--k) * .45); }
+  .fkb-row .half { flex-grow: .5; visibility: hidden; }
+  .fkb-size { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; cursor: nwse-resize; touch-action: none; }
+  .fkb-size::after { content: ""; position: absolute; right: 5px; bottom: 5px; width: 10px; height: 10px;
+    border-right: 2px solid rgba(255,255,255,.55); border-bottom: 2px solid rgba(255,255,255,.55); border-bottom-right-radius: 3px; }
 
 
   /* ---------- the watchlist: a page of its own, over the remote ---------- */
@@ -372,9 +405,21 @@
     <div class="screen-map" id="screen-map" hidden><span></span></div>
     <div class="screen-ctl">
       <button id="screen-fit" hidden><svg viewBox="0 0 24 24"><path id="screen-fit-icon"/></svg></button>
+      <button id="screen-rc" aria-label="Right-click: the next tap on the picture" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6zM12 3v7h6"/><path d="M13 4.5h3.5v4.5H13z" fill="currentColor" stroke="none"/></svg></button>
+      <button id="screen-kb" aria-label="Keyboard" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
       <button id="screen-full" aria-label="Full screen"><svg viewBox="0 0 24 24"><path id="screen-full-icon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     </div>
     <div class="screen-grip" id="screen-grip" role="separator" aria-label="Drag to make the picture taller"></div>
+  </div>
+
+  <div id="fkb" role="group" aria-label="Keyboard for the TV">
+    <div class="fkb-bar" id="fkb-bar">
+      <div class="grab" aria-label="Drag to move the keyboard"></div>
+      <button id="fkb-min" aria-label="Make the keyboard small"><svg viewBox="0 0 24 24"><path id="fkb-min-icon" d="M5 12h14"/></svg></button>
+      <button id="fkb-close" aria-label="Close the keyboard"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="fkb-keys" id="fkb-keys"></div>
+    <div class="fkb-size" id="fkb-size" role="separator" aria-label="Drag to make the keyboard bigger or smaller"></div>
   </div>
 
   <div id="pad" aria-label="Touchpad">
@@ -565,6 +610,7 @@ const LINE_ICONS = {
   film: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>',
   gamepad: '<path d="M6 11h4M8 9v4"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7V14a4 4 0 0 0 7 2.6L10 15h4l1 1.6A4 4 0 0 0 22 14V9.7A4.7 4.7 0 0 0 17.3 5z"/>',
   music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/>',
   tv: '<rect x="2" y="4" width="20" height="14" rx="3"/><path d="M10 8.5v5l4-2.5zM8 21h8"/>',
   octagon: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M9.5 15v-4.5a1.5 1.5 0 0 1 3 0V9.5a1.5 1.5 0 0 1 3 0V14a3 3 0 0 1-3 3h-1.5a1.5 1.5 0 0 1-1.5-1.5z"/>',
   spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>'
@@ -1055,6 +1101,7 @@ for (const el of [document.querySelector(".screen-ctl"), document.getElementById
 // Where the browser can't go full screen (iPhone), the picture still covers the page.
 function setFull(on) {
   document.body.classList.toggle("full", on);
+  if (!on) showFkb(false);
   fullBtn.setAttribute("aria-label", on ? "Leave full screen" : "Full screen");
   document.getElementById("screen-full-icon").setAttribute("d", on
     ? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
@@ -1074,6 +1121,124 @@ fullBtn.onclick = () => { buzz(); setFull(!document.body.classList.contains("ful
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && document.body.classList.contains("full")) setFull(false);
 });
+
+/* Full screen's floating keyboard. Letters go to the TV as typed; the keys the TV takes by name
+   (Backspace, Enter, Tab, Esc, arrows) go as keys. Where it sits, its size and whether it's small are kept. */
+const fkb = document.getElementById("fkb"), fkbKeys = document.getElementById("fkb-keys"), kbBtn = document.getElementById("screen-kb");
+const ICON_BS = '<svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m12 9 6 6M18 9l-6 6"/></svg>';
+const ICON_ENTER = '<svg viewBox="0 0 24 24"><path d="M20 5v7a3 3 0 0 1-3 3H5"/><path d="m9 11-4 4 4 4"/></svg>';
+const ARROW = { Left: "M15 6l-6 6 6 6", Right: "M9 6l6 6-6 6", Up: "M6 15l6-6 6 6", Down: "M6 9l6 6 6-6" };
+const FKB_LAYOUTS = {
+  abc: ["qwertyuiop", "_asdfghjkl_", "⇧zxcvbnm⌫", "?123 , ␣ . ⏎", "Tab Esc ← ↑ ↓ →"],
+  sym: ["1234567890", "@#$%&-+()/", "=*\"':;!?⌫", "abc , ␣ . ⏎", "Tab Esc ← ↑ ↓ →"]
+};
+const NAMED = { "Tab": "Tab", "Esc": "Escape", "←": "Left", "↑": "Up", "↓": "Down", "→": "Right", "⌫": "BackSpace", "⏎": "Return" };
+let fkbLayer = "abc", fkbShift = false;
+const fkbState = (() => { try { return JSON.parse(store.get("deckTvFloatKb")) || {}; } catch { return {}; } })();
+const fkbSave = () => store.set("deckTvFloatKb", JSON.stringify(fkbState));
+
+function fkbBuild() {
+  fkbKeys.innerHTML = "";
+  for (const line of FKB_LAYOUTS[fkbLayer]) {
+    const row = document.createElement("div");
+    row.className = "fkb-row";
+    const keys = line.includes(" ") ? line.split(" ") : [...line];
+    for (const k of keys) {
+      const b = document.createElement("button");
+      if (k === "_") { b.className = "half"; b.tabIndex = -1; row.append(b); continue; }
+      b.dataset.k = k;
+      if (k === "⌫") { b.innerHTML = ICON_BS; b.className = "mod w15"; b.setAttribute("aria-label", "Backspace"); }
+      else if (k === "⏎") { b.innerHTML = ICON_ENTER; b.className = "mod w15"; b.setAttribute("aria-label", "Enter"); }
+      else if (k === "⇧") { b.textContent = "⇧"; b.className = "mod w15" + (fkbShift ? " on" : ""); b.setAttribute("aria-label", "Shift"); }
+      else if (k === "␣") { b.className = "w5"; b.setAttribute("aria-label", "Space"); }
+      else if (k === "?123" || k === "abc") { b.textContent = k; b.className = "mod w15"; }
+      else if (NAMED[k] && ARROW[NAMED[k]]) { b.innerHTML = `<svg viewBox="0 0 24 24"><path d="${ARROW[NAMED[k]]}"/></svg>`; b.className = "mod"; b.setAttribute("aria-label", NAMED[k]); }
+      else if (NAMED[k]) { b.textContent = k; b.className = "mod"; }
+      else b.textContent = fkbShift ? k.toUpperCase() : k;
+      row.append(b);
+    }
+    fkbKeys.append(row);
+  }
+}
+function fkbPress(k) {
+  if (k === "⇧") { fkbShift = !fkbShift; return fkbBuild(); }
+  if (k === "?123" || k === "abc") { fkbLayer = k === "abc" ? "abc" : "sym"; fkbShift = false; return fkbBuild(); }
+  if (NAMED[k]) return queue("/api/key", { key: NAMED[k] });
+  queue("/api/type", { text: k === "␣" ? " " : fkbShift ? k.toUpperCase() : k });
+  if (fkbShift) { fkbShift = false; fkbBuild(); }  // shift is for one letter
+}
+// Keys act as they're pressed; Backspace and the arrows repeat while held
+let fkbRepeat = null;
+const fkbStopRepeat = () => { clearTimeout(fkbRepeat); clearInterval(fkbRepeat); fkbRepeat = null; };
+fkbKeys.addEventListener("pointerdown", e => {
+  const b = e.target.closest("button[data-k]");
+  if (!b) return;
+  e.preventDefault();
+  buzz();
+  const k = b.dataset.k;
+  b.classList.add("down");
+  const up = () => { b.classList.remove("down"); fkbStopRepeat(); };
+  b.addEventListener("pointerup", up, { once: true });
+  b.addEventListener("pointerleave", up, { once: true });
+  b.addEventListener("pointercancel", up, { once: true });
+  fkbPress(k);
+  if (k === "⌫" || ARROW[NAMED[k]]) fkbRepeat = setTimeout(() => (fkbRepeat = setInterval(() => fkbPress(k), 80)), 450);
+});
+
+// Keep it on the screen: at least its grip stays in reach
+function fkbPlace() {
+  const w = fkb.offsetWidth, h = fkb.offsetHeight, vw = innerWidth, vh = innerHeight;
+  fkbState.x = Math.max(0, Math.min(vw - w, fkbState.x ?? (vw - w) / 2));
+  fkbState.y = Math.max(0, Math.min(vh - Math.min(h, 30), fkbState.y ?? vh - h - 12));
+  fkb.style.transform = `translate(${fkbState.x}px, ${fkbState.y}px)`;
+}
+function fkbSize() {
+  // About 5.9 key-widths tall, plus the grip: as wide as fits the screen, and by default no taller than half of it
+  const tallest = (innerHeight - 34) / .59, fits = Math.min(innerWidth, tallest);
+  const w = Math.round(Math.max(240, Math.min(fits, fkbState.w || Math.min(innerWidth * .62, (innerHeight * .55 - 34) / .59, 520))));
+  fkb.style.setProperty("--kb-w", `${w}px`);
+}
+function fkbMin(on) {
+  fkbState.min = on;
+  fkb.classList.toggle("min", on);
+  document.getElementById("fkb-min-icon").setAttribute("d", on ? "M5 15l7-7 7 7" : "M5 12h14");
+  document.getElementById("fkb-min").setAttribute("aria-label", on ? "Show the keys" : "Make the keyboard small");
+  fkbPlace();
+  fkbSave();
+}
+function showFkb(on) {
+  fkb.classList.toggle("show", on);
+  kbBtn.classList.toggle("on", on);
+  kbBtn.setAttribute("aria-pressed", String(on));
+  fkbStopRepeat();
+  if (on) { fkbSize(); fkb.classList.toggle("min", !!fkbState.min); fkbPlace(); }
+}
+kbBtn.onclick = () => { buzz(); showFkb(!fkb.classList.contains("show")); };
+document.getElementById("fkb-close").onclick = () => { buzz(); showFkb(false); };
+document.getElementById("fkb-min").onclick = () => { buzz(); fkbMin(!fkbState.min); };
+addEventListener("resize", () => { if (fkb.classList.contains("show")) { fkbSize(); fkbPlace(); } });
+
+// Move by the grip (a tap on it opens a small keyboard back up); resize from the corner
+function fkbDrag(el, onMove, onTap) {
+  let d = null;
+  el.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return;
+    el.setPointerCapture(e.pointerId);
+    d = { x: e.clientX, y: e.clientY, sx: fkbState.x, sy: fkbState.y, sw: fkb.offsetWidth, moved: 0 };
+  });
+  el.addEventListener("pointermove", e => {
+    if (!d) return;
+    d.moved = Math.max(d.moved, Math.hypot(e.clientX - d.x, e.clientY - d.y));
+    onMove(d, e.clientX - d.x, e.clientY - d.y);
+  });
+  const end = () => { if (!d) return; if (d.moved < 6 && onTap) onTap(); d = null; fkbSave(); };
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", end);
+}
+fkbDrag(document.getElementById("fkb-bar"), (d, dx, dy) => { fkbState.x = d.sx + dx; fkbState.y = d.sy + dy; fkbPlace(); },
+  () => { if (fkbState.min) { buzz(); fkbMin(false); } });
+fkbDrag(document.getElementById("fkb-size"), (d, dx) => { fkbState.w = d.sw + dx; fkbSize(); fkbPlace(); });
+fkbBuild();
 
 // Drag the picture's bottom edge to make it taller. The picture fills the taller panel (the sides go
 // off the edge: drag the picture or watch the map to see them). Double-tap the edge to go back.
@@ -1135,9 +1300,14 @@ function screenRipple(x, y) {
   screenEl.append(el);
   setTimeout(() => el.remove(), 400);
 }
+// The right-click button: the next tap on the picture is a right-click, then it's back to clicks
+const rcBtn = document.getElementById("screen-rc");
+function setRightClick(on) { rcBtn.classList.toggle("on", on); rcBtn.setAttribute("aria-pressed", String(on)); }
+rcBtn.onclick = () => { buzz(); setRightClick(!rcBtn.classList.contains("on")); };
 function screenTap(x, y, button) {
   const f = screenFrac(x, y);
   if (!f) return;
+  if (rcBtn.classList.contains("on")) { button = 3; setRightClick(false); }
   buzz();
   screenRipple(x, y);
   api("/api/tap", { x: f.fx, y: f.fy, button }).catch(fail);
@@ -1183,6 +1353,7 @@ screenEl.addEventListener("pointermove", e => {
       }
     }
     t.mid = mid;
+    if (t.kind) spot.twoKind = t.kind;
     return;
   }
   // One finger, dragged: look around a picture that's bigger than the panel
@@ -1194,7 +1365,10 @@ function screenUp(e) {
   if (spot && spots.size < 2) spot.two = null;
   if (spots.size || !spot) return;
   clearTimeout(spot.timer);
-  if (!spot.held && spot.fingers === 1 && spot.moved < 12 && performance.now() - spot.start < 550) screenTap(spot.x, spot.y, 1);
+  const quick = performance.now() - spot.start < 550;
+  if (!spot.held && spot.fingers === 1 && spot.moved < 12 && quick) screenTap(spot.x, spot.y, 1);
+  // Two fingers tapped together: a right-click where the first one landed, as on the touchpad
+  if (spot.fingers === 2 && spot.moved < 24 && quick && !spot.twoKind) screenTap(spot.x, spot.y, 3);
   spot = null;
 }
 screenEl.addEventListener("pointerup", screenUp);

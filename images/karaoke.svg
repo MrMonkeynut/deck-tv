@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A0F2A"/><stop offset="1" stop-color="#12040B"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="240" cy="262" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F472B6" stop-opacity=".5"/>
+      <stop offset=".45" stop-color="#F472B6" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#F472B6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#bg)"/>
+  <rect width="480" height="640" fill="url(#halo)"/>
+  <!-- Faint sound waves and notes, for singing -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M110 180a185 185 0 0 0 0 164" stroke-opacity=".10" stroke-width="3"/>
+    <path d="M70 150a240 240 0 0 0 0 224" stroke-opacity=".06" stroke-width="3"/>
+    <path d="M370 180a185 185 0 0 1 0 164" stroke-opacity=".10" stroke-width="3"/>
+    <path d="M410 150a240 240 0 0 1 0 224" stroke-opacity=".06" stroke-width="3"/>
+    <path d="M70 560V505l34-7v55" stroke-opacity=".10" stroke-width="3"/>
+    <circle cx="62" cy="560" r="9" stroke-opacity=".10" stroke-width="3"/>
+    <circle cx="96" cy="553" r="9" stroke-opacity=".10" stroke-width="3"/>
+    <path d="M395 110v-42l24 10" stroke-opacity=".08" stroke-width="3"/>
+    <circle cx="387" cy="112" r="8" stroke-opacity=".08" stroke-width="3"/>
+  </g>
+</svg>

@@ -19,6 +19,7 @@ import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import karaoke
 import media
 import movy_tour
 import search
@@ -1394,6 +1395,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(watchlist.load())
             if self.path.startswith(("/api/trailers?", "/api/details?")):
                 return self._lookup()
+            if self.path == "/api/karaoke":
+                return self._json(karaoke.songs())
+            if self.path.startswith("/api/karaoke/lyrics?"):
+                return self._json(karaoke.lyrics(self._query("id")))
+            if self.path.startswith("/api/karaoke/audio?"):
+                return self._file(karaoke.track(self._query("id"), self._query("track")))
             if self.path == "/api/tour/movy":
                 return self._json(movy_tour.status())
             if self.path.startswith("/api/tour/phone-cmds?"):  # ?start, or ?after=<number>
@@ -1404,6 +1411,24 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(tour_phone_cmds(after))
             return self._json({"error": "not found"}, 404)
         return super().do_GET()
+
+    def _query(self, name):
+        return (urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get(name) or [""])[0]
+
+    def _file(self, file):
+        """A whole file (a karaoke track: the page decodes it all before it plays)"""
+        try:
+            data = Path(file).read_bytes() if file else None
+        except OSError:
+            data = None
+        if data is None:
+            return self._json({"error": "not found"}, 404)
+        self.send_response(200)
+        self.send_header("Content-Type", self.guess_type(str(file)))
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
     def _lookup(self):
         """A film's trailers, or a show's details, from TMDB (for the watchlist, on the TV or the phone)"""
@@ -1477,6 +1502,12 @@ class Handler(SimpleHTTPRequestHandler):
             if not title:
                 return self._json({"error": "no title"}, 400)
             return self._json(*watch_now(title))
+        if self.path == "/api/karaoke/prepare":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._json({"error": "bad request"}, 400)
+            return self._json(karaoke.prepare(str(body.get("id", "")) if isinstance(body, dict) else ""))
         if len(parts) == 3 and parts[:2] == ["api", "close"]:
             return self._json(*close_item(parts[2]))
         if len(parts) == 4 and parts[:3] == ["api", "media", "focus"]:
@@ -1694,6 +1725,7 @@ def main():
     threading.Thread(target=watch_for_closed_apps, daemon=True).start()
     threading.Thread(target=app_rules, args=(not desktop_mode,), daemon=True).start()
     threading.Thread(target=now_playing.run, daemon=True).start()
+    threading.Thread(target=karaoke.run, daemon=True).start()
     # Phone remote: home network only (port 8766), every action needs the pairing token
     try:
         pointer = Pointer()

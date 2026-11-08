@@ -24,6 +24,7 @@ _Started 2026-10-25_
 
 ## Done
 
+- [x] **Karaoke group**: two cards. **Karaoke** (built in): songs from `~/Music/Karaoke`, words from LRCLIB that fill as they're sung, and the singing taken out on the Deck by Demucs (in `karaoke-env`, once per song, in the background), with a guide vocal you can turn up or down and the words nudged earlier or later. **UltraStar Play** (free, in `~/Applications/UltraStarPlay`): sing-and-score with UltraStar songs from `~/Music/UltraStar`, phones as mics through its Companion app _(done 2026-11-08)_
 - [x] **Phone remote: tidier**: the touchpad gets most of the screen; one bar at the bottom (Apps, Play/Pause, Sound, Type) replaces the app row, the media and volume buttons and the always-there type box. Apps and Sound open as sheets; Type brings up the keyboard and tucks away again; the header names the app in front _(done 2026-10-27)_
 - [x] **Phone remote: see the TV**: a Screen button shows the TV live (10 fps, 960 px, the pointer drawn in); tap the picture to click there, hold to right-click, two fingers to scroll; sideways it fills the phone. Only captures while a phone is watching (about a quarter of a core then) _(done 2026-10-27)_
 - [x] **Features panel**: a Features button in the top-right corner (up from the cards with the controller) opens a one-screen summary of what Deck TV does, in eight groups. Also: an update no longer reloads the page while the watchlist (or a trailer) is open _(done 2026-10-27)_

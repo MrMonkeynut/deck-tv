@@ -660,9 +660,62 @@
       "requires": [
         "~/.local/share/applications/claude-*.desktop"
       ]
+    },
+    {
+      "id": "karaoke",
+      "name": "Karaoke",
+      "sub": "Your songs",
+      "color": "#4A0F2A",
+      "icon": "mic",
+      "image": "karaoke.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.google.Chrome",
+        "--user-data-dir=~/.var/app/com.google.Chrome/karaoke",
+        "--class=deck-karaoke",
+        "--no-first-run",
+        "--autoplay-policy=no-user-gesture-required",
+        "--start-fullscreen",
+        "--app=http://127.0.0.1:8765/karaoke.html"
+      ],
+      "window_class": "deck-karaoke",
+      "fullscreen": true,
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/karaoke.svg"
+      ],
+      "accent": "#F472B6"
+    },
+    {
+      "id": "ultrastar",
+      "name": "UltraStar Play",
+      "sub": "Sing and score",
+      "color": "#2E1A5C",
+      "icon": "mic",
+      "image": "ultrastar.svg",
+      "command": [
+        "sh",
+        "-c",
+        "cd ~/Applications/UltraStarPlay && exec ./'UltraStar Play'"
+      ],
+      "requires": ["~/Applications/UltraStarPlay/UltraStar Play"],
+      "window_class": "ultrastar play",
+      "app_icon": [
+        "~/.local/share/deck-tv/icons/ultrastar.svg"
+      ],
+      "accent": "#8B5CF6"
     }
   ],
   "groups": [
+    {
+      "id": "g-karaoke",
+      "name": "Karaoke",
+      "style": "rose",
+      "apps": [
+        "karaoke",
+        "ultrastar"
+      ]
+    },
     {
       "id": "g-livetv",
       "name": "Live TV",
