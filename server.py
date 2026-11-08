@@ -22,6 +22,7 @@ from pathlib import Path
 import karaoke
 import media
 import movy_tour
+import profile_sync
 import search
 import storage
 import trailers
@@ -1759,6 +1760,7 @@ def main():
     threading.Thread(target=now_playing.run, daemon=True).start()
     threading.Thread(target=karaoke.run, daemon=True).start()
     threading.Thread(target=storage.run, daemon=True).start()
+    threading.Thread(target=profile_sync.run, daemon=True).start()
     # Phone remote: home network only (port 8766), every action needs the pairing token
     try:
         pointer = Pointer()

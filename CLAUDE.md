@@ -16,4 +16,11 @@ they're copied across. Do this as the last step of every change, then check that
 Check it arrived: `cmp remote/index.html ~/.local/share/deck-tv/remote/index.html`, or
 `curl -s http://127.0.0.1:8766/ | grep <something new>` for the phone remote (port 8766; the TV page is on 8765).
 
+From inside the distrobox, `install.sh` refuses to run; run it on the host with
+`host-spawn sh -c 'bash install.sh < /dev/null'`. host-spawn kills what it started when it exits, so
+if the server isn't back afterwards (`curl` gives 000), start it with
+`host-spawn systemd-run --user --collect python3 ~/.local/share/deck-tv/server.py < /dev/null`.
+
 Settings, groups and the layout live in `~/.config/deck-tv/` and are never overwritten by an update.
+`profile_sync.py` can back that folder up to a private git repo of the person's own (see its header);
+it does nothing until linked, so it never touches anyone else's install.
