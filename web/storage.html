@@ -24,7 +24,7 @@
 
   #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; display: flex; }
 
-  /* ---------- the side: drives, views, the cleanup list ---------- */
+  /* ---------- the side: drives, views, the delete list ---------- */
   #side { width: 268px; flex: none; padding: 30px 14px 22px 26px; display: flex; flex-direction: column; gap: 6px; }
   #side h1 { margin: 0 0 14px 8px; font-size: 34px; letter-spacing: -1px; display: flex; align-items: center; gap: 12px; }
   #side h1 svg { width: 32px; height: 32px; color: var(--accent); }
@@ -43,16 +43,19 @@
   .nav.on { background: var(--row-hi); color: var(--ink); }
   .nav.on svg { color: var(--accent); }
   .nav em { margin-left: auto; font-style: normal; font-size: 13px; color: var(--muted); }
-  #basket-btn { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; background: #13283A; }
+  #basket-btn { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; background: #2E1518; }
   #basket-btn b { font-size: 17px; display: flex; align-items: center; gap: 10px; }
-  #basket-btn b svg { width: 20px; height: 20px; color: var(--accent); }
+  #basket-btn b svg { width: 20px; height: 20px; color: var(--danger); }
   #basket-btn span { font-size: 14px; color: var(--muted); }
-  #basket-btn.on, #basket-btn:hover { background: #1A3850; }
+  #basket-btn.on, #basket-btn:hover { background: #421C21; }
   #side .keys { font-size: 12px; color: var(--dim); margin: 10px 4px 0; line-height: 1.5; }
 
   /* ---------- the main area ---------- */
   #main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 30px 34px 22px 18px; }
   #head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 14px; min-height: 44px; }
+  #back { align-self: center; flex: none; max-width: 280px; padding: 8px 14px 8px 10px; }
+  #back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #back svg { width: 20px; height: 20px; }
   #head h2 { margin: 0; font-size: 30px; letter-spacing: -.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #head h2 small { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 8px; }
   #scan { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); white-space: nowrap; }
@@ -92,20 +95,27 @@
 
   /* rows: folders, files, places */
   .rows { display: flex; flex-direction: column; gap: 5px; }
-  .r { display: flex; align-items: center; gap: 12px; padding: 0 6px 0 0; border-radius: 12px; background: var(--row); min-height: 54px; }
+  .r { display: flex; align-items: center; gap: 12px; padding: 0 8px 0 0; border-radius: 14px; background: var(--row); min-height: 64px; }
   .r:has(> .open.focus), .r:has(> .open:hover) { background: var(--row-hi); }
-  .r .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 4px 8px 14px; border-radius: 12px; align-self: stretch; }
-  .r .ico { width: 22px; height: 22px; color: var(--muted); }
+  .r .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 10px 6px 10px 16px; border-radius: 14px; align-self: stretch; }
+  .r .ico { width: 24px; height: 24px; color: var(--muted); }
   .r .ico.dir { color: #93C5FD; }
   .r .t { flex: 1; min-width: 0; }
-  .r .t b { display: block; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .r .t span { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .r .t b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+    font-size: 18px; font-weight: 500; line-height: 1.25; }
+  .r .t > span { display: block; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .r .meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; font-size: 14px; color: var(--muted); min-width: 0; }
+  .r .meta .sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .r .meta .when { flex: none; white-space: nowrap; }
+  .r .meta .chip { flex: none; }
+  .r .szcol { order: -1; width: 104px; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; margin-right: 4px; }  /* size first, on the left */
+  .r .szcol .bar { width: 100%; }
   .r .bar { width: 120px; flex: none; height: 7px; border-radius: 4px; background: #2A303C; overflow: hidden; display: flex; }
   .r .bar i { height: 100%; display: block; }
-  .r .sz { width: 82px; flex: none; text-align: right; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .r .sz { min-width: 82px; flex: none; text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
   .r .dt { width: 92px; flex: none; text-align: right; font-size: 13px; color: var(--muted); }
   .r .lv { width: 104px; flex: none; }
-  .r.picked { background: #142C3F; }
+  .r.picked { background: #33191D; }
   .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 4px 9px; border-radius: 999px; background: #2A3140; color: var(--muted); white-space: nowrap; }
   .chip svg { width: 13px; height: 13px; }
   .chip.safe { background: #163526; color: var(--safe); }
@@ -118,16 +128,15 @@
   .pick { width: 40px; height: 40px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: #262D3A; color: var(--muted); }
   .pick svg { width: 20px; height: 20px; }
   .pick:hover { background: #313A4A; color: var(--ink); }
-  .pick.on { background: var(--accent); color: #0B2233; }
+  .pick.on { background: var(--danger); color: #3A0E12; }
   .pick.lock { background: transparent; color: var(--dim); cursor: default; }
   .pick.steam { width: auto; padding: 0 12px; white-space: nowrap; font-size: 13px; color: #BAE6FD; background: #1D3B52; }
   .more { font-size: 14px; color: var(--muted); padding: 10px 14px; }
   .empty { font-size: 18px; color: var(--muted); padding: 30px 6px; line-height: 1.5; }
 
   /* folders */
-  #fold.on { display: flex; gap: 18px; }
-  #fold-list { flex: 1; min-width: 0; }
-  #crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 10px; font-size: 15px; }
+  #fold.on { display: block; }
+  #crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 0 -9px; font-size: 15px; }
   #crumbs .crumb { padding: 5px 9px; border-radius: 8px; color: var(--muted); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #crumbs .crumb:hover { background: var(--row); color: var(--ink); }
   #crumbs .crumb:last-child { color: var(--ink); }
@@ -137,22 +146,23 @@
   .tools .lbl:first-child { margin-left: 0; }
   .tools .btn { padding: 6px 11px; font-size: 14px; }
   #fold .act { width: auto; }
-  #fold .r .bar { width: 64px; }
-  #fold .r .dt { width: 76px; }
-  #fold .r .lv { width: 96px; }
-  #fold-info { width: 250px; flex: none; position: sticky; top: 0; align-self: flex-start; display: flex; flex-direction: column; gap: 10px;
-    padding: 18px; border-radius: 16px; background: var(--panel); }
-  #fold-info h3 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
-  #fold-info .big { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #fold-info { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px 16px; border-radius: 16px; background: var(--panel); margin-bottom: 12px; }
+  #fold-info .head { display: flex; align-items: center; gap: 18px; }
+  #fold-info h3 { margin: 0; font-size: 24px; line-height: 1.2; overflow-wrap: anywhere; }
+  #fold-info .big { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   #fold-info .big small { font-size: 15px; color: var(--muted); font-weight: 400; margin-left: 6px; }
-  .kinds { display: flex; flex-direction: column; gap: 5px; }
-  .kind { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; font-size: 13.5px; }
+  #fold-info .btns { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  #fold-info .kindbar { height: 9px; border-radius: 5px; background: #2A303C; overflow: hidden; display: flex; }
+  #fold-info .kindbar i { height: 100%; display: block; }
+  #fold-info .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+  .kinds { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .kind { display: flex; gap: 7px; align-items: center; font-size: 14px; }
   .kind i { width: 10px; height: 10px; border-radius: 3px; }
   .kind em { font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .why { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
-  #fold-info .btn { justify-content: flex-start; }
+  .why { font-size: 14px; line-height: 1.4; color: var(--muted); }
 
-  /* the cleanup list */
+
+  /* the delete list */
   .sum { display: flex; align-items: center; gap: 18px; padding: 16px 18px; border-radius: 16px; background: var(--panel); margin-bottom: 14px; }
   .sum .big { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .sum p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.45; flex: 1; }
@@ -188,8 +198,10 @@
   .itemized em { font-style: normal; font-size: 15px; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1; grid-column: 3; }
   .itemized .chip { grid-row: 1; grid-column: 2; }
   .itemized-sum { font-size: 15px; color: var(--ink); }
+  #ask p.itemized-note { font-size: 13.5px; color: var(--muted); }
+  #ask p.itemized-note b { color: var(--ink); font-weight: 500; }
   .pick.box { color: transparent; border: 2px solid #4A5468; background: transparent; }
-  .pick.box.on { color: #0B2233; border-color: var(--accent); background: var(--accent); }
+  .pick.box.on { color: #3A0E12; border-color: var(--danger); background: var(--danger); }
   .r.off { opacity: .55; }
   .r.off:has(.focus) { opacity: .85; }
   .peek { margin: -2px 0 4px 48px; padding: 8px 14px; border-radius: 0 0 12px 12px; background: #141920; font-size: 13.5px; color: var(--muted); }
@@ -209,16 +221,16 @@
     <button class="nav f" data-view="files"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg>Biggest files</button>
     <button class="nav f" data-view="types"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg>File types</button>
     <button class="nav f" data-view="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Trash<em id="trash-n"></em></button>
-    <button id="basket-btn" class="f" data-view="basket"><b><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Cleanup list</b><span id="basket-sum">Nothing picked yet</span></button>
-    <div class="keys">A open · X pick / tick · Y cleanup list<br>L1 / R1 views · B back</div>
+    <button id="basket-btn" class="f" data-view="basket"><b><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Delete list</b><span id="basket-sum">Nothing marked for deletion</span></button>
+    <div class="keys">A open · X mark for deletion · Y delete list<br>L1 / R1 views · B back a step</div>
   </aside>
   <main id="main">
-    <div id="head"><h2 id="title"></h2><div id="scan"></div></div>
+    <div id="head"><button class="btn f" id="back" title="Back (B)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span id="back-to">Back</span></button><h2 id="title"></h2><div id="scan"></div></div>
     <div id="body">
       <section id="ov" class="view"></section>
       <section id="where" class="view"></section>
       <section id="idea" class="view"></section>
-      <section id="fold" class="view"><div id="fold-list"></div><div id="fold-info"></div></section>
+      <section id="fold" class="view"><div id="fold-info"></div><div id="fold-list"></div></section>
       <section id="files" class="view"></section>
       <section id="types" class="view"></section>
       <section id="trash" class="view"></section>
@@ -277,13 +289,27 @@ const ICON = {
   file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>', ok: '<path d="M5 12l5 5 9-10"/>', up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', bin: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>', ok: '<path d="M5 12l5 5 9-10"/>', up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>', back: '<path d="M15 18l-6-6 6-6"/>', undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
   sd: '<path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6z"/><path d="M9.5 7v2.5M12.5 7v2.5M15.5 7v2.5"/>',
   disk: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="16.5" cy="17" r=".9"/>',
   usb: '<path d="M12 3v14M8 7l4-4 4 4M7 12v2l5 3 5-3v-3"/><circle cx="12" cy="19" r="2"/>',
 };
+/* Paths in your home folder start "Home/", and a long one loses whole folders from its middle, keeping
+   its start and the end that tells it apart */
+function shortPath(p, max = 56) {
+  p = String(p).replace(/^\/home\/deck(?=\/|$)/, "Home");
+  if (p.length <= max) return p;
+  const parts = p.split("/"), head = parts[0] || "/" + parts[1], tail = [];
+  for (let i = parts.length - 1; i > (parts[0] ? 0 : 1); i--) {
+    if ((head + "/…/" + [parts[i], ...tail].join("/")).length > max && tail.length) break;
+    tail.unshift(parts[i]);
+  }
+  return head + "/…/" + tail.join("/");
+}
+/* A place's name with the folder it's in, for when names repeat ("arcade › videos") */
+const placeName = p => { const ps = p.split("/").filter(Boolean); return ps.length > 1 ? ps.at(-2) + " › " + ps.at(-1) : ps[0] || p; };
 const svg = (k, cls = "") => `<svg viewBox="0 0 24 24"${cls ? ` class="${cls}"` : ""}>${ICON[k]}</svg>`;
 const chip = (level, why, kept) => kept ? `<span class="chip blocked" title="${esc(why)}">${svg("lock")}Keep</span>`
   : `<span class="chip ${level}" title="${esc(why)}">${level === "blocked" ? svg("lock") : ""}${LEVEL[level] || ""}</span>`;
@@ -293,7 +319,8 @@ function catBar(cats, total) {
 }
 
 /* ---------- state ---------- */
-let info = null, drive = store.get("storage-drive", "internal"), view = "ov", trail = [];
+let info = null, drive = store.get("storage-drive", "internal"), view = "ov";
+let steps = [];  // every place you've been, newest last: Back goes to each in turn, with what had focus and how far down it was
 let basket = new Map(store.get("storage-basket", []).map(x => [x.path, x]));
 let fold = { path: null, data: null, sort: store.get("storage-sort", "size"), show: "all" };
 let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
@@ -302,7 +329,9 @@ const saveBasket = () => { store.set("storage-basket", [...basket.values()]); dr
 function drawBasketBtn() {
   const tot = [...basket.values()].reduce((a, x) => a + (x.size || 0), 0);
   const on = [...basket.values()].filter(x => x.ticked === true).length;
-  $("basket-sum").textContent = basket.size ? `${basket.size} on the list · ${on} ticked` : "Nothing picked yet";
+  const onBytes = [...basket.values()].filter(x => x.ticked === true).reduce((a, x) => a + (x.size || 0), 0);
+  $("basket-sum").textContent = !basket.size ? "Nothing marked for deletion"
+    : `${on} ticked to delete · ${size(onBytes)}` + (basket.size > on ? ` (${basket.size - on} not ticked)` : "");
 }
 function pick(item, on, ticked = true) {
   if (!item || item.level === "blocked") return;
@@ -311,8 +340,11 @@ function pick(item, on, ticked = true) {
                                   ticked: basket.get(item.path)?.ticked || ticked });
   else basket.delete(item.path);
   saveBasket();
+  if (ticked) toast(on ? `Marked for deletion: ${basket.get(item.path).name} (${size(item.size)}). Nothing is deleted until you confirm in the delete list.`
+                      : `Unmarked: ${base(item.path)} is off the delete list`, null, on ? 3000 : 1800);
   document.querySelectorAll(`[data-pick="${CSS.escape(item.path)}"]`).forEach(b => {
-    b.classList.toggle("on", on); b.innerHTML = svg(on ? "ok" : "plus");
+    b.classList.toggle("on", on); b.innerHTML = svg("bin");
+    b.title = on ? "Marked for deletion (press to unmark)" : "Mark for deletion";
     b.closest(".r")?.classList.toggle("picked", on);
   });
 }
@@ -329,12 +361,13 @@ function row(it, o = {}) {
   if (action) {}
   else if (it.steam) action = `<button class="pick steam f" data-steam="${esc(it.steam)}" title="Steam asks before it uninstalls">Uninstall in Steam</button>`;
   else if (it.level === "blocked") action = `<span class="pick lock" title="${esc(it.why)}">${svg("lock")}</span>`;
-  else action = `<button class="pick f${picked ? " on" : ""}" data-pick="${esc(it.path)}" title="Add to the cleanup list">${svg(picked ? "ok" : "plus")}</button>`;
+  else action = `<button class="pick f${picked ? " on" : ""}" data-pick="${esc(it.path)}" title="${picked ? "Marked for deletion (press to unmark)" : "Mark for deletion"}">${svg("bin")}</button>`;
   return `<div class="r${picked ? " picked" : ""}" data-path="${esc(it.path)}">
     <button class="open f" data-open="${esc(o.open ?? it.path)}" data-kind="${o.kind || (it.dir ? "dir" : "file")}" title="${esc(it.why || "")}">${icon}
-      <div class="t"><b>${esc(o.name ?? (it.label || it.name || base(it.path)))}</b><span>${esc(o.sub ?? "")}</span></div>
-      ${bar}<span class="sz">${size(o.size ?? it.size)}</span><span class="dt">${esc(o.date ?? "")}</span>
-      <span class="lv">${o.recent ? `<span class="chip recent">Changed ${ago(o.recent)}</span>` : it.steam ? `<span class="chip check" title="${esc(it.why)}">Steam game</span>` : chip(it.level, it.why, it.kept)}</span></button><span class="act">${action}</span></div>`;
+      <div class="t"><b>${esc(o.name ?? (it.label || it.name || base(it.path)))}</b>
+        <div class="meta">${o.sub ? `<span class="sub">${esc(shortPath(o.sub))}</span>` : ""}${o.date ? `<span class="when">${o.sub ? "· " : ""}changed ${esc(o.date)}</span>` : ""}
+          ${o.recent ? `<span class="chip recent">Changed ${ago(o.recent)}</span>` : it.steam ? "" : chip(it.level, it.why, it.kept)}</div></div>
+      <span class="szcol"><span class="sz">${size(o.size ?? it.size)}</span>${bar}</span></button><span class="act">${action}</span></div>`;
 }
 function wireRows(el) {
   el.querySelectorAll("[data-pick]").forEach(b => b.onclick = e => { e.stopPropagation(); pick(items.get(b.dataset.pick)); });
@@ -342,47 +375,87 @@ function wireRows(el) {
   el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
     const p = b.dataset.open;
     if (b.dataset.kind === "dir") openFolder(p);
-    else if (b.dataset.kind === "ext") { filesFilter = { cat: "", ext: b.dataset.open, older: 0 }; go("files"); }
+    else if (b.dataset.kind === "ext") { remember(); filesFilter = { cat: "", ext: b.dataset.open, older: 0 }; go("files", false); }
     else openFolder(dirOf(p), p);
   });
 }
 
 /* ---------- moving between views ---------- */
-const TITLES = { ov: "Overview", fold: "Folders", files: "Biggest files", types: "File types", trash: "Trash", basket: "Cleanup list" };
+const TITLES = { ov: "Overview", fold: "Folders", files: "Biggest files", types: "File types", trash: "Trash", basket: "Delete list" };
+/* Where you are now, as a step to come back to */
+function here() {
+  return { view, drive, path: fold.path, whereCat, idea, filesFilter: { ...filesFilter }, focus: focusKey(), scroll: $("body").scrollTop };
+}
+const samePlace = (a, b) => a.view === b.view && a.drive === b.drive && (a.view !== "fold" || a.path === b.path)
+  && (a.view !== "where" || a.whereCat === b.whereCat) && (a.view !== "idea" || a.idea === b.idea)
+  && (a.view !== "files" || JSON.stringify(a.filesFilter) === JSON.stringify(b.filesFilter));
+/* Called just before going somewhere else */
+function remember() {
+  const h = here();
+  if (!steps.length || !samePlace(steps.at(-1), h)) steps.push(h);
+  if (steps.length > 200) steps.shift();
+  drawBack();
+}
+function stepName(s) {
+  if (s.view === "fold") return "Folders: " + (s.path === info?.drives.find(d => d.id === s.drive)?.root ? info.drives.find(d => d.id === s.drive).name : base(s.path || ""));
+  if (s.view === "where") return CAT[s.whereCat]?.[0] || "Overview";
+  if (s.view === "idea") return s.idea?.title || "Ideas";
+  if (s.view === "files" && s.filesFilter.ext) return "Biggest files: ." + s.filesFilter.ext;
+  return TITLES[s.view] || "Overview";
+}
+function drawBack() {
+  const s = steps.at(-1);
+  $("back-to").textContent = s ? "Back to " + stepName(s) : view === "ov" ? "Back to Deck TV" : "Back to Overview";
+}
 function go(v, push = true) {
-  if (push && view !== v) trail.push(view);
+  if (push && view !== v) remember();
   view = v;
   setFocus(null);  // the new view's first thing gets it once it's drawn
   document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id === v));
   document.querySelectorAll("#side [data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "where" || v === "idea") && b.dataset.view === "ov"));
   $("body").scrollTop = 0;
-  draw();
+  drawBack();
+  return draw();
 }
-function back() {
+/* One step back: the place, the drive, the filters, and where you were in it */
+async function back() {
   if ($("ask").classList.contains("on")) return closeAsk();
-  if (view === "fold" && fold.data && fold.data.crumbs.length > 1) return openFolder(fold.data.crumbs.at(-2).path, fold.path);
-  const v = trail.pop();
-  if (v) return go(v, false);
-  if (view !== "ov") return go("ov", false);
-  api("/api/home", {});
+  const s = steps.pop();
+  if (!s) {
+    if (view !== "ov") return go("ov", false);
+    return api("/api/home", {});
+  }
+  if (s.drive !== drive) { drive = s.drive; store.set("storage-drive", drive); ideas = null; drawDrives(); drawScan(); }
+  whereCat = s.whereCat; idea = s.idea; filesFilter = { ...s.filesFilter }; fold.path = s.path;
+  await go(s.view, false);
+  $("body").scrollTop = s.scroll;
+  restoreFocus(s.focus);
+  if (!focus || !document.body.contains(focus)) settle();
 }
 async function draw() {
   $("title").innerHTML = view === "where" ? `${esc(CAT[whereCat]?.[0])}<small>on ${esc(curDrive()?.name)}</small>`
     : view === "idea" ? esc(idea?.title) : esc(TITLES[view] || "");
-  if (view === "ov") drawOverview();
-  else if (view === "where") drawWhere();
+  if (view === "ov") await drawOverview();
+  else if (view === "where") await drawWhere();
   else if (view === "idea") drawIdea();
   else if (view === "fold") { if (!fold.path) fold.path = curDrive()?.root; await openFolder(fold.path, null, false); }
-  else if (view === "files") drawFiles();
-  else if (view === "types") drawTypes();
-  else if (view === "trash") drawTrash();
-  else if (view === "basket") drawBasket();
+  else if (view === "files") await drawFiles();
+  else if (view === "types") await drawTypes();
+  else if (view === "trash") await drawTrash();
+  else if (view === "basket") await drawBasket();
   settle();
 }
 
 /* ---------- drives and scanning ---------- */
+let pageVersion = null;
 async function loadInfo() {
   try { info = await api("/api/storage"); } catch { return; }
+  // An update to this page: reload into it, unless a confirmation is open or a hold is under way
+  if (pageVersion === null) pageVersion = info.page;
+  if (info.page !== pageVersion && !$("ask").classList.contains("on") && !holding) {
+    store.set("storage-resume", { view, path: fold.path, whereCat, filesFilter });
+    return location.reload();
+  }
   if (!info.drives.some(d => d.id === drive)) drive = info.drives[0]?.id;
   drawDrives();
   drawScan();
@@ -390,6 +463,7 @@ async function loadInfo() {
   return info;
 }
 function drawDrives() {
+  const kept = focus?.classList.contains("drv") ? focus.dataset.drive : null;
   $("drives").innerHTML = info.drives.map(d => {
     const tight = d.free / d.total < .05 || d.free < 5e9 ? "crit" : d.free / d.total < .15 ? "low" : "";
     return `<button class="drv f${d.id === drive ? " on" : ""} ${tight}" data-drive="${d.id}">
@@ -397,12 +471,16 @@ function drawDrives() {
       <div class="mini"><i style="width:${100 * d.used / d.total}%;background:var(--accent)"></i></div>
       <span>${size(d.free)} free of ${size(d.total)}</span></button>`;
   }).join("");
+  /* A drive opens at its top folder, from anywhere (even deep inside the same drive) */
   $("drives").querySelectorAll(".drv").forEach(b => b.onclick = () => {
-    if (drive === b.dataset.drive) return;
-    drive = b.dataset.drive; store.set("storage-drive", drive);
-    fold.path = null; ideas = null; drawDrives();
-    if (view === "where" || view === "idea") go("ov", false); else draw();
+    const d = info.drives.find(x => x.id === b.dataset.drive);
+    if (!d || view === "fold" && fold.path === d.root) return;
+    remember();
+    if (drive !== d.id) { drive = d.id; store.set("storage-drive", drive); ideas = null; drawDrives(); drawScan(); }
+    fold.path = d.root;
+    if (view === "fold") openFolder(d.root, null, false); else go("fold", false);
   });
+  if (kept) setFocus($("drives").querySelector(`[data-drive="${CSS.escape(kept)}"]`));  // redrawn under the controller's focus
 }
 function drawScan() {
   const d = curDrive();
@@ -410,7 +488,7 @@ function drawScan() {
   const s = d.scanning;
   $("scan").innerHTML = s ? `Looking through ${esc(d.name)}… ${s.files ? n(s.files) + " files, " + size(s.bytes) : ""}`
     : d.error ? `<span style="color:var(--danger)">Couldn't look through it: ${esc(d.error)}</span>`
-    : d.scanned ? `Counted ${since(d.scanned.at)} <button class="btn f" id="rescan">${svg("refresh")}Count again</button>` : "";
+    : d.scanned ? `Counted ${since(d.scanned.at)} <button class="btn f" id="rescan" title="Count everything on this drive again, in the background">${svg("refresh")}Count whole drive</button>` : "";
   const b = $("rescan");
   if (b) b.onclick = async () => { await api("/api/storage/scan", { drive }); await loadInfo(); };
 }
@@ -475,7 +553,7 @@ async function drawWhere() {
       const name = own ? `Files directly in ${r.label || base(r.path)}` : rest ? `${r.what.slice(5)} more folders in ${r.label || base(r.path)}` : null;
       const it = { ...r, dir: true, size: r.bytes };
       if (own || rest) Object.assign(it, { level: "blocked", why: "Open the folder to pick from it", steam: null, path: r.path + "#" + r.what });
-      return row(it, { name, open: r.path, kind: "dir", sub: r.path, bar: r.bytes / top, color: catColor(cat),
+      return row(it, { name: name ?? (r.label || placeName(r.path)), open: r.path, kind: "dir", sub: dirOf(r.path), bar: r.bytes / top, color: catColor(cat),
                        date: ago(r.newest), size: r.bytes });
     }).join("")}</div>${res.small ? `<div class="more">and ${size(res.small)} in smaller places</div>` : ""}`;
   wireRows(el);
@@ -490,25 +568,30 @@ function drawIdea() {
   const top = g.rows[0]?.size || 1;
   const pickable = g.rows.filter(r => r.level !== "blocked");
   el.innerHTML = `<p class="note">${esc(g.text)}</p>
-    ${pickable.length ? `<div class="actions"><button class="btn f" id="pick-all">${svg("plus")}Add all ${pickable.length} to the list (${size(pickable.reduce((a, r) => a + r.size, 0))})</button>
-      <span class="hint">They go on the cleanup list unticked: you tick each one you want there, and see them all again before anything moves.</span></div>` : ""}
+    ${pickable.length ? `<div class="actions"><button class="btn f" id="pick-all">${svg("bin")}Put all ${pickable.length} on the delete list, unticked (${size(pickable.reduce((a, r) => a + r.size, 0))})</button>
+      <span class="hint">Nothing is deleted yet: on the delete list you tick each one you want deleted, and see them all listed again before anything is deleted.</span></div>` : ""}
     <div class="rows">${g.rows.map(r => row({ ...r, dir: true }, {
       sub: r.lastPlayed !== undefined ? (r.lastPlayed ? "Last played " + ago(r.lastPlayed) : "Not played on this Deck") : r.path,
       bar: r.size / top, date: r.lastPlayed !== undefined ? "" : ago(r.newest) })).join("")}</div>`;
   wireRows(el);
   const all = $("pick-all");
-  if (all) all.onclick = () => { pickable.forEach(r => pick(r, true, false)); toast(`${pickable.length} added to the cleanup list, unticked: tick each one there`); };
+  if (all) all.onclick = () => { pickable.forEach(r => pick(r, true, false)); toast(`${pickable.length} put on the delete list, unticked: tick each one you want deleted there`); };
 }
 
 /* ---------- folders ---------- */
 async function openFolder(path, focusPath, push = true) {
   if (!path) return;
-  if (view !== "fold") { fold.path = path; return go("fold", push); }
+  if (view !== "fold") {
+    if (push) remember();
+    fold.path = path;
+    return go("fold", false);
+  }
   const res = await api("/api/storage/folder?path=" + encodeURIComponent(path));
   if (res.error) {
     if (res.gone && path !== curDrive()?.root) return openFolder(dirOf(path), null, false);
     return toast(res.error);
   }
+  if (push && fold.data && res.path !== fold.path) remember();
   if (res.drive !== drive) { drive = res.drive; store.set("storage-drive", drive); drawDrives(); drawScan(); }
   fold.path = res.path; fold.data = res;
   drawFolder(focusPath);
@@ -532,13 +615,12 @@ function drawFolder(focusPath) {
   const showBtn = (k, t) => `<button class="btn f${fold.show === k ? " on" : ""}" data-show="${k}">${t}</button>`;
   const stale = d.entries.some(e => e.dir && e.size == null && !e.other_drive);
   $("fold-list").innerHTML = `
-    <div id="crumbs">${d.crumbs.map((c, i) => `${i ? '<span class="sep">›</span>' : ""}<button class="crumb f" data-crumb="${esc(c.path)}">${esc(c.name)}</button>`).join("")}</div>
     <div class="tools"><span class="lbl">Sort</span>${sortBtn("size", "Size")}${sortBtn("name", "Name")}${sortBtn("changed", "Oldest change")}${sortBtn("type", "Type")}
       <span class="lbl">Show</span>${showBtn("all", "All")}${showBtn("dirs", "Folders")}${showBtn("files", "Files")}</div>
     ${d.error ? `<p class="empty">${esc(d.error)}</p>` : ""}
-    ${stale ? `<p class="note">Some folders are new since the last count, so their size shows as —. Count again to include them.</p>` : ""}
+    ${stale ? `<p class="note">Some folders are new since the last count, so their size shows as —. Count again (above) to include them.</p>` : ""}
     <div class="rows">${list.map(e => row(e, {
-      sub: e.dir ? (e.other_drive ? "Another drive" : e.files != null ? `${n(e.files)} files${e.label ? " · " + e.name : ""}` : e.label ? e.name : "")
+      sub: e.dir ? (e.other_drive ? "Another drive" : e.files != null ? `${e.label && e.label.toLowerCase() !== e.name.toLowerCase() ? e.name + " · " : ""}${n(e.files)} files` : e.label ? e.name : "")
            : e.link != null ? "Shortcut to " + e.link : (e.ext ? "." + e.ext + " · " : "") + CAT[e.cat]?.[0],
       bar: (e.size || 0) / max, cats: e.dir ? e.cats : null, catTotal: e.size,
       color: e.cat ? catColor(e.cat) : undefined, date: ago(e.dir ? e.newest : e.mtime),
@@ -548,21 +630,25 @@ function drawFolder(focusPath) {
   const me = { path: d.path, label: d.label, name: base(d.path), size: d.scanned?.size, level: d.level, why: d.why, kept: d.kept, dir: true };
   items.set(d.path, me);
   const atRoot = d.crumbs.length <= 1;
-  $("fold-info").innerHTML = `<h3>${esc(d.label || base(d.path) || d.path)}</h3>
-    <div class="big">${size(d.scanned?.size)}<small>${d.scanned ? n(d.scanned.files) + " files" : "not counted yet"}</small></div>
-    ${kinds.length ? `<div class="r" style="min-height:0;background:none"><span class="bar" style="width:100%;height:9px">${catBar(d.scanned.cats, d.scanned.size)}</span></div>
-      <div class="kinds">${kinds.slice(0, 6).map(([c, b]) => `<div class="kind"><i style="background:${catColor(c)}"></i>${esc(CAT[c][0])}<em>${size(b)}</em></div>`).join("")}</div>` : ""}
-    <div>${chip(d.level, d.why, d.kept)}</div><div class="why">${esc(d.why)}</div>
-    ${d.steam ? `<button class="btn f" data-steam="${esc(d.steam)}">Uninstall in Steam</button>` : ""}
-    ${d.level !== "blocked" ? `<button class="btn f${basket.has(d.path) ? " on" : ""}" id="pick-here" data-pick="${esc(d.path)}">${svg(basket.has(d.path) ? "ok" : "plus")}${basket.has(d.path) ? "On the cleanup list" : "Add this folder"}</button>` : ""}
-    ${!atRoot && (d.kept || d.level !== "blocked" || d.why.startsWith("Has something")) ? `<button class="btn f" id="keep">${svg("lock")}${d.kept ? "Stop keeping" : "Keep (can't be removed)"}</button>` : ""}
-    <button class="btn f" id="reveal">${svg("eye")}Show in Dolphin</button>
-    ${!atRoot ? `<button class="btn f" id="up">${svg("up")}Up a folder</button>` : ""}`;
+  $("fold-info").innerHTML = `
+    <div id="crumbs">${d.crumbs.map((c, i) => `${i ? '<span class="sep">›</span>' : ""}<button class="crumb f" data-crumb="${esc(c.path)}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="head"><h3>${esc(d.label || base(d.path) || d.path)}</h3>
+      <div class="big">${size(d.scanned?.size)}<small>${d.scanned ? n(d.scanned.files) + " files" : "not counted yet"}</small></div>
+      <div class="btns">
+        ${d.steam ? `<button class="btn f" data-steam="${esc(d.steam)}">Uninstall in Steam</button>` : ""}
+        ${d.level !== "blocked" ? `<button class="btn f${basket.has(d.path) ? " on" : ""}" id="pick-here" data-pick="${esc(d.path)}">${svg("bin")}${basket.has(d.path) ? "Marked for deletion" : "Mark for deletion"}</button>` : ""}
+        ${!atRoot && (d.kept || d.level !== "blocked" || d.why.startsWith("Has something")) ? `<button class="btn f" id="keep">${svg("lock")}${d.kept ? "Stop keeping" : "Keep"}</button>` : ""}
+        <button class="btn f" id="recount" title="Count this folder again, now">${svg("refresh")}Count again</button>
+        <button class="btn f" id="reveal">${svg("eye")}Dolphin</button>
+        ${!atRoot ? `<button class="btn f" id="up">${svg("up")}Up a folder</button>` : ""}</div></div>
+    ${kinds.length ? `<div class="kindbar">${catBar(d.scanned.cats, d.scanned.size)}</div>` : ""}
+    <div class="foot">${kinds.length ? `<div class="kinds">${kinds.slice(0, 5).map(([c, b]) => `<div class="kind"><i style="background:${catColor(c)}"></i>${esc(CAT[c][0])}<em>${size(b)}</em></div>`).join("")}</div>` : ""}
+      ${chip(d.level, d.why, d.kept)}<span class="why">${esc(d.why)}</span></div>`;
   wireRows($("fold-list"));
   wireRows($("fold-info"));
   const ph = $("pick-here");
   if (ph) ph.onclick = () => { pick(me); drawFolder(); };
-  $("fold-list").querySelectorAll("[data-crumb]").forEach(b => b.onclick = () => openFolder(b.dataset.crumb, fold.path));
+  $("fold-info").querySelectorAll("[data-crumb]").forEach(b => b.onclick = () => openFolder(b.dataset.crumb, fold.path));
   $("fold-list").querySelectorAll("[data-sort]").forEach(b => b.onclick = () => { fold.sort = b.dataset.sort; store.set("storage-sort", fold.sort); drawFolder(); });
   $("fold-list").querySelectorAll("[data-show]").forEach(b => b.onclick = () => { fold.show = b.dataset.show; drawFolder(); });
   const kb = $("keep");
@@ -575,6 +661,17 @@ function drawFolder(focusPath) {
     openFolder(d.path, null, false);
   };
   $("reveal").onclick = () => api("/api/storage/reveal", { path: d.path });
+  $("recount").onclick = async () => {
+    toast("Counting this folder again…", null, 20000);
+    const r = await api("/api/storage/recount", { paths: [d.path] }), x = r.rows?.[0];
+    await loadInfo();
+    if (x?.whole) return toast("Counting the whole drive again, in the background");
+    ideas = null;
+    await openFolder(d.path, null, false);
+    setFocus($("recount"));
+    toast(!x ? "Couldn't count it" : x.before == null ? `Counted: ${size(x.now)}` : Math.abs(x.before - x.now) < 1e6 ? `Counted again: still ${size(x.now)}`
+          : `Counted again: was ${size(x.before)}, now ${size(x.now)}`);
+  };
   const up = $("up");
   if (up) up.onclick = () => openFolder(d.crumbs.at(-2).path, d.path);
   if (focusPath) {
@@ -602,6 +699,7 @@ async function drawFiles() {
     ${res.partial ? `<div class="more">The ${n(3000)} biggest files on the drive (1 MB and up) are looked at here.</div>` : ""}`;
   el.querySelectorAll("[data-f]").forEach(x => x.onclick = () => {
     const k = x.dataset.f;
+    remember();
     filesFilter = { ...f, [k]: k === "older" ? +x.dataset.v : x.dataset.v };
     const key = `[data-f="${k}"][data-v="${CSS.escape(String(filesFilter[k]))}"]`;
     drawFiles().then(() => setFocus(document.querySelector(key)));
@@ -625,9 +723,10 @@ async function drawTypes() {
       <span class="sz">${size(r.bytes)}</span></button></div>`).join("")}</div>
     ${res.count > res.rows.length ? `<div class="more">and ${n(res.count - res.rows.length)} rarer kinds</div>` : ""}`;
   el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
-    filesFilter = { cat: "", ext: b.dataset.open, older: 0 };
     if (!b.dataset.open) return toast("Files without an ending can't be listed on their own");
-    go("files");
+    remember();
+    filesFilter = { cat: "", ext: b.dataset.open, older: 0 };
+    go("files", false);
   });
   settle();
 }
@@ -669,22 +768,22 @@ async function drawTrash() {
   if ($("t-empty")) $("t-empty").onclick = () => confirmList(`Remove ${picked.length} for good?`,
     "Exactly these, and nothing else. This can't be undone: they won't be in the Trash any more.",
     picked.map(i => ({ name: i.from ? base(i.from) : i.name, path: "Was in " + (i.from ? dirOf(i.from) : "somewhere unknown"), size: i.size, files: i.dir ? i.files : null })),
-    `Hold to remove these ${picked.length} for good`, true, async () => {
+    [{ label: `Hold to remove these ${picked.length} for good`, danger: true, done: async () => {
     const ids = picked.map(i => i.id);
     const r = await api("/api/storage/empty", { ids });
     trashPick = new Set();
     toast(r.refused.length ? `Freed ${size(r.bytes)}. ${r.refused.length} couldn't be removed: ${r.refused[0].why}` : `Freed ${size(r.bytes)}`);
     ideas = null; await loadInfo(); drawTrash();
-  });
+  } }]);
   settle();
 }
 
-/* ---------- the cleanup list: a last look, then to the Trash ---------- */
+/* ---------- the delete list: everything marked for deletion, ticked one by one, then deleted all in one go ---------- */
 async function drawBasket() {
   const el = $("basket");
   if (!basket.size) {
-    el.innerHTML = `<p class="empty">Nothing picked yet.<br>Press ${svg("plus").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} (or X) on anything in Overview, Folders or Biggest files to put it here.
-      You tick each thing you want gone, see the whole list again before anything moves, and it goes to the Trash first, so it can be put back.</p>`;
+    el.innerHTML = `<p class="empty">Nothing is marked for deletion.<br>Press ${svg("bin").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} (or X) on anything in Overview, Folders or Biggest files to mark it for deletion.
+      Keep marking as you look around; nothing is deleted until you come here, tick each one you want deleted, see them all listed, and hold to confirm: to the Trash, or deleted for good.</p>`;
     return settle();
   }
   el.innerHTML = `<p class="note">Checking each one again…</p>`;
@@ -703,23 +802,23 @@ async function drawBasket() {
   const total = on.reduce((a, r) => a + r.size, 0);
   const ready = on.length && (!careful.length || carefulOk);
   el.innerHTML = `<div class="sum"><div class="big">${size(total)}</div>
-      <p>${on.length} of ${ok.length} ticked (${n(on.reduce((a, r) => a + r.files, 0))} files). Only ticked things move, and only after you've seen
-      the full list of them once more. They go to the Trash, where you can put them back until you remove them for good.</p></div>
+      <p>${on.length} of ${ok.length} ticked to delete (${n(on.reduce((a, r) => a + r.files, 0))} files). Nothing has been deleted yet. Only the ticked ones
+      are deleted, all in one go, after you've seen the full list of them, and you choose how: to the Trash (can be put back), or deleted for good (space back now).</p></div>
     ${careful.length ? `<button class="tick f${carefulOk ? " on" : ""}" id="tick"><span class="box">${svg("ok")}</span>
-      I've looked at the ${careful.length} careful one${careful.length === 1 ? "" : "s"} I ticked (amber) and I'm sure</button>` : ""}
+      I've looked at the ${careful.length} careful one${careful.length === 1 ? "" : "s"} I ticked to delete (amber) and I'm sure</button>` : ""}
     ${recent.length ? `<p class="note" style="color:var(--careful)">${recent.length} ticked ${recent.length === 1 ? "one" : "ones"} changed in the last 3 days: something may still be using ${recent.length === 1 ? "it" : "them"}.</p>` : ""}
     ${blocked.length ? `<p class="note">${blocked.length} can't be removed from here any more and will be left alone.</p>` : ""}
     <div class="actions">
-      <button class="btn big f" id="go"${ready ? "" : " disabled"}>Review the ${on.length || ""} ticked…</button>
+      <button class="btn big danger f" id="go"${ready ? "" : " disabled"}>${svg("bin")}Delete the ${on.length || ""} ticked…</button>
       <button class="btn f" id="tick-all">${on.length === ok.length ? "Untick all" : "Tick all"}</button>
       <button class="btn f" id="clear">Clear the list</button>
-      <span class="hint">${!on.length ? "Tick (or X) each thing you want gone." : careful.length && !carefulOk ? "Tick the box above first." : "You'll see each one listed before anything moves."}</span></div>
+      <span class="hint">${!on.length ? "Tick (or X) each thing you want deleted." : careful.length && !carefulOk ? "Tick the box above first." : "You'll see each one listed before anything is deleted."}</span></div>
     <div class="rows">${rows.map(r => {
       const t = basket.get(r.path).ticked;
       const act = r.level === "blocked" ? `<span class="pick lock" title="${esc(r.why)}">${svg("lock")}</span>`
-        : `<button class="pick box f${t ? " on" : ""}" data-tick="${esc(r.path)}" title="${t ? "Untick" : "Tick to remove"}">${svg("ok")}</button>`;
+        : `<button class="pick box f${t ? " on" : ""}" data-tick="${esc(r.path)}" title="${t ? "Ticked to delete (press to untick)" : "Tick to delete"}">${svg("ok")}</button>`;
       return row(r, { sub: r.path + (r.dir ? ` · ${n(r.files)} files` : ""), kind: "peek", date: ago(r.newest), recent: r.recent && r.level !== "blocked" ? r.newest : 0,
-        action: act + `<button class="pick f" data-drop="${esc(r.path)}" title="Take off the list">${svg("x")}</button>` })
+        action: act + `<button class="pick f" data-drop="${esc(r.path)}" title="Take off the delete list (it's kept)">${svg("x")}</button>` })
         .replace('<div class="r', `<div class="r${t || r.level === "blocked" ? "" : " off"}`) + `<div class="peek" data-peek="${esc(r.path)}" hidden></div>`;
     }).join("")}</div>`;
   const redraw = () => { const k = focusKey(); drawBasket().then(() => restoreFocus(k)); };
@@ -728,23 +827,33 @@ async function drawBasket() {
   el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => peek(b.dataset.open, fresh.get(b.dataset.open)));
   $("tick-all").onclick = () => { const all = on.length !== ok.length; ok.forEach(r => basket.get(r.path).ticked = all); saveBasket(); drawBasket().then(() => setFocus($("tick-all"))); };
   if ($("tick")) $("tick").onclick = () => { carefulOk = !carefulOk; drawBasket().then(() => setFocus($("tick"))); };
-  $("clear").onclick = () => ask("Clear the cleanup list?", "Nothing is removed; the list is just emptied.", [["Clear it", () => { basket.clear(); saveBasket(); drawBasket(); }], ["Keep the list"]]);
-  $("go").onclick = () => confirmList(`Move ${on.length} to the Trash?`,
-    "Exactly these, and nothing else. They can be put back from Trash until you remove them for good.",
-    on.map(r => ({ name: r.label || base(r.path), path: r.path, size: r.size, level: r.level, why: r.why, files: r.dir ? r.files : null })),
-    `Hold to move these ${on.length} to the Trash`, false, async () => {
-      const r = await api("/api/storage/remove", { paths: on.map(x => x.path), careful: carefulOk });
-      for (const d of r.done) basket.delete(d.path);
-      saveBasket(); carefulOk = false; ideas = null;
-      const ids = r.done.map(d => d.id);
-      toast(`Moved ${r.done.length} to the Trash (${size(r.bytes)})` + (r.refused.length ? `. ${r.refused.length} left alone: ${r.refused[0].why}` : "") +
-            ". Empty the Trash to get the space back.", ids.length ? ["Undo", async () => {
-              const u = await api("/api/storage/restore", { ids });
-              toast(u.refused.length ? `Put back ${u.done.length}; ${u.refused.length} couldn't be: ${u.refused[0].why}` : "Put back");
-              await loadInfo(); draw();
-            }] : null, 9000);
-      await loadInfo(); drawBasket();
-    });
+  $("clear").onclick = () => ask("Clear the delete list?", "Nothing is deleted: everything is just taken off the list and kept.", [["Clear the list", () => { basket.clear(); saveBasket(); drawBasket(); }], ["Keep the list"]]);
+  const list = on.map(r => ({ name: r.label || base(r.path), path: r.path, size: r.size, level: r.level, why: r.why, files: r.dir ? r.files : null }));
+  const after = async r => {
+    for (const d of r.done) basket.delete(d.path);
+    saveBasket(); carefulOk = false; ideas = null;
+    await loadInfo(); drawBasket();
+  };
+  $("go").onclick = () => confirmList(`Delete these ${on.length}?`,
+    "Exactly these, and nothing else. Choose how they're deleted:",
+    list, [
+      { label: `Hold: delete ${on.length} to the Trash`, why: "they can be put back (Undo, or Put back in Trash); the space comes back once the Trash is emptied", done: async () => {
+        const r = await api("/api/storage/remove", { paths: on.map(x => x.path), careful: carefulOk });
+        const ids = r.done.map(d => d.id);
+        toast(`Moved ${r.done.length} to the Trash (${size(r.bytes)})` + (r.refused.length ? `. ${r.refused.length} left alone: ${r.refused[0].why}` : "") +
+              ". Empty the Trash to get the space back.", ids.length ? ["Undo", async () => {
+                const u = await api("/api/storage/restore", { ids });
+                toast(u.refused.length ? `Put back ${u.done.length}; ${u.refused.length} couldn't be: ${u.refused[0].why}` : "Put back");
+                await loadInfo(); draw();
+              }] : null, 9000);
+        await after(r);
+      } },
+      { label: `Hold: delete ${on.length} for good (${size(total)})`, danger: true, why: "the space comes back now, and they can't be put back", done: async () => {
+        const r = await api("/api/storage/remove", { paths: on.map(x => x.path), careful: carefulOk, forever: true });
+        toast(`Deleted ${r.done.length} for good, freeing ${size(r.bytes)}` + (r.refused.length ? `. ${r.refused.length} left alone: ${r.refused[0].why}` : ""), null, 6000);
+        await after(r);
+      } },
+    ]);
   settle();
 }
 
@@ -764,7 +873,7 @@ async function peek(path, r) {
 }
 
 /* The last look before anything moves or goes: every item by name, where it is and its size, then hold to do it */
-function confirmList(title, text, list, holdLabel, danger, done) {
+function confirmList(title, text, list, holds) {
   askReturn = focus;
   const card = $("ask").querySelector(".card");
   card.classList.add("wide");
@@ -773,17 +882,60 @@ function confirmList(title, text, list, holdLabel, danger, done) {
     <div class="itemized f" id="itemized" tabindex="-1">${list.map(x => `<div class="it"><b>${esc(x.name)}</b>${x.level ? chip(x.level, x.why) : "<span></span>"}<em>${size(x.size)}</em>
       <span class="p">${esc(x.path)}${x.files != null ? ` · ${n(x.files)} files` : ""}</span></div>`).join("")}</div>
     <div class="itemized-sum">${list.length} item${list.length === 1 ? "" : "s"} · ${size(total)} in all</div>
-    <div class="btns"><button class="btn big f${danger ? " danger" : ""} hold" id="confirm-go"><i></i><span>${esc(holdLabel)}</span></button>
-      <button class="btn big f" id="confirm-back">Go back</button></div>`;
+    <div class="btns">${holds.map((h, i) => `<button class="btn big f${h.danger ? " danger" : ""} hold" data-hold="${i}" title="${esc(h.why || "")}"><i></i><span>${esc(h.label)}</span></button>`).join("")}
+      <button class="btn big f" id="confirm-back">Go back</button></div>
+    ${holds.some(h => h.why) ? `<p class="itemized-note">${holds.map(h => h.why ? `<b>${esc(h.label.replace(/^Hold: /, ""))}</b>: ${esc(h.why)}` : "").filter(Boolean).join("<br>")}</p>` : ""}`;
   $("ask").classList.add("on");
-  holdable($("confirm-go"), () => { closeAsk(); done(); });
+  card.querySelectorAll("[data-hold]").forEach(b => holdable(b, () => { closeAsk(); holds[+b.dataset.hold].done(); }));
   $("confirm-back").onclick = closeAsk;
   setFocus($("confirm-back"));
 }
 
 async function uninstall(appid) {
   ask("Uninstall in Steam?", "Steam opens and asks first. It keeps your saves in Steam Cloud for games that use it, and you can install it again any time.",
-      [["Open Steam", async () => { const r = await api("/api/storage/uninstall", { appid }); toast(r.error || "Steam is asking about it"); }], ["Not now"]]);
+      [["Open Steam", async () => {
+        const r = await api("/api/storage/uninstall", { appid });
+        if (r.error) return toast(r.error);
+        toast(`Steam is asking about ${r.name}. Storage updates by itself once it's uninstalled.`, null, 6000);
+        watchUninstall(appid, r.name, r.paths);
+      }], ["Not now"]]);
+}
+
+/* Once Steam has finished uninstalling a game (its manifest is gone), count its folders again */
+const watching = new Map();
+function watchUninstall(appid, name, paths) {
+  clearInterval(watching.get(appid));
+  const until = Date.now() + 30 * 60e3;
+  watching.set(appid, setInterval(async () => {
+    const r = await api("/api/storage/installed", { appid }).catch(() => null);
+    if (!r || r.installed) {
+      if (Date.now() > until) { clearInterval(watching.get(appid)); watching.delete(appid); }
+      return;
+    }
+    clearInterval(watching.get(appid)); watching.delete(appid);
+    // Steam may still be deleting the files: count again until the game's folder is gone (up to a minute)
+    let freed = 0;
+    for (let i = 0; i < 15; i++) {
+      const c = await api("/api/storage/recount", { paths });
+      freed += c.freed || 0;
+      if (!c.rows?.[0] || c.rows[0].gone) break;
+      await new Promise(res => setTimeout(res, 4000));
+    }
+    const c = { freed };
+    ideas = null;
+    await loadInfo();
+    await refreshView();
+    toast(`${name} is uninstalled: ${size(c.freed)} freed`, null, 7000);
+  }, 4000));
+}
+
+/* Draw the view again with what's changed, staying on the same thing and scrolled to the same place */
+async function refreshView() {
+  if ($("ask").classList.contains("on")) return;
+  const k = focusKey(), top = $("body").scrollTop;
+  await draw();
+  $("body").scrollTop = top;
+  restoreFocus(k);
 }
 
 /* ---------- toasts, questions, holding to confirm ---------- */
@@ -837,11 +989,12 @@ function setFocus(el, auto = false) {
 }
 const focusables = () => [...document.querySelectorAll($("ask").classList.contains("on") ? "#ask .f" : "#side .f, #main .f, #toast.show .f")]
   .filter(e => e.offsetParent !== null && !e.hasAttribute("disabled"));
-function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick } : null; }
+function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick, f: focus.dataset.f, v: focus.dataset.v, view: focus.dataset.view, drv: focus.dataset.drive } : null; }
 function restoreFocus(k) {
   if (!k) return;
   const sel = k.id ? "#" + CSS.escape(k.id) : k.open != null ? `[data-open="${CSS.escape(k.open)}"]` : k.pick ? `[data-pick="${CSS.escape(k.pick)}"]`
-    : k.cat ? `[data-cat="${k.cat}"]` : k.idea ? `[data-idea="${k.idea}"]` : k.tid ? `[data-tid="${CSS.escape(k.tid)}"]` : k.tpick ? `[data-tpick="${CSS.escape(k.tpick)}"]` : k.tick ? `[data-tick="${CSS.escape(k.tick)}"]` : null;
+    : k.cat ? `[data-cat="${k.cat}"]` : k.idea ? `[data-idea="${k.idea}"]` : k.tid ? `[data-tid="${CSS.escape(k.tid)}"]` : k.tpick ? `[data-tpick="${CSS.escape(k.tpick)}"]` : k.tick ? `[data-tick="${CSS.escape(k.tick)}"]`
+    : k.f ? `[data-f="${k.f}"][data-v="${CSS.escape(k.v)}"]` : k.view ? `#side [data-view="${k.view}"]` : k.drv ? `[data-drive="${CSS.escape(k.drv)}"]` : null;
   const el = sel && document.querySelector(sel);
   if (el) setFocus(el);
 }
@@ -938,8 +1091,19 @@ function poll() {
 requestAnimationFrame(poll);
 
 document.querySelectorAll("#side [data-view]").forEach(b => b.onclick = () => go(b.dataset.view));
+$("back").onclick = () => back();
+addEventListener("mouseup", e => { if (e.button === 3) { e.preventDefault(); back(); } });
+addEventListener("keydown", e => { if (e.key === "BrowserBack") { e.preventDefault(); back(); } });
 drawBasketBtn();
-loadInfo().then(() => { go("ov", false); tick(); });
+loadInfo().then(() => {
+  const r = store.get("storage-resume", null);
+  store.set("storage-resume", null);
+  if (r && r.view && r.view !== "idea") {
+    whereCat = r.whereCat; filesFilter = r.filesFilter || filesFilter; fold.path = r.path;
+    go(r.view === "where" && !whereCat ? "ov" : r.view, false);
+  } else go("ov", false);
+  tick();
+});
 </script>
 </body>
 </html>

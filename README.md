@@ -94,23 +94,35 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
   since they changed; **File types** lists every ending by space. Under the overview, **Ideas**
   finds app caches, shader caches, leftovers from uninstalled games, old downloads and games not
   played for 3 months (those are uninstalled through Steam, which asks first).
+  Click a drive on the left to open its top folder, from anywhere.
+  **Count again** on a folder recounts just that folder, straight away (after copying things in, say);
+  **Count whole drive** (top right) recounts everything in the background. After **Uninstall in
+  Steam**, Storage waits for Steam to finish and recounts the game's folders by itself, saying how
+  much was freed.
+  **Back** (beside the title, or B / Esc, or the mouse's back button) retraces every step you took,
+  one at a time: each view, category, idea, folder, drive and filter, landing on the same item and
+  scrolled to where you were. With nowhere left to go back to, it returns to Deck TV.
   Removing is careful on purpose:
   - Each thing is marked **Safe** (comes back by itself), **Look first** (your own files),
     **Careful** (an app's settings, a game's Proton setup or saves, part of a game) or **Can't
     remove** (the folders everything lives in, Steam's and the apps' own files, Steam saves,
     Deck TV, keys and passwords). The server refuses those too, not just the page.
-  - **+** (or X) puts things on the **Cleanup list** (Y), ticked. **Add all** from an idea puts them
-    there *unticked*: tick (or X) each one you want gone. Open any of them to see what's inside. The
-    list reads everything again, warns about anything changed in the last 3 days, and needs a tick
-    for Careful ones.
-  - **Review the ticked…** then lists every one by name, where it is and its size, and only a
-    **hold** (until the bar fills) moves exactly those to the **Trash** (the same one Dolphin uses),
-    with **Undo**. Unticked ones stay on the list, untouched.
-  - The space comes back only when you remove them for good in **Trash**: tick each one, and the
-    same itemized list comes up first, then a hold. Until then, **Put back** returns them where
-    they were.
+  - The **bin** button (or X) on anything **marks it for deletion**: it turns red and goes on the
+    **Delete list** (Y). Nothing is deleted then; keep marking as you look around. The sidebar shows
+    how many are ticked to delete and their total. **Put all on the delete list** from an idea adds
+    them *unticked*: tick (or X) each one you want deleted. Open any of them on the list to see
+    what's inside. The list reads everything again, warns about anything changed in the last 3
+    days, and needs a tick for Careful ones. **Clear the list** deletes nothing.
+  - **Delete the ticked…** lists every one by name, where it is and its size, then offers two holds
+    (until the bar fills), each deleting exactly those, all in one go:
+    - **Delete to the Trash** (the same one Dolphin uses): **Undo** straight away, or **Put back**
+      from Trash later. The space comes back once the Trash is emptied.
+    - **Delete for good**: the space comes back now, and they can't be put back.
+    Unticked ones stay on the list, untouched.
+  - **Trash**: tick each thing to **Put back** or **Remove for good** (the same itemized list comes
+    up first, then a hold).
   - **Keep** (in a folder's panel) protects a folder and everything in it.
-  - Everything moved, put back or removed is written to `~/.local/share/deck-tv/storage.log`;
+  - Everything moved, put back, removed or deleted is written to `~/.local/share/deck-tv/storage.log`;
     Keep marks are in `~/.config/deck-tv/storage.json`. Counting a drive takes a minute or so, in
     the background, and again when it's more than 12 hours old (or **Count again**).
 - **Sound** (System → Sound): the volume, and where sound plays: the TV, the Deck's

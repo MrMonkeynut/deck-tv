@@ -10,6 +10,7 @@ they're copied across. Do this as the last step of every change, then check that
 |---|---|---|
 | `remote/` (the phone remote) | `cp remote/index.html ~/.local/share/deck-tv/remote/` (and any other changed file in `remote/`) | Nothing to restart: the page is read from disk each time and sent `no-cache`. Close and reopen the remote on the phone (or pull to refresh). |
 | `web/index.html` (the TV's home screen) | `cp web/index.html ~/.local/share/deck-tv/web/` | The open page notices the new file and reloads itself. |
+| `web/storage.html` (the Storage card) | `cp web/storage.html ~/.local/share/deck-tv/web/` | An open Storage window notices within 15 s and reloads itself, staying where it was. |
 | `server.py` or another `.py`, `tiles.json`, `images/`, `icons/` | `bash install.sh < /dev/null` (copies everything, keeps settings, asks nothing, restarts the server and reopens Deck TV) | Wait a few seconds for it to come back. |
 
 Check it arrived: `cmp remote/index.html ~/.local/share/deck-tv/remote/index.html`, or

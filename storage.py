@@ -739,7 +739,12 @@ def overview():
                         "scanning": dict(d["progress"]) if d["scanning"] and d["progress"] else (True if d["scanning"] else None),
                         "error": d["error"]})
     t = trash_list()
-    return {"drives": out, "cats": CATS, "keep": _keeps(), "trash": {"items": len(t["items"]), "bytes": t["bytes"]}}
+    try:
+        page = int((Path(__file__).resolve().parent / "web" / "storage.html").stat().st_mtime)
+    except OSError:
+        page = 0
+    return {"drives": out, "cats": CATS, "keep": _keeps(), "trash": {"items": len(t["items"]), "bytes": t["bytes"]},
+            "page": page}  # changes when the page is updated, so an open one reloads itself
 
 
 def folder(path):
@@ -1131,9 +1136,9 @@ def check(paths):
     return {"rows": rows}
 
 
-def remove(paths, careful=False):
-    """Move to the Trash. Blocked places are refused here too (not just on the page), and the careful
-    ones only go when the page says they were looked at."""
+def remove(paths, careful=False, forever=False):
+    """Move to the Trash, or (forever) delete straight away, freeing the space. Blocked places are refused
+    here too (not just on the page), and the careful ones only go when the page says they were looked at."""
     done, refused = [], []
     mounts, keeps = _mounts(), _keeps()
     with _ops:
@@ -1149,6 +1154,22 @@ def remove(paths, careful=False):
                 refused.append({"path": p, "why": "It isn't there any more"})
                 continue
             hit = _drive_of(p, mounts)
+            if forever:
+                m = _measure(hit[1], p)
+                size = sum(m[1]) if m else 0
+                try:
+                    _rmtree(p)
+                except OSError as e:
+                    refused.append({"path": p, "why": e.strerror or str(e)})
+                if os.path.lexists(p):
+                    if not refused or refused[-1]["path"] != p:
+                        refused.append({"path": p, "why": "Some of it couldn't be deleted"})
+                    _jobs.put(("scan", hit[0]))  # part of it went: count the drive again
+                    continue
+                _apply(p, m, -1)
+                _log("delete", p, size)
+                done.append({"path": p, "size": size})
+                continue
             try:
                 t, top = _trash_for(p)
             except OSError as e:
@@ -1290,15 +1311,57 @@ def reveal(path):
     return {"ok": True}
 
 
+def _game_paths(appid, lib):
+    """Everything Steam keeps for a game: its files, Proton setup, shader cache and Workshop items"""
+    app = steam()["apps"].get(appid)
+    sa = f"{lib}/steamapps"
+    return ([app["dir"]] if app else []) + [f"{sa}/compatdata/{appid}", f"{sa}/shadercache/{appid}", f"{sa}/workshop/content/{appid}"]
+
+
 def uninstall(appid):
-    """Steam's own uninstall (it asks first)"""
+    """Steam's own uninstall (it asks first). The page then watches for it to finish (installed()) and
+    counts the game's folders again (recount())."""
     appid = str(appid)
-    if appid not in steam()["apps"]:
+    app = steam()["apps"].get(appid)
+    if not app:
         return {"error": "That game isn't installed"}
-    subprocess.Popen(["xdg-open", f"steam://uninstall/{appid}"], stdout=subprocess.DEVNULL,
+    subprocess.Popen(["steam", f"steam://uninstall/{appid}"], stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, start_new_session=True)
-    _log("steam-uninstall", steam()["apps"][appid]["dir"], steam()["apps"][appid]["size"], appid)
-    return {"ok": True}
+    _log("steam-uninstall", app["dir"], app["size"], appid)
+    return {"ok": True, "name": app["name"], "paths": _game_paths(appid, app["lib"])}
+
+
+def still_installed(appid):
+    with _lock:
+        _steam["at"] = 0  # read the manifests afresh
+    return {"installed": str(appid) in steam()["apps"]}
+
+
+def recount(paths):
+    """Count folders again after something else changed them (Steam uninstalling a game, files copied in):
+    each is measured afresh and takes the place of what the last count had. A drive's top folder is a whole
+    count, in the background. (The File types totals catch up at the next whole count.)"""
+    out = []
+    mounts = _mounts()
+    for p in [os.path.normpath(x) for x in paths if isinstance(x, str) and x.startswith("/")][:20]:
+        hit = _drive_of(p, mounts)
+        if not hit:
+            continue
+        if p == hit[1].rstrip("/"):
+            scan(hit[0])
+            out.append({"path": p, "whole": True})
+            continue
+        old = _node(p)
+        with _lock:
+            before = (None, list(old.cats), old.files, {}, []) if old else None
+        now = _measure(hit[1], p) if os.path.isdir(p) else None
+        if before:
+            _apply(p, before, -1)
+        if now:
+            _apply(p, (now[0], now[1], now[2], {}, now[4]), +1)
+        out.append({"path": p, "gone": not os.path.lexists(p), "before": sum(before[1]) if before else None,
+                    "now": sum(now[1]) if now else 0})
+    return {"rows": out, "freed": sum(max(0, (r.get("before") or 0) - r.get("now", 0)) for r in out)}
 
 
 def act(action, body):
@@ -1309,7 +1372,7 @@ def act(action, body):
     if action == "check":
         return check(body.get("paths") or [])
     if action == "remove":
-        return remove(body.get("paths") or [], careful=body.get("careful") is True)
+        return remove(body.get("paths") or [], careful=body.get("careful") is True, forever=body.get("forever") is True)
     if action == "restore":
         return restore(body.get("ids") or [])
     if action == "empty":
@@ -1320,4 +1383,8 @@ def act(action, body):
         return reveal(body.get("path"))
     if action == "uninstall":
         return uninstall(body.get("appid", ""))
+    if action == "installed":
+        return still_installed(body.get("appid", ""))
+    if action == "recount":
+        return recount(body.get("paths") or [])
     return {"error": "unknown"}

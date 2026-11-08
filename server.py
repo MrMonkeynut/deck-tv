@@ -1338,6 +1338,13 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT / "web"), **kwargs)
 
+    def end_headers(self):
+        # Pages (Storage, Karaoke): always checked before a saved copy is used, so an update reaches an
+        # app window opened before it
+        if self.path.split("?")[0].endswith((".html", "/")):
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def log_message(self, *args):
         pass
 
