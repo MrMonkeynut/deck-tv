@@ -599,6 +599,26 @@
       ]
     },
     {
+      "id": "bambu",
+      "name": "Bambu Studio",
+      "sub": "3D printer",
+      "color": "#0F3A22",
+      "accent": "#00AE42",
+      "icon": "desktop",
+      "image": "bambu.svg",
+      "command": [
+        "flatpak",
+        "run",
+        "com.bambulab.BambuStudio"
+      ],
+      "window_class": "bambustudio",
+      "fullscreen": "launch",
+      "app_icon": [
+        "/var/lib/flatpak/exports/share/icons/hicolor/*/apps/com.bambulab.BambuStudio.svg",
+        "~/.local/share/flatpak/exports/share/icons/hicolor/*/apps/com.bambulab.BambuStudio.svg"
+      ]
+    },
+    {
       "id": "chrome",
       "name": "Chrome",
       "sub": "Web browser",
