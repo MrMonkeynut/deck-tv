@@ -94,6 +94,11 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
   finds app caches, shader caches, leftovers from uninstalled games, old downloads and games not
   played for 3 months (those are uninstalled through Steam, which asks first).
   Click a drive on the left to open its top folder, from anywhere.
+  **Right-click** anything in a list (or **≡** on the controller, or **M**) for its menu: Open (or the
+  folder a file is in), Mark for deletion / Unmark, Uninstall in Steam, Count again, **Hide from
+  Biggest folders** (just it, or it and everything inside; only that list changes, nothing on disk),
+  Keep / Stop keeping, Show in Dolphin and Copy its location. In Biggest folders, **Hidden → Show**
+  lists the hidden ones, dimmed, to bring them back (kept in `~/.config/deck-tv/storage.json`).
   **Count again** on a folder recounts just that folder, straight away (after copying things in, say);
   **Count whole drive** (top right) recounts everything in the background. After **Uninstall in
   Steam**, Storage waits for Steam to finish and recounts the game's folders by itself, saying how

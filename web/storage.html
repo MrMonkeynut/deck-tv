@@ -183,6 +183,19 @@
   #toast.show { opacity: 1; pointer-events: auto; }
   #toast .btn { background: #3A4352; }
 
+  /* the menu for one thing (right-click, ≡ on the controller, M) */
+  #menu { position: absolute; inset: 0; display: none; z-index: 6; }
+  #menu.on { display: block; }
+  #menu .mcard { position: absolute; width: 400px; padding: 8px; border-radius: 16px; background: #222834; box-shadow: 0 16px 40px #000a;
+    display: flex; flex-direction: column; gap: 2px; }
+  #menu .mhead { padding: 8px 12px 10px; font-size: 14px; color: var(--muted); border-bottom: 1px solid #2F3644; margin-bottom: 4px; }
+  #menu .mhead b { display: block; color: var(--ink); font-size: 18px; font-weight: 500; overflow-wrap: anywhere; margin-bottom: 2px; }
+  #menu .mi { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 17px; }
+  #menu .mi svg { width: 20px; height: 20px; color: var(--muted); }
+  #menu .mi:hover, #menu .mi.focus { background: #2F3747; }
+  #menu .mi.danger, #menu .mi.danger svg { color: var(--danger); }
+  #menu .mi.off { color: var(--dim); cursor: default; font-size: 14px; }
+  #menu .msep { height: 1px; background: #2F3644; margin: 4px 6px; }
   #ask { position: absolute; inset: 0; background: #080A0ECC; display: none; align-items: center; justify-content: center; z-index: 5; }
   #ask.on { display: flex; }
   #ask .card { width: 640px; max-height: 600px; display: flex; flex-direction: column; gap: 14px; padding: 26px 28px; border-radius: 22px; background: #1B2029; }
@@ -222,7 +235,7 @@
     <button class="nav f" data-view="types"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg>File types</button>
     <button class="nav f" data-view="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Trash<em id="trash-n"></em></button>
     <button id="basket-btn" class="f" data-view="basket"><b><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Delete list</b><span id="basket-sum">Nothing marked for deletion</span></button>
-    <div class="keys">A open · X mark for deletion · Y delete list<br>L1 / R1 views · B back a step</div>
+    <div class="keys">A open · X mark for deletion · Y delete list<br>≡ or right-click: more · L1 / R1 views · B back</div>
   </aside>
   <main id="main">
     <div id="head"><button class="btn f" id="back" title="Back (B)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span id="back-to">Back</span></button><h2 id="title"></h2><div id="scan"></div></div>
@@ -240,6 +253,7 @@
   </main>
   <div id="toast"></div>
   <div id="ask"><div class="card"></div></div>
+  <div id="menu"><div class="mcard"></div></div>
 </div>
 
 <script>
@@ -296,11 +310,13 @@ const ICON = {
   sd: '<path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6z"/><path d="M9.5 7v2.5M12.5 7v2.5M15.5 7v2.5"/>',
   disk: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="16.5" cy="17" r=".9"/>',
   usb: '<path d="M12 3v14M8 7l4-4 4 4M7 12v2l5 3 5-3v-3"/><circle cx="12" cy="19" r="2"/>',
+  hide: '<path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6 0 10 6 10 6a17 17 0 0 1-3.2 3.7M6.6 6.6A17 17 0 0 0 2 12s4 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
 };
 /* Paths in your home folder start "Home/", and a long one loses whole folders from its middle, keeping
    its start and the end that tells it apart */
 function shortPath(p, max = 56) {
-  p = String(p).replace(/^\/home\/deck(?=\/|$)/, "Home");
+  p = String(p).replace(/^\/home\/deck(?=\/|$|\s)/, "Home");
   if (p.length <= max) return p;
   const parts = p.split("/"), head = parts[0] || "/" + parts[1], tail = [];
   for (let i = parts.length - 1; i > (parts[0] ? 0 : 1); i--) {
@@ -310,7 +326,7 @@ function shortPath(p, max = 56) {
   return head + "/…/" + tail.join("/");
 }
 /* A place's name with the folder it's in, for when names repeat ("arcade › videos") */
-const placeName = p => { const ps = p.split("/").filter(Boolean); return ps.length > 1 ? ps.at(-2) + " › " + ps.at(-1) : ps[0] || p; };
+const placeName = p => { const ps = shortPath(p, 1e9).split("/").filter(Boolean); return ps.length > 1 ? ps.at(-2) + " › " + ps.at(-1) : ps[0] || p; };
 const svg = (k, cls = "") => `<svg viewBox="0 0 24 24"${cls ? ` class="${cls}"` : ""}>${ICON[k]}</svg>`;
 const chip = (level, why, kept) => kept ? `<span class="chip blocked" title="${esc(why)}">${svg("lock")}Keep</span>`
   : `<span class="chip ${level}" title="${esc(why)}">${level === "blocked" ? svg("lock") : ""}${LEVEL[level] || ""}</span>`;
@@ -324,7 +340,7 @@ let info = null, drive = store.get("storage-drive", "internal"), view = "ov";
 let steps = [];  // every place you've been, newest last: Back goes to each in turn, with what had focus and how far down it was
 let basket = new Map(store.get("storage-basket", []).map(x => [x.path, x]));
 let fold = { path: null, data: null, sort: store.get("storage-sort", "size"), show: "all" };
-let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, foldersFilter = { cat: "", older: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
+let whereCat = null, idea = null, ideas = null, filesFilter = { cat: "", ext: "", older: 0 }, foldersFilter = { cat: "", older: 0, hidden: 0 }, trashPick = new Set(), carefulOk = false, checked = null;
 
 const saveBasket = () => { store.set("storage-basket", [...basket.values()]); drawBasketBtn(); };
 function drawBasketBtn() {
@@ -422,6 +438,7 @@ function go(v, push = true) {
 }
 /* One step back: the place, the drive, the filters, and where you were in it */
 async function back() {
+  if ($("menu").classList.contains("on")) return closeMenu();
   if ($("ask").classList.contains("on")) return closeAsk();
   const s = steps.pop();
   if (!s) {
@@ -715,7 +732,7 @@ async function drawFiles() {
 /* ---------- biggest folders: every folder by size, but not ones that can't be removed from here ---------- */
 async function drawFolders() {
   const el = $("folders"), f = foldersFilter;
-  const res = await api(`/api/storage/folders?drive=${drive}&cat=${f.cat}&older=${f.older}`);
+  const res = await api(`/api/storage/folders?drive=${drive}&cat=${f.cat}&older=${f.older}&hidden=${f.hidden ? 1 : 0}`);
   if (view !== "folders") return;
   items = new Map();
   const cats = Object.keys(curDrive()?.scanned?.cats || {});
@@ -724,14 +741,16 @@ async function drawFolders() {
   el.innerHTML = `<p class="note">The biggest folders on ${esc(curDrive()?.name)}, leaving out the ones that can't be deleted from here (the drive's top,
       Documents, Steam's own folders…). Games are shown whole. Open one to look inside.</p>
     <div class="tools"><span class="lbl">Mostly</span>${b("cat", "", "Anything")}${cats.filter(c => c !== "system").map(c => b("cat", c, esc(CAT[c][0]))).join("")}</div>
-    <div class="tools"><span class="lbl">Nothing changed for</span>${b("older", 0, "Any time")}${b("older", 90, "3 months")}${b("older", 365, "A year")}${b("older", 730, "2 years")}</div>
-    <div class="rows">${res.rows.map(r => row(r, { name: r.label || placeName(r.path), sub: dirOf(r.path) + ` · ${n(r.files)} files`,
-      bar: r.size / top, cats: r.cats, catTotal: r.size, date: ago(r.newest) })).join("")
+    <div class="tools"><span class="lbl">Nothing changed for</span>${b("older", 0, "Any time")}${b("older", 90, "3 months")}${b("older", 365, "A year")}${b("older", 730, "2 years")}
+      ${res.hidden || f.hidden ? `<span class="lbl">Hidden</span>${b("hidden", 0, "Leave out")}${b("hidden", 1, `Show ${res.hidden}`)}` : ""}</div>
+    ${f.hidden ? `<p class="note">Hidden ones are dimmed. Right-click one (or ≡) → Show in Biggest folders again.</p>` : ""}
+    <div class="rows">${res.rows.map(r => row(r, { name: r.label || placeName(r.path), sub: (r.hidden ? "Hidden · " : "") + dirOf(r.path) + ` · ${n(r.files)} files`,
+      bar: r.size / top, cats: r.cats, catTotal: r.size, date: ago(r.newest) }).replace('<div class="r', r.hidden ? '<div class="r off' : '<div class="r')).join("")
       || `<p class="empty">No folders like that (100 MB and up).</p>`}</div>`;
   el.querySelectorAll("[data-g]").forEach(x => x.onclick = () => {
     const k = x.dataset.g;
     remember();
-    foldersFilter = { ...f, [k]: k === "older" ? +x.dataset.v : x.dataset.v };
+    foldersFilter = { ...f, [k]: k === "cat" ? x.dataset.v : +x.dataset.v };
     drawFolders().then(() => setFocus(document.querySelector(`[data-g="${k}"][data-v="${CSS.escape(String(foldersFilter[k]))}"]`)));
   });
   wireRows(el);
@@ -968,6 +987,88 @@ async function refreshView() {
   restoreFocus(k);
 }
 
+/* ---------- the menu for one thing: right-click, ≡ on the controller, or M ---------- */
+let menuReturn = null;
+const itemOf = el => { const p = el?.closest(".r")?.dataset.path; return p ? items.get(p) : null; };
+function menuFor(it) {
+  const p = it.path, dir = !!it.dir, marked = basket.has(p), L = [];
+  if (p.includes("#")) return [["dir", "Open the folder", () => openFolder(p.split("#")[0])]];  // "files directly in…" rows
+  L.push(dir ? ["dir", "Open", () => openFolder(p)] : ["dir", "Open the folder it's in", () => openFolder(dirOf(p), p)]);
+  if (it.steam) L.push(["bin", "Uninstall in Steam", () => uninstall(it.steam)]);
+  if (it.level !== "blocked") L.push(["bin", marked ? "Unmark (take off the delete list)" : "Mark for deletion", () => {
+    pick(it); if (view === "basket") drawBasket();
+  }, !marked]);
+  if (dir) L.push(["refresh", "Count again", async () => {
+    toast("Counting it again…", null, 20000);
+    const r = await api("/api/storage/recount", { paths: [p] }), x = r.rows?.[0];
+    await loadInfo(); await refreshView();
+    toast(!x ? "Couldn't count it" : x.before == null ? `Counted: ${size(x.now)}` : `Counted again: was ${size(x.before)}, now ${size(x.now)}`);
+  }]);
+  L.push("sep");
+  if (dir) {
+    if (it.hiddenHere) L.push(["eye", "Show in Biggest folders again", () => setHidden(p, false)]);
+    else if (it.hidden) L.push(["hide", "Hidden from Biggest folders (with a folder around it)", null]);
+    else {
+      L.push(["hide", "Hide from Biggest folders", () => setHidden(p, true, false)]);
+      L.push(["hide", "Hide it and everything inside from Biggest folders", () => setHidden(p, true, true)]);
+    }
+  }
+  if (it.kept || it.level !== "blocked" || (it.why || "").startsWith("Has something"))
+    L.push(["lock", it.kept ? "Stop keeping" : "Keep (protect it from deletion)", () => setKeep(p, !it.kept)]);
+  L.push("sep");
+  L.push(["eye", "Show in Dolphin", () => api("/api/storage/reveal", { path: p })]);
+  L.push(["copy", "Copy its location", () => copyPath(p)]);
+  return L;
+}
+function openMenu(it, at) {
+  if (!it) return;
+  menuReturn = focus;
+  const card = $("menu").querySelector(".mcard");
+  const acts = menuFor(it).filter((x, i, a) => x !== "sep" || (i && a[i - 1] !== "sep" && i < a.length - 1));
+  card.innerHTML = `<div class="mhead"><b>${esc(it.label || it.name || base(it.path.split("#")[0]))}</b>${esc(shortPath(it.path.split("#")[0], 48))}${it.size != null ? " · " + size(it.size) : ""}</div>` +
+    acts.map((a, i) => a === "sep" ? '<div class="msep"></div>'
+      : `<button class="mi${a[2] ? " f" : " off"}${a[3] ? " danger" : ""}" data-i="${i}">${svg(a[0])}<span>${esc(a[1])}</span></button>`).join("");
+  $("menu").classList.add("on");
+  card.querySelectorAll(".mi.f").forEach(b => b.onclick = () => { const a = acts[+b.dataset.i]; closeMenu(); a[2](); });
+  // where it opens: at the pointer, or under the thing it's for; kept on the screen
+  const st = $("stage").getBoundingClientRect(), k = st.width / 1280;
+  let x, y;
+  if (at) { x = (at.x - st.left) / k; y = (at.y - st.top) / k; }
+  else { const r = (menuReturn || document.body).getBoundingClientRect(); x = (r.left - st.left) / k + 60; y = (r.bottom - st.top) / k + 4; }
+  x = Math.max(12, Math.min(x, 1280 - card.offsetWidth - 12));
+  y = y + card.offsetHeight > 708 ? Math.max(12, (at ? y : y - (menuReturn?.offsetHeight || 0) - 8) - card.offsetHeight) : y;
+  card.style.left = x + "px"; card.style.top = y + "px";
+  setFocus(card.querySelector(".mi.f"));
+}
+function closeMenu() {
+  $("menu").classList.remove("on");
+  if (menuReturn && document.body.contains(menuReturn)) setFocus(menuReturn);
+}
+$("menu").onclick = e => { if (e.target.id === "menu") closeMenu(); };
+addEventListener("contextmenu", e => {
+  e.preventDefault();  // no browser menu anywhere on the TV
+  if ($("menu").classList.contains("on")) return closeMenu();
+  const it = itemOf(e.target);
+  if (it) { setFocus(e.target.closest(".r").querySelector(".open") || focus); openMenu(it, { x: e.clientX, y: e.clientY }); }
+});
+async function setHidden(p, on, inside = false) {
+  await api("/api/storage/hide", { path: p, on, inside });
+  toast(on ? (inside ? "Hidden from Biggest folders, with everything inside it" : "Hidden from Biggest folders") + ". Show hidden there lists it again."
+           : "Back in Biggest folders");
+  await refreshView();
+}
+async function setKeep(p, on) {
+  await api("/api/storage/keep", { path: p, on });
+  if (on) for (const q of [...basket.keys()]) if (q === p || q.startsWith(p + "/")) basket.delete(q);
+  saveBasket();
+  toast(on ? "Kept: it and everything in it can't be deleted from here" : "No longer kept");
+  await refreshView();
+}
+async function copyPath(p) {
+  try { await navigator.clipboard.writeText(p); toast("Copied: " + p); }
+  catch { toast("Couldn't copy it. It's " + p, null, 8000); }
+}
+
 /* ---------- toasts, questions, holding to confirm ---------- */
 let toastT, toastAction = null;
 function toast(text, action = null, ms = 3500) {
@@ -1017,7 +1118,7 @@ function setFocus(el, auto = false) {
   focus.classList.add("focus");
   focus.scrollIntoView({ block: "nearest" });
 }
-const focusables = () => [...document.querySelectorAll($("ask").classList.contains("on") ? "#ask .f" : "#side .f, #main .f, #toast.show .f")]
+const focusables = () => [...document.querySelectorAll($("menu").classList.contains("on") ? "#menu .f" : $("ask").classList.contains("on") ? "#ask .f" : "#side .f, #main .f, #toast.show .f")]
   .filter(e => e.offsetParent !== null && !e.hasAttribute("disabled"));
 function focusKey() { return focus ? { id: focus.id, open: focus.dataset.open, pick: focus.dataset.pick, cat: focus.dataset.cat, idea: focus.dataset.idea, tid: focus.dataset.tid, tpick: focus.dataset.tpick, tick: focus.dataset.tick, f: focus.dataset.f, g: focus.dataset.g, v: focus.dataset.v, view: focus.dataset.view, drv: focus.dataset.drive } : null; }
 function restoreFocus(k) {
@@ -1064,6 +1165,11 @@ function input(cmd) {
   if (cmd === "ok") { if (focus?.classList.contains("hold")) return holdStart(focus); return focus?.click(); }
   if (cmd === "ok-up") return holdEnd();
   if (cmd === "back") return back();
+  if (cmd === "menu") {
+    if ($("menu").classList.contains("on")) return closeMenu();
+    if (!$("ask").classList.contains("on")) openMenu(itemOf(focus));
+    return;
+  }
   if (cmd === "pick") {
     const r = focus?.closest(".r");
     const p = r?.querySelector("[data-pick]")?.dataset.pick || focus?.dataset.pick;
@@ -1082,7 +1188,7 @@ function input(cmd) {
 }
 
 const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", Enter: "ok", Escape: "back", Backspace: "back",
-               x: "pick", " ": "pick", y: "basket", "[": "prev", "]": "next", PageUp: "prev", PageDown: "next" };
+               x: "pick", " ": "pick", y: "basket", m: "menu", ContextMenu: "menu", "[": "prev", "]": "next", PageUp: "prev", PageDown: "next" };
 addEventListener("keydown", e => {
   if (e.ctrlKey || e.altKey || e.metaKey) return;
   const cmd = KEYS[e.key];
@@ -1097,7 +1203,7 @@ addEventListener("mousemove", () => document.body.classList.add("mouse"));
 addEventListener("pointerdown", e => { const f = e.target.closest(".f"); if (f) setFocus(f); });
 
 /* Gamepad (when the controller isn't already sending keys) */
-const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back", 2: "pick", 3: "basket", 4: "prev", 5: "next" };
+const BTN = { 12: "up", 13: "down", 14: "left", 15: "right", 0: "ok", 1: "back", 2: "pick", 3: "basket", 4: "prev", 5: "next", 9: "menu" };
 const held = {};
 let lastStick = 0, stickDir = null;
 function poll() {

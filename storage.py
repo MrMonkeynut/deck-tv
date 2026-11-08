@@ -621,6 +621,25 @@ def _keeps():
     return [k for k in _settings().get("keep", []) if isinstance(k, str)]
 
 
+def _hidden():
+    """Folders hidden from Biggest folders: path -> whether everything inside is hidden too"""
+    return {h["path"]: bool(h.get("inside")) for h in _settings().get("hidden", [])
+            if isinstance(h, dict) and isinstance(h.get("path"), str)}
+
+
+def hide(path, on, inside=False):
+    """Hide a folder from Biggest folders (only that list: nothing on disk changes), or show it again"""
+    path = os.path.normpath(path)
+    s = _settings()
+    hidden = [h for h in s.get("hidden", []) if isinstance(h, dict) and h.get("path") != path]
+    if on:
+        hidden.append({"path": path, "inside": bool(inside)})
+    s["hidden"] = sorted(hidden, key=lambda h: h["path"])
+    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS.write_text(json.dumps(s, indent=1))
+    return {"ok": True}
+
+
 def keep(path, on):
     path = os.path.normpath(path)
     s = _settings()
@@ -794,9 +813,13 @@ def folder(path):
     if len(rows) > 500:
         more, more_bytes = len(rows) - 500, sum(r["size"] or 0 for r in rows[500:])
         rows = rows[:500]
+    hidden = _hidden()
     for row in rows:
         level, why, extra = guard(row["path"], keeps, mounts)
         row.update(level=level, why=why, **extra)
+        if row.get("dir"):
+            row["hidden"] = row["path"] in hidden or any(i and row["path"].startswith(q + "/") for q, i in hidden.items())
+            row["hiddenHere"] = row["path"] in hidden
         lab = label(row["path"]) if row.get("dir") else None
         if lab:
             row["label"] = lab
@@ -869,11 +892,12 @@ def where(did, cat, limit=36):
     return {"rows": rows, "total": total, "small": small}
 
 
-def biggest_folders(did, cat="", older=0, limit=200, smallest=100 << 20):
+def biggest_folders(did, cat="", older=0, show_hidden=False, limit=200, smallest=100 << 20):
     """Folders by size, leaving out the ones that can't be removed from here anyway (a drive's top, Documents,
     Steam's own folders...), except installed games, which Steam uninstalls. A game is one entry, not its
     parts, and a folder that's nearly all of the one around it (MGSDelta/MGSDelta) isn't listed twice.
-    cat: mostly that kind of space. older: nothing inside changed for that many days."""
+    cat: mostly that kind of space. older: nothing inside changed for that many days. Folders hidden from
+    the list (hide()) are counted, and listed, marked, only with show_hidden."""
     mounts = _mounts()
     if did not in mounts:
         return {"error": "unknown"}
@@ -896,20 +920,27 @@ def biggest_folders(did, cat="", older=0, limit=200, smallest=100 << 20):
         found.sort(key=lambda x: -x[0])
         picked = [(p, k.size, k.files, k.mtime, list(k.cats)) for size, p, k in found
                   if (c is None or k.cats[c] * 2 >= k.size) and (cutoff is None or k.mtime <= cutoff)]
-    keeps, rows, shown = _keeps(), [], {}
+    keeps, rows, shown, hidden, n_hidden = _keeps(), [], {}, _hidden(), 0
     for p, size, files, newest, cats in picked:
         up = shown.get(os.path.dirname(p))
         if up and size >= up * .95:
             continue
         level, why, extra = guard(p, keeps, mounts)
-        if level == "blocked" and not (extra.get("steam") and why.startswith("An installed game")) or why.startswith("Part of"):
+        if level == "blocked" and not (extra.get("steam") and why.startswith("An installed game") or extra.get("kept")) \
+                or why.startswith("Part of"):
             continue
+        hid = p in hidden or any(inside and p.startswith(q + "/") for q, inside in hidden.items())
+        if hid:
+            n_hidden += 1
+            if not show_hidden:
+                continue
         shown[p] = size
         rows.append({"path": p, "name": os.path.basename(p), "label": label(p), "dir": True, "size": size, "files": files,
-                     "newest": newest, "cats": _cats(cats), "level": level, "why": why, **extra})
+                     "newest": newest, "cats": _cats(cats), "level": level, "why": why, "hidden": hid,
+                     "hiddenHere": p in hidden, **extra})
         if len(rows) >= limit:
             break
-    return {"rows": rows}
+    return {"rows": rows, "hidden": n_hidden}
 
 
 def biggest(did, cat="", ext="", older=0, limit=300):
@@ -1420,6 +1451,8 @@ def act(action, body):
         return restore(body.get("ids") or [])
     if action == "empty":
         return empty(body.get("ids") or [])
+    if action == "hide":
+        return hide(str(body.get("path", "")), bool(body.get("on")), bool(body.get("inside")))
     if action == "keep":
         return keep(str(body.get("path", "")), bool(body.get("on")))
     if action == "reveal":
