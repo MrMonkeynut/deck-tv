@@ -233,11 +233,40 @@ Actions=back;
 Name=Previous app
 Exec=$BIN/deck-tv-switch back
 EOS
+# Alt+F5: desktop mode on or off, as the home screen's desktop button. With Deck TV closed it just
+# flips the setting, for next time it opens.
+cat > "$BIN/deck-tv-mode" <<'EOS'
+#!/usr/bin/env bash
+FLAG="$HOME/.config/deck-tv/desktop-mode"
+if OUT=$(curl -sf -m 5 -X POST -H "X-Deck-TV: 1" "http://127.0.0.1:${DECK_TV_PORT:-8765}/api/desktop"); then
+  case "$OUT" in *'"desktop": true'*) ON=1 ;; *) ON= ;; esac
+elif [ -e "$FLAG" ]; then
+  rm -f "$FLAG"; ON=
+else
+  mkdir -p "${FLAG%/*}" && touch "$FLAG"; ON=1
+fi
+if [ -n "$ON" ]; then
+  notify-send -a "Deck TV" -i video-display -t 2500 "Desktop mode on" "Apps open as ordinary windows. Alt+F5 to switch back."
+else
+  notify-send -a "Deck TV" -i video-display -t 2500 "Desktop mode off" "Back to Deck TV."
+fi
+EOS
+chmod +x "$BIN/deck-tv-mode"
+cat > "$APPS/deck-tv-mode.desktop" <<EOS
+[Desktop Entry]
+Type=Application
+Name=Deck TV desktop mode
+Exec=$BIN/deck-tv-mode
+NoDisplay=true
+StartupNotify=false
+EOS
 
 # ---------- desktop settings ----------
 say "Setting up the Home shortcut and full-screen windows…"
 # Meta+H (the Super/Windows key + H on a keyboard) opens Deck TV or brings it back to the front
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv.desktop --key _launch "Meta+H"
+# Alt+F5 switches desktop mode on and off, from anywhere
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-mode.desktop --key _launch "Alt+F5"
 # Alt+Tab starts with KDE; the dock takes it while it runs (see deck-tv-alttab above)
 kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows" "Alt+Tab,Alt+Tab,Walk Through Windows"
 kwriteconfig6 --file kglobalshortcutsrc --group kwin --key "Walk Through Windows (Reverse)" "Alt+Shift+Tab,Alt+Shift+Tab,Walk Through Windows (Reverse)"

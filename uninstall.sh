@@ -8,12 +8,13 @@ pkill -f "$DEST/server.py" 2>/dev/null
 [ -f "$HOME/.cache/deck-tv-dock.lock" ] && kill "$(cat "$HOME/.cache/deck-tv-dock.lock")" 2>/dev/null
 rm -f "$HOME/.cache/deck-tv-dock.lock"
 
-rm -f "$HOME/.local/bin/deck-tv" "$HOME/.local/bin/deck-tv-switch" "$HOME/.local/bin/deck-tv-alttab" "$HOME/.local/share/applications/deck-tv.desktop" \
+rm -f "$HOME/.local/bin/deck-tv" "$HOME/.local/bin/deck-tv-switch" "$HOME/.local/bin/deck-tv-alttab" "$HOME/.local/bin/deck-tv-mode" "$HOME/.local/share/applications/deck-tv.desktop" \
       "$HOME/.local/share/applications/deck-tv-"*.desktop "$HOME/.config/autostart/deck-tv.desktop" \
       "$HOME/Desktop/deck-tv.desktop"
 rm -rf "$HOME/.config/deck-tv"
 
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv.desktop --key _launch --delete
+kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-mode.desktop --key _launch --delete
 # Alt+Tab back to KDE's own switcher
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key _launch --delete
 kwriteconfig6 --file kglobalshortcutsrc --group services --group deck-tv-switch.desktop --key back --delete

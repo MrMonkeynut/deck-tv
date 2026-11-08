@@ -73,7 +73,8 @@ groups (Streaming, UFC, Torrents). Change them with the pencil button (see below
   It stays on (through restarts too) until you press the button again, which brings the dock, Deck
   TV's Alt+Tab and full-screen apps back. The dock's speaker menu has **Desktop mode** too, to
   switch it on from inside an app. Get back to the home screen with the **Deck TV icon on the
-  desktop**, **Super+H**, the taskbar, Alt+Tab, or Home on the phone remote. **Alt+F4** on the home screen closes Deck TV
+  desktop**, **Super+H**, the taskbar, Alt+Tab, or Home on the phone remote. **Alt+F5** switches
+  desktop mode on or off from anywhere, with a short notice saying which. **Alt+F4** on the home screen closes Deck TV
   completely (dock and all), in case anything ever gets stuck. Open it again from the app menu.
 - **Now playing**: whatever's playing shows at the top of the home screen with play/pause and
   skip. Starting something in another app pauses the first. Right-click a tile →
